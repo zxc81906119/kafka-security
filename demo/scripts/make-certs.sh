@@ -23,6 +23,7 @@ if [ -f certs/.done ]; then
       echo "補產 client 憑證: $n"
     fi
   done
+  for f in keystore_creds sslkey_creds truststore_creds; do [ -f certs/$f ] || printf '%s' "$PASS" > certs/$f; done   # 密碼檔(cp 映像用 *_CREDENTIALS 讀檔)
   echo "certs 已存在,略過其餘"; exit 0
 fi
 
@@ -67,5 +68,7 @@ rm -f /certs/truststore.p12
 keytool -importcert -noprompt -alias demo-ca -file /certs/ca.pem -keystore /certs/truststore.p12 -storetype PKCS12 -storepass $PASS >/dev/null
 chmod 644 /certs/truststore.p12
 "
+# keystore / key / truststore 的密碼檔:docker-compose 以 KAFKA_SSL_*_CREDENTIALS 指定檔名,cp 映像啟動時讀取(沒有這三個檔 controller / broker 會啟動失敗)
+for f in keystore_creds sslkey_creds truststore_creds; do printf '%s' "$PASS" > certs/$f; done
 touch certs/.done
 echo "OK: certs 完成 → demo/certs"
