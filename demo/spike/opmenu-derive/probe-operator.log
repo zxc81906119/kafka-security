@@ -1,0 +1,9 @@
+== [1] cluster id(MDS,不帶帳密)
+{"id":"XyZBQ3-GTvKH2qNfP7X33A","scope":{"path":[],"clusters":{"kafka-cluster":"XyZBQ3-GTvKH2qNfP7X33A"}}}
+== [2] broker 清單(kafka-broker-api-versions)
+broker1:9094 (id: 11 rack: null isFenced: false) -> (
+broker2:9094 (id: 12 rack: null isFenced: false) -> (
+== [3] controller 清單(kafka-metadata-quorum --describe --status)
+== [4] broker 設定 log.dirs(kafka-configs --describe --all)
+-- broker 11
+-- broker 12

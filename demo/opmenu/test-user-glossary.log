@@ -1,0 +1,13 @@
+== (1) 開關開(vm 預設),OPMENU_USER=ming 應被忽略,以 gary 登入 → 41 應 OK
+/tmp/om/lib/backend/docker.sh: line 5: cd: /tmp/om/../certs: No such file or directory
+/tmp/om/lib/backend/docker.sh: line 5: cd: /tmp/om/../config/clients: No such file or directory
+cat: can't open '/tp': No such file or directory
+/tmp/om/lib/backend/docker.sh: line 15: docker: command not found
+== (2) 密碼給 ming 的 → 應 登入失敗
+[31m帳號含不允許的字元[0m
+== (3) 開關關,OPMENU_USER=ming + ming 密碼 → 以 ming 登入 OK
+/tmp/om/lib/backend/docker.sh: line 5: cd: /tmp/om/../certs: No such file or directory
+/tmp/om/lib/backend/docker.sh: line 5: cd: /tmp/om/../config/clients: No such file or directory
+== 紀錄(操作者欄)
+2026-10-06 15:26:04 +0000 | DEMO | ming | login | ticket=- | sid=1791300364-21 | MDS_DOWN | 
+2026-10-06 15:26:04 +0000 | DEMO | ming | login | ticket=- | sid=1791300364-86 | MDS_DOWN | 

@@ -1,0 +1,107 @@
+
+===== 18
+已打包:/c/Users/user/IdeaProjects/untitled6/demo/opmenu/log/diag-20261006-224348-gary.tgz(32K)
+
+===== 13 demo-
+demo-yujie                     infra.ops-demo                    0  落後 0
+== demo-ming                      合計落後 12
+== demo-yujie                     合計落後 0
+
+===== 13 zzz
+[31m執行失敗(見上方訊息)[0m
+
+===== 34 svc-opmtest opm.
+Completed updating config for user svc-opmtest.
+帳號 svc-opmtest 已建立;密碼(只顯示這一次,請存入密碼庫):ht0YgFfJxWuj2z3Es5Yu
+
+===== 41 User:svc-opmtest
+[1m[41] 查看權限[0m  (授權與緊急)
+  輸入 AD 群組或帳號,列出它綁定的 role 與資源(需 SecurityAdmin 或 UserAdmin)
+-- 叢集層級的 role:
+["DeveloperRead","DeveloperWrite"]
+-- 資源層級的綁定:
+{"scope":{"clusters":{"kafka-cluster":"XyZBQ3-GTvKH2qNfP7X33A"}},"rolebindings":{"User:svc-opmtest":{"DeveloperRead":[{"resourceType":"Group","name":"opm.","patternType":"PREFIXED"},{"resourceType":"Topic","name":"opm.","patternType":"PREFIXED"}],"DeveloperWrite":[{"resourceType":"Topic","name":"opm.","patternType":"PREFIXED"}]}}}
+
+===== 35 svc-opmtest
+新密碼(只顯示這一次,請存入密碼庫):49nNRhbnFRc1p81co8C7
+
+===== 35 gary
+[31m執行失敗(見上方訊息)[0m
+
+===== 31 opm.events 1
+Created topic opm.events.
+
+===== 36 opmenu-nogroup earliest
+[33m將執行:重設 opmenu-nogroup 的讀取位置到 earliest(單號 CHG-2026-0010)[0m
+GROUP           TOPIC           PARTITION  NEW-OFFSET
+
+===== 33 opm.events
+  有 consumer 在線時拒絕;受保護的 topic 不處理
+[33m將執行:刪除 topic opm.events,資料不可復原(單號 CHG-2026-0010)[0m
+
+===== 41 沒有權限的人(ming,應 DENIED)
+[31mKafka 拒絕:你的群組沒有這項權限,請依變更單申請。[0m
+
+===== 42 add kafka-readonly DeveloperRead Topic opm.
+已完成:add Group:kafka-readonly DeveloperRead
+
+===== 41 Group:kafka-readonly
+["DeveloperRead"]
+-- 資源層級的綁定:
+{"scope":{"clusters":{"kafka-cluster":"XyZBQ3-GTvKH2qNfP7X33A"}},"rolebindings":{"Group:kafka-readonly":{"DeveloperRead":[{"resourceType":"Topic","name":"opm.","patternType":"PREFIXED"}]}}}
+
+===== 42 remove kafka-readonly DeveloperRead Topic opm.
+已完成:remove Group:kafka-readonly DeveloperRead
+
+===== 43 50
+已匯出最近 50 分鐘共 20 筆:/c/Users/user/IdeaProjects/untitled6/demo/opmenu/log/audit-20261006-224535-gary.jsonl
+
+===== 22 restproxy
+已重啟 restproxy
+
+===== 22 broker1
+[31m執行失敗(見上方訊息)[0m
+
+===== 23 restproxy 5
+(最近 5 行沒有錯誤或警告)
+
+===== 24 broker1 14
+容器環境的日誌由 docker 管理,沒有可清理的日誌檔(正式環境:刪除 broker1 上超過 14 天的日誌檔)
+
+===== 24 broker1 3
+[31m執行失敗(見上方訊息)[0m
+
+===== 91 kafka-topics --list
+orders.events
+orders.payments
+payments.events
+
+===== 91 kafka-delete-records --help
+[31m執行失敗(見上方訊息)[0m
+
+===== 收尾:刪測試帳號與綁定(用 bootstrap)
+Completed updating config for user svc-opmtest.
+
+===== 紀錄
+2026-10-06 22:44:27 +0800 | DEMO | gary | 34 新增應用系統帳號 | ticket=CHG-2026-0010 | sid=1791297858-5504 | OK | svc-opmtest opm. [rc=0 6s]
+2026-10-06 22:44:32 +0800 | DEMO | gary | 41 查看權限 | ticket=- | sid=1791297867-5645 | OK | User:svc-opmtest [rc=0 3s]
+2026-10-06 22:44:39 +0800 | DEMO | gary | 35 更換應用系統帳號密碼 | ticket=CHG-2026-0010 | sid=1791297872-5759 | OK | svc-opmtest [rc=0 4s]
+2026-10-06 22:44:42 +0800 | DEMO | gary | 35 更換應用系統帳號密碼 | ticket=CHG-2026-0010 | sid=1791297879-5852 | FAIL | gary [rc=1 0s]
+2026-10-06 22:44:49 +0800 | DEMO | gary | 31 建立 topic | ticket=CHG-2026-0010 | sid=1791297883-5935 | OK | opm.events 1 [rc=0 3s]
+2026-10-06 22:45:01 +0800 | DEMO | gary | 36 重設 consumer 讀取位置 | ticket=CHG-2026-0010 | sid=1791297890-6025 | OK | opmenu-nogroup earliest [rc=0 9s]
+2026-10-06 22:45:11 +0800 | DEMO | gary | 33 刪除 topic | ticket=CHG-2026-0010 | sid=1791297902-6139 | OK | opm.events [rc=0 6s]
+2026-10-06 22:45:16 +0800 | DEMO | ming | 41 查看權限 | ticket=- | sid=1791297912-6244 | DENIED | User:svc-orders [rc=1 2s]
+2026-10-06 22:45:21 +0800 | DEMO | gary | 42 指派或移除權限 | ticket=CHG-2026-0010 | sid=1791297917-6342 | OK | add kafka-readonly DeveloperRead Topic opm. [rc=0 2s]
+2026-10-06 22:45:27 +0800 | DEMO | gary | 41 查看權限 | ticket=- | sid=1791297921-6437 | OK | Group:kafka-readonly [rc=0 2s]
+2026-10-06 22:45:32 +0800 | DEMO | gary | 42 指派或移除權限 | ticket=CHG-2026-0010 | sid=1791297927-6551 | OK | remove kafka-readonly DeveloperRead Topic opm. [rc=0 1s]
+2026-10-06 22:45:57 +0800 | DEMO | gary | 43 匯出 audit 紀錄 | ticket=CHG-2026-0010 | sid=1791297932-6646 | OK | 50 [rc=0 22s]
+2026-10-06 22:46:01 +0800 | DEMO | gary | 22 重啟 REST Proxy 或 C3 | ticket=CHG-2026-0010 | sid=1791297957-6741 | OK | restproxy [rc=0 1s]
+2026-10-06 22:46:04 +0800 | DEMO | gary | 22 重啟 REST Proxy 或 C3 | ticket=CHG-2026-0010 | sid=1791297962-6824 | FAIL | broker1 [rc=1 0s]
+2026-10-06 22:46:10 +0800 | DEMO | gary | 23 查看服務日誌 | ticket=CHG-2026-0010 | sid=1791297965-6907 | OK | restproxy 5 [rc=0 1s]
+2026-10-06 22:46:14 +0800 | DEMO | gary | 24 清理過期的應用程式日誌 | ticket=CHG-2026-0010 | sid=1791297971-6994 | OK | broker1 14 [rc=0 0s]
+2026-10-06 22:46:18 +0800 | DEMO | gary | 24 清理過期的應用程式日誌 | ticket=CHG-2026-0010 | sid=1791297974-7073 | FAIL | broker1 3 [rc=1 0s]
+2026-10-06 22:46:21 +0800 | DEMO | gary | 91 bootstrap | ticket=CHG-2026-0010 | sid=1791297978-7156 | EMERGENCY | kafka-topics --list / 原因=test
+2026-10-06 22:46:24 +0800 | DEMO | gary | 91 緊急模式(bootstrap 身分執行一個指令) | ticket=CHG-2026-0010 | sid=1791297978-7156 | OK | kafka-topics --list [rc=0 3s]
+2026-10-06 22:46:28 +0800 | DEMO | gary | 91 緊急模式(bootstrap 身分執行一個指令) | ticket=CHG-2026-0010 | sid=1791297985-7258 | FAIL | kafka-delete-records --help [rc=1 0s]
+2026-10-06 22:46:32 +0800 | DEMO | gary | 91 bootstrap | ticket=CHG-2026-0010 | sid=1791297989-7340 | EMERGENCY | kafka-configs --alter --delete-config SCRAM-SHA-512 --entity-type users --entity-name svc-opmtest / 原因=test
+2026-10-06 22:46:36 +0800 | DEMO | gary | 91 緊急模式(bootstrap 身分執行一個指令) | ticket=CHG-2026-0010 | sid=1791297989-7340 | OK | kafka-configs --alter --delete-config SCRAM-SHA-512 --entity-type users --entity-name svc-opmtest [rc=0 4s]

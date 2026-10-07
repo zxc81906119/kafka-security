@@ -1,0 +1,101 @@
+
+===== ming = Operator
+-- [Operator]
+  1 KRaft quorum 狀態 (kafka-metadata-quorum describe --status)
+  → 被拒(授權)
+  2 各 topic 容量 (kafka-log-dirs --describe)
+  → 被拒(授權)
+  3 partition 搬移方案(只產生方案,不執行) kafka-reassign-partitions --generate
+  Error: Unable to read file /t.json
+  java.io.IOException: Unable to read file /t.json
+  → 有結果
+  4 preferred leader 選舉 (kafka-leader-election --election-type preferred --all-topic-partitions)
+  → 被拒(授權)
+  5 增加分割區 (kafka-topics --alter --partitions 2 on optest.a)
+  → 被拒(授權)
+  6 client quota 設定 (producer_byte_rate on client optest)
+  → 被拒(授權)
+  7 broker log level 動態調整 (broker-loggers kafka.server.KafkaApis=DEBUG)
+  → 被拒(授權)
+  8 刪除 consumer group (optest-g,拋棄式)
+  → 被拒(授權)
+  9 刪除底線開頭的非內部 topic (_optest-guard)
+  → 被拒(授權)
+
+===== ming = ResourceOwner Topic*+Group*
+-- [ResourceOwner Topic*+Group*]
+  1 KRaft quorum 狀態 (kafka-metadata-quorum describe --status)
+  → 被拒(授權)
+  2 各 topic 容量 (kafka-log-dirs --describe)
+  → 被拒(授權)
+  3 partition 搬移方案(只產生方案,不執行) kafka-reassign-partitions --generate
+  Error: Unable to read file /t.json
+  java.io.IOException: Unable to read file /t.json
+  → 有結果
+  4 preferred leader 選舉 (kafka-leader-election --election-type preferred --all-topic-partitions)
+  → 被拒(授權)
+  5 增加分割區 (kafka-topics --alter --partitions 2 on optest.a)
+  → (無輸出)
+  6 client quota 設定 (producer_byte_rate on client optest)
+  → 被拒(授權)
+  7 broker log level 動態調整 (broker-loggers kafka.server.KafkaApis=DEBUG)
+  → 被拒(授權)
+  8 刪除 consumer group (optest-g,拋棄式)
+  Error: Deletion of some consumer groups failed:
+  * Group 'optest-g' could not be deleted due to: org.apache.kafka.common.errors.GroupIdNotFoundException: The group id does not exist.
+  → 有結果
+  9 刪除底線開頭的非內部 topic (_optest-guard)
+  → (無輸出)
+
+===== ming = ClusterAdmin
+-- [ClusterAdmin]
+  1 KRaft quorum 狀態 (kafka-metadata-quorum describe --status)
+  ClusterId:              XyZBQ3-GTvKH2qNfP7X33A
+  LeaderId:               1
+  LeaderEpoch:            1
+  → 有結果
+  2 各 topic 容量 (kafka-log-dirs --describe)
+  Querying brokers for log directories information
+  Received log directory information from brokers 11,12
+  {"brokers":[{"logDirs":[{"partitions":[{"isFuture":false,"partition":"optest.a-0","size":0,"offsetLag":0},{"isFuture":fa
+  → 有結果
+  3 partition 搬移方案(只產生方案,不執行) kafka-reassign-partitions --generate
+  Error: Unable to read file /t.json
+  java.io.IOException: Unable to read file /t.json
+  → 有結果
+  4 preferred leader 選舉 (kafka-leader-election --election-type preferred --all-topic-partitions)
+  → (無輸出)
+  5 增加分割區 (kafka-topics --alter --partitions 2 on optest.a)
+  Error while executing topic command : Topic already has 2 partition(s).
+  [2026-10-06 08:29:29,361] ERROR org.apache.kafka.common.errors.InvalidPartitionsException: Topic already has 2 partition(s).
+   (org.apache.kafka.tools.TopicCommand)
+  → 有結果
+  6 client quota 設定 (producer_byte_rate on client optest)
+  Completed updating config for client optest.
+  → 有結果
+  7 broker log level 動態調整 (broker-loggers kafka.server.KafkaApis=DEBUG)
+  Completed updating config for broker-logger 11.
+  → 有結果
+  8 刪除 consumer group (optest-g,拋棄式)
+  → 被拒(授權)
+  9 刪除底線開頭的非內部 topic (_optest-guard)
+  → (無輸出)
+
+===== SCRAM 密碼改用檔案傳入(避免出現在 ps):kafka-configs --add-config-file
+Error while executing config command with args '--bootstrap-server broker1:9094 --command-config /clients/token-bootstrap.properties --alter --add-config-file /
+java.io.IOException: Is a directory
+	at java.base/sun.nio.ch.UnixFileDispatcherImpl.read0(Native Method)
+  → 密碼是否真的設成功(用該帳號 SCRAM 連線列 topic):
+  [2026-10-06 08:29:59,826] ERROR [AdminClient clientId=adminclient-1] Connection to node -1 (broker1/172.20.0.6:9094) failed authentication due to: Authentication failed during authentication due to in
+  [2026-10-06 08:29:59,829] WARN [AdminClient clientId=adminclient-1] Fatal error during metadata update (org.apache.kafka.clients.admin.internals.AdminMetadataManager)
+  → 有結果
+
+===== MDS:依 role 反查有哪些主體(定期權限覆核用)
+["Group:kafka-developers","User:restproxy"]
+[HTTP 200]
+["Group:kafka-admins","User:c3"]
+[HTTP 200]
+
+===== 收尾:刪拋棄式資源
+ming 的 role(應為空):
+[]

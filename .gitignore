@@ -21,15 +21,11 @@ node_modules/
 *.bak-*.dir/
 *.bak-*/
 
-# --- 執行時產生的日誌與暫存 ---
+# --- 執行時產生的日誌與暫存(實驗與測試的「結果」紀錄不在此列:spike run.log、rocky 測試 log、labguide verify*、opmenu test-*.log 都納入版控) ---
 demo/log/
 demo/opmenu/log/
-demo/opmenu/*.log
-demo/rocky/*.log
-demo/labguide/verify*.log
-demo/labguide/verify*.json
-demo/spike/**/*.log
 demo/pull.log
+demo/spike/up.log
 *.out
 
 # --- IDE 與 Office 暫存 ---

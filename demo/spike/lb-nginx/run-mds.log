@@ -1,0 +1,4 @@
+[0] 直連 MDS,restproxy 憑證         [HTTP 200]
+[0] 直連 MDS,不帶憑證             [HTTP 401]
+[1] L4 透傳,restproxy 憑證          [HTTP 200]
+[2] L7 終止 TLS,restproxy 憑證      [HTTP 401]

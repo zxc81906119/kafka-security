@@ -1,0 +1,39 @@
+== 啟動 Kafka(server 憑證 S1 ← CA1;server 信任庫 {CA1};要求 client 憑證)
+
+【T0 基準】server=S1(CA1),client=C1(CA1)+信任庫{CA1}
+  → OK
+  server 憑證:serial=742AC0198A9AEE2D0D9E5E5781B4E3EC4CFCF5E5 issuer=CN=Corp Root CA 
+
+【T1 只換 server 憑證,CA 不變】動態換 keystore → S2(同 CA1、新金鑰、新序號),client 完全不動
+  Completed updating config for broker 1.
+  server 憑證:serial=742AC0198A9AEE2D0D9E5E5781B4E3EC4CFCF5E6 issuer=CN=Corp Root CA 
+  → client(C1 + 信任庫{CA1},未改):OK
+
+【T4 CA 根憑證用「同一把金鑰」重新簽發(CA1b)】client 信任庫只放 CA1b
+  → client(C1 + 信任庫{CA1b}):OK
+  server 信任庫也換成 {CA1b}(動態):Completed updating config for broker 1.
+  → client(C1 + 信任庫{CA1b}):OK
+  還原 server 信任庫 {CA1}:Completed updating config for broker 1.
+
+【T2 CA 換金鑰:錯誤順序】先換 server 憑證到 S3(CA2),client 信任庫還是 {CA1}
+  Completed updating config for broker 1.
+  → client(C1 + 信任庫{CA1}):拒絕:PKIX path building failed
+  還原 S2:Completed updating config for broker 1.
+  → client(C1 + 信任庫{CA1}):OK
+
+【T3 CA 換金鑰:正確順序】
+ ① 所有信任庫先加入新根(server 與 client 都變成 {CA1,CA2})
+    server 信任庫:Completed updating config for broker 1.
+    → client(C1 + 信任庫{CA1,CA2}):OK
+ ② 換 server 憑證到 S3(CA2)
+    Completed updating config for broker 1.
+    server 憑證:serial=483AB5DAF5DB6D3D81F83D8F7E6285DD7FC208 issuer=CN=Corp Root CA G2 
+    → client(舊 client 憑證 C1 + 信任庫{CA1,CA2}):OK
+ ③ 重簽 client 憑證 → C2(CA2)
+    → client(C2 + 信任庫{CA1,CA2}):OK
+ ④ 全部確認後移除舊根(server 信任庫 {CA2},client 信任庫 {CA2})
+    server 信任庫:Completed updating config for broker 1.
+    → client(C2 + 信任庫{CA2}):OK
+    → 還沒換的舊 client 憑證(C1 + 信任庫{CA2}):拒絕:failed authentication
+
+(收尾)docker compose -p crtest down -v

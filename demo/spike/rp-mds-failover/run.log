@@ -1,0 +1,28 @@
+== [0] 兩台都在:基線
+  c:200/0.072574s b:200/0.248388s  c:200/0.040928s b:200/0.037737s  c:200/0.054704s b:200/0.040077s  c:200/0.059467s b:200/0.041007s  
+  broker1:       3 /security/1.0/impersonate 
+  broker2:       1 /security/1.0/impersonate 
+== [1] 停 broker1(它的 MDS 是設定裡的第一台)
+  停止後 20 秒,連送 8 組(c=憑證、b=Basic;碼/耗時):
+  c:200/8.061811s b:200/0.034146s  c:200/0.046853s b:200/0.034062s  c:200/0.040463s b:200/0.028674s  c:200/0.035009s b:200/0.027410s  c:200/0.057183s b:200/0.036529s  c:200/0.056152s b:200/0.036938s  c:200/0.056416s b:200/0.035678s  c:200/0.037104s b:200/0.035301s  
+  broker1: 
+  broker2:       8 /security/1.0/impersonate 
+== [2] broker1 仍停著,重啟 REST Proxy(啟動時的 Kafka client 登入也要拿 token)
+  restproxy 重啟後 healthy
+  c:200/0.459505s b:200/0.207103s  c:200/0.067704s b:200/0.030907s  c:200/0.050988s b:200/8.074685s  c:200/0.047829s b:200/0.032673s  c:200/0.045836s b:200/0.035072s  c:200/0.043089s b:200/0.034392s  
+  broker1: 
+  broker2:       3 /security/1.0/authenticate       6 /security/1.0/impersonate 
+2026-10-06T15:02:39.038761839Z main ERROR Loggers contains an invalid element or attribute "Logger"
+	return.429.instead.of.500.for.jetty.response.errors = false
+	return.429.instead.of.500.for.jetty.response.errors = false
+	return.429.instead.of.500.for.jetty.response.errors = false
+	return.429.instead.of.500.for.jetty.response.errors = false
+== [3] 啟動 broker1,停 broker2
+== [3] 停 broker2(broker1 在)
+  c:200/8.059729s b:200/0.037009s  c:200/0.053775s b:200/0.035908s  c:200/0.049253s b:200/0.029460s  c:200/0.040600s b:200/0.035298s  c:200/0.076735s b:200/0.032820s  c:200/0.053329s b:200/0.033143s  c:200/0.044592s b:200/0.032660s  c:200/0.041548s b:200/0.035832s  
+  broker1:       8 /security/1.0/impersonate 
+  broker2: 
+== [4] 全部恢復
+  c:200/0.075126s b:200/0.069432s  c:200/0.047687s b:200/0.035060s  c:200/0.069626s b:200/0.042791s  c:200/0.053975s b:200/0.042489s  
+  broker1:       2 /security/1.0/impersonate 
+  broker2:       2 /security/1.0/impersonate 

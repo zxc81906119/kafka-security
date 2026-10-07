@@ -1,0 +1,176 @@
+===== 環境:跳板機能 ssh 到節點、節點的假服務在跑
+node1
+active
+active
+===== 作業系統層:gary 讀不到 bootstrap 憑證;sudo 只開放包裝腳本
+    !visiblepw, always_set_home, match_group_by_gid, always_query_group_plugin, env_reset, env_keep="COLORS DISPLAY HOSTNAME HISTSIZE KDEDIR LS_COLORS", env_keep+="MAIL PS1 PS2 QTDIR USERNAME LANG LC_ADDRESS LC_CTYPE", env_keep+="LC_COLLATE LC_IDENTIFICATION LC_MEASUREMENT LC_MESSAGES", env_keep+="LC_MONETARY LC_NAME LC_NUMERIC LC_PAPER LC_TELEPHONE", env_keep+="LC_TIME LC_ALL LANGUAGE LINGUAS _XKB_CHARSET XAUTHORITY", secure_path=/sbin\:/bin\:/usr/sbin\:/usr/bin
+
+User gary may run the following commands on jump:
+    (opbootstrap) NOPASSWD: /usr/local/sbin/opmenu-bootstrap
+===== 登入殼層:su - gary 直接進選單(送 0 離開)
+操作者(作業系統登入帳號):gary
+
+===== 11
+-- 離線分割區(應為空):
+-- broker 在線清單:
+broker1:9094 (id: 11
+broker2:9094 (id: 12
+
+===== 12
+ Topic: _confluent-telemetry-metrics Partition: 9 Leader: 12 Replicas: 12,11 Isr: 11,12 Offline: Elr: LastKnownElr: 
+ Topic: _confluent-telemetry-metrics Partition: 10 Leader: 12 Replicas: 12,11 Isr: 11,12 Offline: Elr: LastKnownElr: 
+ Topic: _confluent-telemetry-metrics Partition: 11 Leader: 11 Replicas: 11,12 Isr: 11,12 Offline: Elr: LastKnownElr: 
+
+===== 13 demo-
+demo-yujie                     infra.ops-demo                    0  落後 0
+== demo-ming                      合計落後 69
+== demo-yujie                     合計落後 0
+
+===== 14 orders.events
+  min.insync.replicas=1
+  retention.ms=604800000
+Topic: orders.events	TopicId: xbCvIx6kSMitdP9M3zG8Nw	PartitionCount: 1	ReplicationFactor: 2	Configs: min.insync.replicas=1
+
+===== 16
+  各節點 Kafka 資料目錄
+node1                        磁碟用量 9%  剩餘 877G
+
+===== 17
+client-bootstrap.pem             Jan  4 12:01:22 2029 GMT
+client-c3.pem                    Jan  4 11:51:37 2029 GMT
+client-restproxy.pem             Jan  4 11:51:38 2029 GMT
+server.pem                       Jan  4 11:51:37 2029 GMT
+
+===== 18
+已打包:/var/log/opmenu/diag-20261006-050035-gary.tgz(4.0K)
+
+===== 21 node1:confluent-server
+[33m將執行:重啟 node1:confluent-server(單號 CHG-2026-0050);期間該台的分割區會切換 leader[0m
+已重啟 node1 的 confluent-server
+
+===== 22 node1:confluent-control-center
+已重啟 node1 的 confluent-control-center
+
+===== 23 node1:confluent-server 10
+[1m[23] 查看服務日誌[0m  (服務操作)
+  最近 N 行的錯誤與警告;會記錄誰看了哪台的日誌
+Oct 06 05:00:22 node1 fake-service[36]: WARN [confluent-server] heartbeat 6: simulated warning
+
+===== 24 node1 14
+已刪除 2 個超過 14 天的日誌檔(node1)
+
+===== 24 node1 3
+[31m執行失敗(見上方訊息)[0m
+
+===== 31 rk.events 1
+Created topic rk.events.
+
+===== 32 rk.events 3600000
+Completed updating config for topic rk.events.
+
+===== 34 svc-rktest rk.
+Completed updating config for user svc-rktest.
+帳號 svc-rktest 已建立;密碼(只顯示這一次,請存入密碼庫):LK3gs4Jwj7YzZ5g8xgSO
+
+===== 41 User:svc-rktest
+-- 叢集層級的 role:
+["DeveloperRead","DeveloperWrite"]
+-- 資源層級的綁定:
+{"scope":{"clusters":{"kafka-cluster":"XyZBQ3-GTvKH2qNfP7X33A"}},"rolebindings":{"User:svc-rktest":{"DeveloperRead":[{"resourceType":"Group","name":"rk.","patternType":"PREFIXED"},{"resourceType":"Topic","name":"rk.","patternType":"PREFIXED"}],"DeveloperWrite":[{"resourceType":"Topic","name":"rk.","patternType":"PREFIXED"}]}}}
+
+===== 35 svc-rktest
+新密碼(只顯示這一次,請存入密碼庫):kspinT8VKalZWQ3jh4Op
+
+===== 36 rk-nogroup earliest
+[33m將執行:重設 rk-nogroup 的讀取位置到 earliest(單號 CHG-2026-0050)[0m
+GROUP           TOPIC           PARTITION  NEW-OFFSET
+
+===== 42 add kafka-readonly DeveloperRead Topic rk.
+已完成:add Group:kafka-readonly DeveloperRead
+
+===== 42 remove kafka-readonly DeveloperRead Topic rk.
+已完成:remove Group:kafka-readonly DeveloperRead
+
+===== 43 20
+已匯出 20 筆:/var/log/opmenu/audit-20261006-050108-gary.jsonl
+
+===== 33 rk.events
+[33m將執行:刪除 topic rk.events,資料不可復原(單號 CHG-2026-0050)[0m
+
+===== 91 kafka-topics --list
+orders.events
+orders.payments
+payments.events
+
+===== 91 kafka-delete-records --help
+[31m執行失敗(見上方訊息)[0m
+
+===== 收尾:刪測試帳號(用 bootstrap)
+Completed updating config for user svc-rktest.
+
+===== 冒用測試:環境變數給 OPMENU_USER=ming + ming 的密碼;設定檔 OPMENU_USER_FROM_OS=1 蓋過環境變數,身分仍是 gary → 應 登入失敗
+[31m登入失敗:帳號或密碼不正確。[0m
+
+===== sshd 旁路:ssh gary@jump id(應:進選單、不執行 id;紀錄 BYPASS_ATTEMPT)
+操作者(作業系統登入帳號):gary
+[31m登入失敗:帳號或密碼不正確。[0m
+===== sshd 旁路:scp 與 sftp(應:失敗)
+scp rc=255
+sftp rc=255
+===== sshd 旁路:轉埠(開通道後真的連一次;應:administratively prohibited,連線失敗)
+經通道連 broker:HTTP 000
+administratively prohibited
+
+===== ssh 認證開關:password 模式(用登入選單的 AD 密碼 ssh 到節點,金鑰停用)
+已重啟 node1 的 confluent-control-center
+===== ssh 認證開關:password 模式但節點密碼不同(節點沒接 AD)→ 應 失敗;測完還原
+node1                        gary@node1: Permission denied (publickey,gssapi-keyex,gssapi-with-mic,password).
+[31m執行失敗(見上方訊息)[0m
+===== ControlMaster:同一 session 內連兩次節點,第二次重用連線(看 ssh -O check)
+Master running (pid=3387)
+Exit request sent.
+
+===== MDS 失效轉移:第一台填不存在的主機(broker9),應自動用第二台
+-- 資源層級的綁定:
+{"scope":{},"rolebindings":{}}
+===== MDS 失效轉移:bootstrap 包裝腳本(暫改設定檔,測完還原)
+["SystemAdmin"]
+HTTP 200===== MDS 全部連不上(應:登入失敗,不是當掉)
+MDS 全部連不上:https://broker9:8091
+[31m無法連到 MDS,請確認叢集狀態或通知管理員。[0m
+
+===== 紀錄(容器內 /var/log/opmenu/opmenu.log)
+2026-10-06 05:00:28 | ROCKY | gary | 13 查看 consumer 落後量 | ticket=- | OK | demo-
+2026-10-06 05:00:33 | ROCKY | gary | 14 查看某個 topic 的設定 | ticket=- | OK | orders.events
+2026-10-06 05:00:34 | ROCKY | gary | 16 查看磁碟與資料目錄用量 | ticket=- | OK | 
+2026-10-06 05:00:34 | ROCKY | gary | 17 查看憑證到期日 | ticket=- | OK | 
+2026-10-06 05:00:39 | ROCKY | gary | 18 收集診斷資訊 | ticket=- | OK | 
+2026-10-06 05:00:42 | ROCKY | gary | 21 重啟單一 broker | ticket=CHG-2026-0050 | OK | node1:confluent-server
+2026-10-06 05:00:43 | ROCKY | gary | 22 重啟 REST Proxy 或 C3 | ticket=CHG-2026-0050 | OK | node1:confluent-control-center
+2026-10-06 05:00:44 | ROCKY | gary | 23 查看服務日誌 | ticket=CHG-2026-0050 | OK | node1:confluent-server 10
+2026-10-06 05:00:45 | ROCKY | gary | 24 清理過期的應用程式日誌 | ticket=CHG-2026-0050 | OK | node1 14
+2026-10-06 05:00:45 | ROCKY | gary | 24 清理過期的應用程式日誌 | ticket=CHG-2026-0050 | FAIL | node1 3
+2026-10-06 05:00:48 | ROCKY | gary | 31 建立 topic | ticket=CHG-2026-0050 | OK | rk.events 1
+2026-10-06 05:00:53 | ROCKY | gary | 32 修改 topic 保留時間 | ticket=CHG-2026-0050 | OK | rk.events 3600000
+2026-10-06 05:00:56 | ROCKY | gary | 34 新增應用系統帳號 | ticket=CHG-2026-0050 | OK | svc-rktest rk.
+2026-10-06 05:00:57 | ROCKY | gary | 41 查看權限 | ticket=- | OK | User:svc-rktest
+2026-10-06 05:01:00 | ROCKY | gary | 35 更換應用系統帳號密碼 | ticket=CHG-2026-0050 | OK | svc-rktest
+2026-10-06 05:01:06 | ROCKY | gary | 36 重設 consumer 讀取位置 | ticket=CHG-2026-0050 | OK | rk-nogroup earliest
+2026-10-06 05:01:07 | ROCKY | gary | 42 指派或移除權限 | ticket=CHG-2026-0050 | OK | add kafka-readonly DeveloperRead Topic rk.
+2026-10-06 05:01:08 | ROCKY | gary | 42 指派或移除權限 | ticket=CHG-2026-0050 | OK | remove kafka-readonly DeveloperRead Topic rk.
+2026-10-06 05:01:13 | ROCKY | gary | 43 匯出 audit 紀錄 | ticket=CHG-2026-0050 | OK | 20
+2026-10-06 05:01:30 | ROCKY | gary | 33 刪除 topic | ticket=CHG-2026-0050 | OK | rk.events
+2026-10-06 05:01:31 | ROCKY | gary | 91 bootstrap | ticket=CHG-2026-0050 | EMERGENCY | kafka-topics --list
+2026-10-06 05:01:33 | ROCKY | gary | 91 緊急模式(bootstrap 身分執行一個指令) | ticket=CHG-2026-0050 | OK | kafka-topics --list
+2026-10-06 05:01:34 | ROCKY | gary | 91 緊急模式(bootstrap 身分執行一個指令) | ticket=CHG-2026-0050 | FAIL | kafka-delete-records --help
+2026-10-06 05:01:35 | ROCKY | gary | 91 bootstrap | ticket=CHG-2026-0050 | EMERGENCY | kafka-configs --alter --delete-config SCRAM-SHA-512 --entity-type users --entity-name svc-rktest
+2026-10-06 05:01:37 | ROCKY | gary | 91 緊急模式(bootstrap 身分執行一個指令) | ticket=CHG-2026-0050 | OK | kafka-configs --alter --delete-config SCRAM-SHA-512 --entity-type users --entity-name svc-rktest
+2026-10-06 05:01:39 | ROCKY | gary | login | ticket=- | AUTH_FAIL | 
+2026-10-06 05:01:39 | ROCKY | gary | ssh 指令被擋 | ticket=- | BYPASS_ATTEMPT | id
+2026-10-06 05:01:39 | ROCKY | gary | login | ticket=- | AUTH_FAIL | 
+2026-10-06 05:01:40 | ROCKY | gary | ssh 指令被擋 | ticket=- | BYPASS_ATTEMPT | /usr/libexec/openssh/sftp-server
+2026-10-06 05:01:41 | ROCKY | gary | ssh 指令被擋 | ticket=- | BYPASS_ATTEMPT | /usr/libexec/openssh/sftp-server
+2026-10-06 05:01:46 | ROCKY | gary | 22 重啟 REST Proxy 或 C3 | ticket=CHG-2026-0051 | OK | node1:confluent-control-center
+2026-10-06 05:01:51 | ROCKY | gary | 16 查看磁碟與資料目錄用量 | ticket=- | FAIL | 
+2026-10-06 05:02:07 | ROCKY | gary | 41 查看權限 | ticket=- | OK | User:svc-orders
+2026-10-06 05:02:15 | ROCKY | gary | login | ticket=- | MDS_DOWN | 
