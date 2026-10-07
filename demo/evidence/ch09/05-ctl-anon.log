@@ -1,4 +1,0 @@
-# 【內部通道】CONTROLLER 埠(9093):只有 TLS、沒有 SASL 身分的連線 → 拒絕
-$ kafka-broker-api-versions --bootstrap-server controller1:9093 --command-config ssl-only.properties
-Request METADATA failed on brokers [controller1:9093 (id: -1 rack: null isFenced: false)]
-java.lang.RuntimeException: Request METADATA failed on brokers [controller1:9093 (id: -1 rack: null isFenced: false)]

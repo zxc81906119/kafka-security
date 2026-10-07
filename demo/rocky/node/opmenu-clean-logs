@@ -1,6 +1,0 @@
-#!/bin/bash
-# 清理超過 N 天的應用程式日誌(只碰 /var/log/kafka,不碰 data directory);由 sudo 規則開放給操作員
-set -u
-days="${1:?天數}"; [[ "$days" =~ ^[0-9]+$ ]] || { echo "天數要是數字"; exit 2; }
-n=$(find /var/log/kafka -type f -name 'server.log*' -mtime +"$days" -print -delete | wc -l)
-echo "已刪除 $n 個超過 $days 天的日誌檔($(hostname))"

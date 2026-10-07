@@ -1,4 +1,0 @@
-# 【授權前】憑證通過認證,但還沒有任何 role → 寫入被拒(403)
-$ curl --cert client-legacy-orders.pem --key client-legacy-orders.key -X POST https://restproxy:8086/topics/orders.events -d '{...}'
-{"offsets":[{"partition":null,"offset":null,"error_code":40301,"error":"Not authorized to access topics: [orders.events]"}],"key_schema_id":null,"value_schema_id":null}
-[HTTP 403]

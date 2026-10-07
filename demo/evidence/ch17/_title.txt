@@ -1,1 +1,0 @@
-傳輸加密補強:LDAPS、監控 HTTPS + Basic、C3 HTTPS

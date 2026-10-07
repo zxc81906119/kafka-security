@@ -1,4 +1,0 @@
-# 【C3 操作】gary 在 Control Center 把 orders.* 的寫入權限指派給「User:svc-orders」—— 與 AD 群組並列在同一張表
-$ (瀏覽器)C3 → Manage role assignments → Topic → Add role assignment(User / svc-orders / DeveloperWrite / orders.)
-  📸 ch07/c7-1-svc-form.png — C3:Add role assignment — User svc-orders / DeveloperWrite / orders.
-  📸 ch07/c7-1-svc-saved.png — C3:指派完成後的 Topic 範圍列表

@@ -1,6 +1,0 @@
---- 不帶帳密
-Unauthorized
-[HTTP 401]
---- 帶 Basic 帳密(c3)
-{"status":"success","data":{"resultType":"vector","result":[]}}
-[HTTP 200]

@@ -1,3 +1,0 @@
-# 【gary 寫入】同一個呼叫 → 成功,回傳 offset
-$ curl -u gary:*** -X POST https://broker1:8091/kafka/v3/clusters/XyZBQ3-GTvKH2qNfP7X33A/topics/orders.events/records -d '{...}'
-"error_code":200 "offset":58 [HTTP 200] 

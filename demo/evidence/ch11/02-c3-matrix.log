@@ -1,4 +1,0 @@
-# 【C3】gary 在 Manage role assignments 檢視:群組 → 角色
-$ (瀏覽器)C3 → Administration → Manage role assignments → Cluster / Topic
-  📸 ch11/c11-1-matrix-cluster.png — C3 角色指派:Cluster 範圍(群組 → 角色)
-  📸 ch11/c11-2-matrix-topic.png — C3 角色指派:Topic 範圍(群組 → 角色)

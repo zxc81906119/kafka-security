@@ -1,3 +1,0 @@
-[25] 開始維護模式(Alertmanager silence)  (服務操作)
-  對指定 node 靜音告警一段時間(最長 OPMENU_MAINT_MAX_MIN 分鐘),重啟或維護前使用;記錄是誰、哪張 ticket
-目前有其他變更作業進行中(gary 27 滾動重啟所有 broker | 2026-10-07 19:24:36),請稍後再試

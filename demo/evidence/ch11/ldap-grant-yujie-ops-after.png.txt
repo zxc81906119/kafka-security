@@ -1,1 +1,0 @@
-LDAP(模擬 AD)群組 ops:加入 yujie 之後

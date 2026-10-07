@@ -1,1 +1,0 @@
-LDAP(模擬 AD)群組 rbac-admin:移除 ming 之後

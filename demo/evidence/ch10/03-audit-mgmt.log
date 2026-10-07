@@ -1,9 +1,0 @@
-# 【權限變更紀錄】誰嘗試改授權(MDS 管理事件 AlterAccess)—— 非管理員的嘗試也被記錄
-$ kafka-console-consumer --topic confluent-audit-log-events  | mds.Authorize / AlterAccess
-  33×  User:GARY          mds.Authorize       ALLOWED  security-metadata
-  26×  User:bootstrap     mds.Authorize       ALLOWED  orders.
-  21×  User:bootstrap     mds.Authorize       ALLOWED  security-metadata
-   9×  User:GARY          mds.Authorize       ALLOWED  orders.
-   4×  User:bootstrap     mds.Authorize       ALLOWED  payments.
-   1×  User:MING          mds.Authorize       DENIED   security-metadata
-   1×  User:YUJIE         mds.Authorize       DENIED   payments.

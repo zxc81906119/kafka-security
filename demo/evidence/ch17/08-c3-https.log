@@ -1,3 +1,0 @@
-# 【C3 ①】C3 走 HTTPS(9022):憑證由 demo CA 驗證通過(主機名稱在 SAN 內)
-$ curl --cacert ca.pem https://control-center:9022/login
-憑證驗證結果 0(0 = 通過) HTTP 200

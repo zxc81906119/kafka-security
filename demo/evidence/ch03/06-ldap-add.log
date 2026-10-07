@@ -1,6 +1,0 @@
-# 【AD 操作】在 AD(LDAP 管理介面)把 ming 加進群組 orders-write —— Kafka/RBAC 這邊完全不動
-$ (瀏覽器)phpLDAPadmin → cn=orders-write → member 加入 CN=MING
-  📸 ch03/ldap-add-ming-before.png — LDAP(模擬 AD)群組 orders-write:加入 ming 之前
-  📸 ch03/ldap-add-ming-form.png — LDAP 管理介面:新增 member 值(ming)
-  📸 ch03/ldap-add-ming-after.png — LDAP(模擬 AD)群組 orders-write:加入 ming 之後
-[23:18:43] 已在 AD 加入 ming

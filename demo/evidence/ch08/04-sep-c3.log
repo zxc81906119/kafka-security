@@ -1,3 +1,0 @@
-# 【對照:每元件各一張(不同 DN)】C3 的憑證 CN=c3
-$ curl --cert client-c3.pem https://broker1:8091/security/1.0/authenticate
-MDS 看到的 principal = "c3"

@@ -1,4 +1,0 @@
-# 【ming 執行】同一支腳本,讀的是 ming 自己的設定(他是 orders-read)→ 被拒
-$ HOME=~ming  ./orders-heartbeat.sh
-org.apache.kafka.common.errors.TopicAuthorizationException: Not authorized to access topics: [orders.events]
-FAILED: 沒有權限(使用 /home/appuser/.kafka/client.properties)

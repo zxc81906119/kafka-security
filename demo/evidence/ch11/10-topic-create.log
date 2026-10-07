@@ -1,3 +1,0 @@
-# 【topic 管理】yujie(topic-admin)建立 infra.ops-demo → 成功
-$ kafka-topics --command-config yujie.properties --create --topic infra.ops-demo
-Created topic infra.ops-demo.

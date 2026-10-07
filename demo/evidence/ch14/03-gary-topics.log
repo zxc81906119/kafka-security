@@ -1,3 +1,0 @@
-# 【管理員 gary】用 AD 帳密列出 topic → 200,看得到全部 topic
-$ curl -u gary:*** https://broker1:8091/kafka/v3/clusters/XyZBQ3-GTvKH2qNfP7X33A/topics
-"kind":"KafkaTopicList" "kind":"KafkaTopic" [HTTP 200] 

@@ -1,3 +1,0 @@
-# 【監控 ①】Prometheus:HTTPS + Basic。不帶帳密 401、錯誤密碼 401、正確 200;明文 HTTP 被拒(400)
-$ curl https://prometheus:9090/api/v1/query?query=count(up)   # 對照:無帳密 / 錯密碼 / 正確 / 明文 HTTP
-無帳密 [HTTP 401];錯誤密碼 [HTTP 401];正確帳密 [HTTP 200];明文 HTTP [HTTP 400]

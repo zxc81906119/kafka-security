@@ -1,3 +1,0 @@
-# 【授權前】yujie 屬於 AD 群組 orders-write,但還沒有任何 role → 寫入被拒
-$ echo hello | kafka-console-producer --bootstrap-server broker1:9094 --command-config yujie.properties --topic orders.events
-

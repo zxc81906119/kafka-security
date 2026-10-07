@@ -1,1 +1,0 @@
-broker 內建 Admin REST 的保護(匿名擋下、依使用者授權)

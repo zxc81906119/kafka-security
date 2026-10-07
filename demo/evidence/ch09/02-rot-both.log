@@ -1,4 +1,0 @@
-# 【輪替 2/4】新舊帳號同時可用(應用逐步切換到新帳號)
-$ producer(svc-orders)  與  producer(svc-orders-v2)
-→ 結果:成功
-→ 結果:成功

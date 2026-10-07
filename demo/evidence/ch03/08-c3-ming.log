@@ -1,3 +1,0 @@
-# 【C3】ming 重新整理 Control Center:現在看得到 orders.* topics
-$ (瀏覽器)ming 登入 C3 → Topics
-  📸 ch03/c3-3-ming-topics.png — ming 加入 AD 群組後,C3 Topics 清單出現 orders.*(Kafka 端零變更)

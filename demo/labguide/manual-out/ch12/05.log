@@ -1,4 +1,0 @@
-{"offsets":[{"partition":0,"offset":63,"error_code":null,"error":null}],"key_schema_id":null,"value_schema_id":null}
-[HTTP 200]
-{"offsets":[{"partition":null,"offset":null,"error_code":40301,"error":"Not authorized to access topics: [payments.events]"}],"key_schema_id":null,"value_schema_id":null}
-[HTTP 403]

@@ -1,3 +1,0 @@
-# 【以共用憑證當身分(2)】REST Proxy 也出示「同一張共用憑證」
-$ curl --cert shared-server.pem https://broker1:8091/security/1.0/authenticate
-MDS 看到的 principal = "kafka.demo.local"

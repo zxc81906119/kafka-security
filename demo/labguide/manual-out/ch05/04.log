@@ -1,6 +1,0 @@
-{"auth_token":"eyJhbGciOiJSUzI1NiIsImtpZCI6bnVsbH0.eyJqdGkiOiJ2My1uSXhvbldGTjViaGlxMnlmWDVBIiwiaXNzIjoiQ29uZmx1ZW50Iiwic3ViIjoiR0FSWSIsImV4cCI6MTc5MTM3NTA2NSwiaWF0IjoxNzkxMzcxNDY1LCJuYmYiOjE3OTEzNzE0MDUsImF6cCI6IkdBUlkiLCJhdXRoX3RpbWUiOjE3OTEzNzE0NjV9.QfH1MWXM6qZvQf45c5fymh3psVxtAZ-8_63Xb_aI-_LyApOIvy29lXOalAh0F7eNCrCtebg-X3ZiyPeoKMxASpUDG3xzbs1HH8DUnrQ6w-8PiJdnQ52NId8usfcOtVd0_6--ni2qCi8wYMWAJ6JVlmOOsA--iquB0b1SIFgeOn-xL3VoVFY_ATPKJXjpAZYhziP2WltaiVLTsXjzlwrCC2I3zvW05vlDwDFV64LAZyBrhcN7DxoU9LTGPjB4_8M_o9eGWq0v6dxTiNsSacFcpR_XmjPWfAOGizGnjAKMr0NtosmOzELmOZL1IUUVCmB493_j8lvw4R8-R9SRexfsXg","token_type":"Bearer","expires_in":3600}
-[HTTP 200]
-{"Group:orders-write":{"DeveloperWrite":[{"resourceType":"Topic","name":"orders.","patternType":"PREFIXED"}],"DeveloperRead":[{"resourceType":"Topic","name":"orders.","patternType":"PREFIXED"}]}}
-[HTTP 200]
-{"error_code":40301,"message":"Action(scope='Scope(path='[]', clusters='{kafka-cluster=XyZBQ3-GTvKH2qNfP7X33A}')', resourcePattern='Topic:PREFIXED:payments.', operation='AlterAccess', resourceReferenceCount='1', logIfAllowed='true', logIfDenied='true') not permitted for User:YUJIE"}
-[HTTP 403]

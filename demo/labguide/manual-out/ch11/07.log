@@ -1,7 +1,0 @@
-modifying entry "cn=topic-admin,ou=groups,dc=corp,dc=demo"
-Created topic infra.ops-demo.
-ops-secret-1
-[HTTP 204]
-ERROR Error processing message, terminating consumer process: 
-org.apache.kafka.common.errors.TimeoutException
-Processed a total of 1 messages

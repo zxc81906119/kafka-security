@@ -1,4 +1,0 @@
-# 【AD 掛了】人的「新登入」失敗:yujie 以 AD 帳密連線 → 無法驗證
-$ (openldap 已停止)  producer(yujie)
-org.apache.kafka.common.errors.SaslAuthenticationException: Authentication failed: Invalid username or password
-→ 結果:被拒絕

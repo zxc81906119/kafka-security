@@ -1,3 +1,0 @@
-# 【ming 寫入】透過 Admin REST produce → 內容回 40301 Not authorized(注意:HTTP 狀態碼仍是 200,錯誤在內容裡,監控要看 error_code)
-$ curl -u ming:*** -X POST https://broker1:8091/kafka/v3/clusters/XyZBQ3-GTvKH2qNfP7X33A/topics/orders.events/records -d '{...}'
-"error_code":40301 "message":"Not authorized to access topics: [orders.events]" [HTTP 200] 

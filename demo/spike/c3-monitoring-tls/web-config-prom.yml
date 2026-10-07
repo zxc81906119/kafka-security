@@ -1,5 +1,0 @@
-tls_server_config:
-  cert_file: /etc/tls/server-san.pem
-  key_file: /etc/tls/server.key
-basic_auth_users:
-  c3: "$2y$10$0JXPKBF0fDKvbXh66WbH2utWZAsLk4rolzu2MsMtZ/MDsldjOr9tW"

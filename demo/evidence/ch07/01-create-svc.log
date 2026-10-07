@@ -1,3 +1,0 @@
-# 【建立服務身分】AD 裡沒有這個帳號:在 Kafka 內建立 SCRAM 帳號 svc-orders(密碼存密碼庫,不是 AD)
-$ kafka-configs --alter --add-config 'SCRAM-SHA-512=[password=***]' --entity-type users --entity-name svc-orders
-Completed updating config for user svc-orders.

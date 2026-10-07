@@ -1,5 +1,0 @@
-# 【沒有權限的人】明(唯讀)用同一個選單匯出權限清單 → 被 Kafka RBAC 拒絕;選單本身不判斷權限
-$ OPMENU_USER=ming ./opmenu.sh --run 44
-  列出各 role 的所有 principal 與資源範圍(CSV),交給定期權限覆核;需 SecurityAdmin 或 UserAdmin
-查詢 role SystemAdmin 失敗(HTTP 403);需要 SecurityAdmin 或 UserAdmin
-[31mKafka 拒絕:你的群組沒有這項權限,請依 ticket 申請。[0m

@@ -1,6 +1,0 @@
-subject=CN=legacy-orders, O=Demo
-issuer=CN=Demo Private CA, O=Demo
-notBefore=Oct  7 11:32:16 2026 GMT
-notAfter=Jan  9 11:32:16 2029 GMT
-Certificate request self-signature ok
-subject=CN=legacy-orders, O=Demo

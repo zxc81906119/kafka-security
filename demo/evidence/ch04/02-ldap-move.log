@@ -1,8 +1,0 @@
-# 【AD 操作】ming 改為「只看資料」:AD 管理介面把 ming 從 orders-write 移到 orders-read
-$ (瀏覽器)phpLDAPadmin:orders-read 加入 ming、orders-write 移除 ming
-  📸 ch04/ldap-ming-to-readonly-before.png — LDAP(模擬 AD)群組 orders-read:加入 ming 之前
-  📸 ch04/ldap-ming-to-readonly-form.png — LDAP 管理介面:新增 member 值(ming)
-  📸 ch04/ldap-ming-to-readonly-after.png — LDAP(模擬 AD)群組 orders-read:加入 ming 之後
-  📸 ch04/ldap-ming-from-developers-before.png — LDAP(模擬 AD)群組 orders-write:移除 ming 之前
-  📸 ch04/ldap-ming-from-developers-after.png — LDAP(模擬 AD)群組 orders-write:移除 ming 之後
-[23:28:10] AD 群組異動完成

@@ -1,3 +1,0 @@
-# 【匿名】不帶任何身分呼叫 Admin REST → 401(沒設定保護時,這個呼叫會直接成功,甚至曾讓 broker 記憶體耗盡而崩潰)
-$ curl https://broker1:8091/kafka/v3/clusters        # 不帶任何憑證
-[HTTP 401] 

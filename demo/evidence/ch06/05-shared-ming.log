@@ -1,3 +1,0 @@
-# 【反面教材】同一份共用設定,換 ming 用 → 也成功(連唯讀的人都能寫了!)
-$ HOME=~shared  ./orders-heartbeat.sh        # ming 執行
-OK: 已送出 heartbeat(使用 /home/appuser/.kafka/client.properties)

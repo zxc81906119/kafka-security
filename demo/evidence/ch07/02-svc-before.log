@@ -1,5 +1,0 @@
-# 【授權前】svc-orders 認證成功,但還沒有任何 role → 寫入被拒
-$ echo order | kafka-console-producer --command-config svc-orders.properties --topic orders.events
-WARN [Producer clientId=console-producer] The metadata response from the cluster reported a recoverable issue with correlation id 1 : {orders.events=TOPIC_AUTHORIZATION_FAILED}
-ERROR [Producer clientId=console-producer] Topic authorization failed for topics [orders.events]
-org.apache.kafka.common.errors.TopicAuthorizationException: Not authorized to access topics: [orders.events]

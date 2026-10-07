@@ -1,5 +1,0 @@
-# 【25 開始維護模式】對 broker1 靜音告警 30 分鐘(Alertmanager silence;記錄操作者與核准單號)
-$ ./opmenu.sh --run 25 broker1 30
-  對指定 node 靜音告警一段時間(最長 OPMENU_MAINT_MAX_MIN 分鐘),重啟或維護前使用;記錄是誰、哪張 ticket
-[33m將執行:靜音 broker1 的告警 30 分鐘(ticket CHG-2026-0001)[0m
-維護模式已開始:broker1,到 2026-10-07T10:57:10Z(UTC);silence id=74fbb6d6-8862-43fb-9b88-7dd1ed3896a9(用項目 26 提前結束)

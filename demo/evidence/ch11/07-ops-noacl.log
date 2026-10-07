@@ -1,4 +1,0 @@
-# 【分權重點】ops 也不能改授權:yujie 嘗試給 orders-write 開 infra.* 讀取權 → 403
-$ POST /security/1.0/principals/Group:orders-write/roles/DeveloperRead/bindings   # yujie
-{"error_code":40301,"message":"Action(scope='Scope(path='[]', clusters='{kafka-cluster=XyZBQ3-GTvKH2qNfP7X33A}')', resourcePattern='Topic:PREFIXED:infra.', operation='AlterAccess', resourceReferenceCo
-[HTTP 403]

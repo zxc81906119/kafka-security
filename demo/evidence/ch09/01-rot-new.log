@@ -1,4 +1,0 @@
-# 【輪替 1/4】建立新帳號 svc-orders-v2(新密碼)並給同樣的 RBAC 權限 —— 新舊並行,不中斷
-$ kafka-configs --alter ... --entity-name svc-orders-v2   +   role binding(同 svc-orders)
-Completed updating config for user svc-orders-v2.
-  bind User:svc-orders-v2 DeveloperWrite Topic:orders.(PREFIXED) ->  [HTTP 204] 

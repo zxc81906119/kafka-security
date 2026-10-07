@@ -1,3 +1,0 @@
-# 【機器 ①-風險】c3 的憑證換到的 token 就是管理員:可以建立、刪除 role binding(官方要求 C3 主體必須是 SystemAdmin)
-$ POST / DELETE /security/1.0/principals/User:probe-user/roles/DeveloperRead/bindings   (Bearer c3 token)
-用 c3 的 token 建立 role binding → [HTTP 204] ;清除 → [HTTP 204]

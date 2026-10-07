@@ -1,4 +1,0 @@
-# 【內部通道】INTERNAL 埠(9092)只是另一個 SASL 埠:有效的 SCRAM 帳號(svc-orders)能「認證」進去 —— 所以必須靠防火牆只開放給 broker/controller 節點
-$ kafka-topics --bootstrap-server broker1:9092 --command-config svc-orders.properties --list
-orders.events
-orders.payments

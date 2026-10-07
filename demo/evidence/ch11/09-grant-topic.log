@@ -1,6 +1,0 @@
-# 【臨時提權 2】經核准,AD 管理員把 yujie 加進 topic-admin
-$ (瀏覽器)phpLDAPadmin:topic-admin 加入 yujie
-  📸 ch11/ldap-grant-yujie-topic-admin-before.png — LDAP(模擬 AD)群組 topic-admin:加入 yujie 之前
-  📸 ch11/ldap-grant-yujie-topic-admin-form.png — LDAP 管理介面:新增 member 值(yujie)
-  📸 ch11/ldap-grant-yujie-topic-admin-after.png — LDAP(模擬 AD)群組 topic-admin:加入 yujie 之後
-[21:42:57] AD 群組異動完成

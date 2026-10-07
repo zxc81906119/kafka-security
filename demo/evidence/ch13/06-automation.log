@@ -1,3 +1,0 @@
-# 【機器 ②】自動化(例如 CI)呼叫 C3 API:用憑證向 MDS 換 token 後帶 Bearer → 200;沒有 token → 401
-$ curl -H "Authorization: Bearer <憑證換來的 token>" https://control-center:9022/2.0/clusters/kafka
-帶 token(legacy-orders)→ [HTTP 200] ;沒有 token → [HTTP 401]

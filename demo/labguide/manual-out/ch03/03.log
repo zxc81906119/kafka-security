@@ -1,2 +1,0 @@
-{"Group:orders-write":{"DeveloperWrite":[{"resourceType":"Topic","name":"orders.","patternType":"PREFIXED"}],"DeveloperRead":[{"resourceType":"Topic","name":"orders.","patternType":"PREFIXED"}]}}
-[HTTP 200]

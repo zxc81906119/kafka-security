@@ -1,4 +1,0 @@
-[25] 開始維護模式(Alertmanager silence)  (服務操作)
-  對指定 node 靜音告警一段時間(最長 OPMENU_MAINT_MAX_MIN 分鐘),重啟或維護前使用;記錄是誰、哪張 ticket
-將執行:靜音 broker1 的告警 30 分鐘(ticket CHG-2026-0001)
-維護模式已開始:broker1,到 2026-10-07T11:52:57Z(UTC);silence id=cad16c17-be6c-4ae7-a417-8c54f43dff86(用項目 26 提前結束)

@@ -1,1 +1,0 @@
-LDAP(模擬 AD)群組 orders-read:加入 ming 之前

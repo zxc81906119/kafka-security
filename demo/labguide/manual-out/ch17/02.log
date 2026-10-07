@@ -1,5 +1,0 @@
---- 信任 demo CA
-dn: dc=corp,dc=demo
-result: 0 Success
---- 不信任 demo CA(只用系統預設的 CA)
-ldap_sasl_bind(SIMPLE): Can't contact LDAP server (-1)

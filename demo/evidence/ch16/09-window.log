@@ -1,4 +1,0 @@
-# 【變更時窗】只允許週一 00:00 到 00:01 變更;現在(模擬週三中午)嘗試開始維護模式 → 被擋;唯讀項目與緊急模式不受限
-$ OPMENU_CHANGE_WINDOW='Mon 00:00-00:01' ./opmenu.sh --run 25 broker1 5
-  對指定 node 靜音告警一段時間(最長 OPMENU_MAINT_MAX_MIN 分鐘),重啟或維護前使用;記錄是誰、哪張 ticket
-[31m目前不在允許變更的時窗內(OPMENU_CHANGE_WINDOW=Mon 00:00-00:01)[0m

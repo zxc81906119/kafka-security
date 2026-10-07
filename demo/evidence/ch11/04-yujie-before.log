@@ -1,4 +1,0 @@
-# 【日常】yujie 想建立 infra.ops-demo topic → 被拒(他是開發者,不是 topic 管理)
-$ kafka-topics --command-config yujie.properties --create --topic infra.ops-demo
-Error while executing topic command : Authorization failed.
-ERROR org.apache.kafka.common.errors.TopicAuthorizationException: Authorization failed.

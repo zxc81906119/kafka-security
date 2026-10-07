@@ -1,2 +1,0 @@
-{"offsets":[{"partition":null,"offset":null,"error_code":40301,"error":"Not authorized to access topics: [orders.events]"}],"key_schema_id":null,"value_schema_id":null}
-[HTTP 403]

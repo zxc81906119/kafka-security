@@ -1,4 +1,0 @@
-# 收回後:ming 再改授權 → 403
-$ POST .../roles/DeveloperRead/bindings   # ming
-{"error_code":40301,"message":"Action(scope='Scope(path='[]', clusters='{kafka-cluster=XyZBQ3-GTvKH2qNfP7X33A}')', resourcePattern='Topic:PREFIXED:infra.', operation='AlterAccess', resourceReferenceCo
-[HTTP 403]

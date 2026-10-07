@@ -1,3 +1,0 @@
-# 【對照】ming 不在任何群組 → 同一個 topic 被拒
-$ echo hi | kafka-console-producer ... --command-config ming.properties --topic orders.events
-

@@ -1,8 +1,0 @@
-# 暫時性實驗:把共用 server 憑證的身分(CN=kafka.demo.local)列為 super user,觀察後果。測完即還原。
-services:
-  broker1:
-    environment:
-      KAFKA_SUPER_USERS: User:kafka-broker;User:kafka-controller;User:bootstrap;User:kafka.demo.local
-  broker2:
-    environment:
-      KAFKA_SUPER_USERS: User:kafka-broker;User:kafka-controller;User:bootstrap;User:kafka.demo.local

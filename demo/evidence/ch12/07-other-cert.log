@@ -1,4 +1,0 @@
-# 【憑證有效但沒授權】同一個 CA 簽發的另一個 app(CN=legacy-other,沒有任何 role)→ 403
-$ curl --cert client-legacy-other.pem ... -X POST https://restproxy:8086/topics/orders.events
-{"offsets":[{"partition":null,"offset":null,"error_code":40301,"error":"Not authorized to access topics: [orders.events]"}],"key_schema_id":null,"value_schema_id":null}
-[HTTP 403]

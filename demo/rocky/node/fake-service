@@ -1,4 +1,0 @@
-#!/bin/bash
-# 假服務:每 5 秒寫一行日誌到 journal,偶爾寫 WARN,讓「查看服務日誌」有東西可看
-n=0
-while :; do n=$((n+1)); if [ $((n % 6)) = 0 ]; then echo "WARN [$1] heartbeat $n: simulated warning"; else echo "INFO [$1] heartbeat $n"; fi; sleep 5; done

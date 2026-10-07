@@ -1,8 +1,0 @@
-# 暫時性實驗:ldap.principal.mapping=ldap(登入後的身分改用 LDAP 紀錄的大小寫,而不是使用者輸入的字串)
-services:
-  broker1:
-    environment:
-      KAFKA_LDAP_PRINCIPAL_MAPPING: ldap
-  broker2:
-    environment:
-      KAFKA_LDAP_PRINCIPAL_MAPPING: ldap

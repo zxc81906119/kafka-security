@@ -1,5 +1,0 @@
-# 【並存】同一個 REST Proxy,人(yujie)照常用 Basic(AD 帳密)→ 200
-$ curl -u yujie:*** -X POST https://restproxy:8086/topics/orders.events
-[HTTP 204]
-{"offsets":[{"partition":0,"offset":62,"error_code":null,"error":null}],"key_schema_id":null,"value_schema_id":null}
-[HTTP 200]

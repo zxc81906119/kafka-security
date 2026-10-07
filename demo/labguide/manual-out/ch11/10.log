@@ -1,4 +1,0 @@
-ops-secret-1
-ERROR Error processing message, terminating consumer process: 
-org.apache.kafka.common.errors.TimeoutException
-Processed a total of 1 messages

@@ -1,6 +1,0 @@
-# 【密碼錯誤】SCRAM 認證失敗
-$ kafka-topics --command-config svc-orders-wrong.properties --list
-ERROR [AdminClient clientId=adminclient-1] Connection to node -1 (broker1/172.20.0.6:9094) failed authentication due to: Authentication failed during authentication due to invalid credentials with SAS
-org.apache.kafka.common.errors.SaslAuthenticationException: Authentication failed during authentication due to invalid credentials with SASL mechanism SCRAM-SHA-512
-Error while executing topic command : Authentication failed during authentication due to invalid credentials with SASL mechanism SCRAM-SHA-512
-ERROR org.apache.kafka.common.errors.SaslAuthenticationException: Authentication failed during authentication due to invalid credentials with SASL mechanism SCRAM-SHA-512

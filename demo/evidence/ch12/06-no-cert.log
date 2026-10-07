@@ -1,3 +1,0 @@
-# 【沒憑證也沒帳密】→ 401
-$ curl -X POST https://restproxy:8086/topics/orders.events
-[HTTP 401]

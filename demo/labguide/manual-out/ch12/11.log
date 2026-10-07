@@ -1,6 +1,0 @@
-restproxy 憑證代 yujie          → [HTTP 200]
-restproxy 憑證代 legacy-orders  → [HTTP 200]
-restproxy 憑證代 GARY           → [HTTP 403]
-restproxy 憑證代 c3             → [HTTP 403]
-restproxy 憑證代 bootstrap      → [HTTP 403]
-c3 憑證代 yujie               → [HTTP 403]

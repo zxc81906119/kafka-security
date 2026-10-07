@@ -1,3 +1,0 @@
-# 【無 role 的 ming】同一個呼叫 → 200 但清單是空的(只回他有權看的資源)
-$ curl -u ming:*** https://broker1:8091/kafka/v3/clusters/XyZBQ3-GTvKH2qNfP7X33A/topics
-"kind":"KafkaTopicList" "data":[] [HTTP 200] 

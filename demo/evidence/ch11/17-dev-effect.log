@@ -1,6 +1,0 @@
-# 授權生效:yujie(開發者)現在讀得到 infra.ops-demo
-$ kafka-console-consumer --command-config yujie.properties --topic infra.ops-demo --from-beginning
-ops-secret-1
-ERROR Error processing message, terminating consumer process: 
-org.apache.kafka.common.errors.TimeoutException
-Processed a total of 1 messages

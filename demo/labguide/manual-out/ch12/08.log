@@ -1,8 +1,0 @@
-11:29:57  User:legacy-orders kafka.Metadata      DENIED   payments.events
-11:30:01  User:legacy-other  kafka.Metadata      DENIED   orders.events
-11:31:19  User:legacy-other  kafka.Metadata      DENIED   orders.events
-11:32:18  User:legacy-orders kafka.Produce       DENIED   orders.events
-11:32:19  User:legacy-orders kafka.Produce       DENIED   orders.events
-11:32:28  User:legacy-orders kafka.Produce       ALLOWED  orders.events
-11:32:29  User:legacy-orders kafka.Metadata      DENIED   payments.events
-11:32:32  User:legacy-other  kafka.Metadata      DENIED   orders.events

@@ -1,6 +1,0 @@
-# 【發憑證】legacy app 無法用 Kafka client → 發一張 client 憑證(CN = app 名稱 = RBAC 主體;由客戶的 CA 簽發)
-$ openssl x509 -in client-legacy-orders.pem -noout -subject -issuer -dates
-subject=CN=legacy-orders, O=Demo
-issuer=CN=Demo Private CA, O=Demo
-notBefore=Oct  7 11:18:47 2026 GMT
-notAfter=Jan  9 11:18:47 2029 GMT
