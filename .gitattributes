@@ -1,0 +1,11 @@
+# 全部文字檔一律用 LF:bash 腳本、docker compose、LDIF、properties 在 Windows 以 CRLF 簽出會壞掉
+* text=auto eol=lf
+
+# 二進位
+*.docx binary
+*.pptx binary
+*.png binary
+*.jpg binary
+*.p12 binary
+*.jar binary
+*.tgz binary
