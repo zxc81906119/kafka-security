@@ -1,0 +1,3 @@
+# 【對照】REST Proxy 的憑證 CN=restproxy → 不同 principal,可分別授權
+$ curl --cert client-restproxy.pem https://broker1:8091/security/1.0/authenticate
+MDS 看到的 principal = "restproxy"

@@ -1,0 +1,5 @@
+# 【監控 ④】C3 到 Prometheus 與 Alertmanager 的連線(HTTPS + Basic)狀態:兩個都是 ONLINE
+$ GET /3.0/services/{prometheus,alertmanager}/status   # C3 API(HTTPS 9022)
+"componentName":"PROMETHEUS","componentStatus":"ONLINE"
+"componentName":"ALERT_MANAGER","componentStatus":"ONLINE"
+ONLINE 數量:2

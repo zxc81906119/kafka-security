@@ -1,0 +1,3 @@
+# 【C3 ②】工具(或瀏覽器)不信任簽發的 CA 時會被擋:不帶 CA 連 HTTPS 失敗(curl 錯誤 60);所以正式環境要把內部 CA 發給使用者端
+$ curl https://control-center:9022/login   # 對照:沒有 --cacert
+curl: (60) SSL certificate OpenSSL verify result: self-signed certificate in certificate chain (19)

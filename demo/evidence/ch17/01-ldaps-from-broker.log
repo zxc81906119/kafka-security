@@ -1,0 +1,5 @@
+# 【AD ①】broker 連 AD 走 LDAPS(636):openldap 日誌裡,來自 broker 的連線全部落在 636,389 沒有 broker 的連線
+$ docker logs openldap | grep ACCEPT   # 依來源(broker1、broker2)與目的埠彙總
+broker1(172.20.0.6): 508 條連到 636、0 條連到 389
+broker2(172.20.0.5): 351 條連到 636、0 條連到 389
+判定:broker 連 AD 只走 LDAPS(636)

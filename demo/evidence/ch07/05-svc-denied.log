@@ -1,0 +1,5 @@
+# 【最小權限】svc-orders 碰 payments.* → 被拒
+$ echo x | kafka-console-producer --command-config svc-orders.properties --topic payments.events
+WARN [Producer clientId=console-producer] The metadata response from the cluster reported a recoverable issue with correlation id 1 : {payments.events=TOPIC_AUTHORIZATION_FAILED}
+ERROR [Producer clientId=console-producer] Topic authorization failed for topics [payments.events]
+org.apache.kafka.common.errors.TopicAuthorizationException: Not authorized to access topics: [payments.events]

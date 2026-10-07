@@ -1,0 +1,5 @@
+# 【角色對照】三個維運群組的 role 在 bootstrap 時就綁好了,日常這些群組是空的(gary 以 MDS API 查詢)
+$ POST /security/1.0/lookup/rolebindings/principal/Group:<群組>
+"Group:ops":{"Operator"
+"Group:topic-admin":{"ResourceOwner"
+"Group:rbac-admin":{"UserAdmin"

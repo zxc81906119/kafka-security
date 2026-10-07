@@ -1,0 +1,12 @@
+--- 不帶帳密
+Unauthorized
+[HTTP 401]
+--- 錯誤密碼
+Unauthorized
+[HTTP 401]
+--- 正確帳密
+{"status":"success","data":{"resultType":"vector","result":[]}}
+[HTTP 200]
+--- 明文 HTTP
+Client sent an HTTP request to an HTTPS server.
+[HTTP 400]

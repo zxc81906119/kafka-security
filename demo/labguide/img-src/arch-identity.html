@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="zh-Hant"><head><meta charset="utf-8">
+<style>
+  html,body{margin:0;background:#fff;font-family:"Microsoft JhengHei","Noto Sans TC","PingFang TC",sans-serif;color:#0f2a43}
+  .s{position:relative;width:1280px;height:720px;overflow:hidden;padding:34px 52px;box-sizing:border-box}
+  h1{margin:0 0 4px;font-size:34px}
+  .sub{font-size:18px;font-weight:700;color:#1a1a1a;margin-bottom:14px}
+  .lane{display:flex;align-items:center;gap:10px;border-radius:12px;padding:9px 12px;margin-bottom:9px;box-sizing:border-box}
+  .who{width:200px;flex:none;font-weight:700;font-size:16px;line-height:1.3}
+  .who small{display:block;font-weight:400;font-size:12.5px;color:#4a5a6a}
+  .box{background:#fff;border-radius:8px;padding:7px 10px;font-size:13.5px;line-height:1.3;box-shadow:0 1px 2px rgba(0,0,0,.1);flex:1;text-align:center}
+  .box b{font-size:14px}
+  .ar{font-size:20px;color:#4a5a6a;flex:none}
+  .l1{background:#e8f1fb;border:1.5px solid #17608f}
+  .l2{background:#e6f1ea;border:1.5px solid #2e9e49}
+  .l3{background:#f1ecf8;border:1.5px solid #6b4fa0}
+  .l4{background:#fdf1de;border:1.5px solid #e8890c}
+  .l5{background:#eef3f7;border:1.5px solid #6c7f93}
+  .foot{font-size:13px;color:#4a5a6a;margin-top:6px;line-height:1.5}
+</style></head><body><div class="s">
+<h1>身分路徑:誰用什麼身分進來</h1>
+<div class="sub">AD 只有 user / group;role 綁 AD 群組或 User:;最後都由 broker 的 RBAC 判斷</div>
+
+<div class="lane l1"><div class="who">人<small>AD 帳號(gary、yujie、ming);權限來自 AD 群組</small></div>
+  <div class="box"><b>Basic / PLAIN</b><br>C3、REST Proxy、Postman:Basic<br>Kafka CLI:SASL/PLAIN</div><div class="ar">➜</div>
+  <div class="box"><b>MDS 向 AD 驗證</b><br>LDAPS 636;登入大小寫不分<br>主體 = AD 記錄(User:GARY)</div><div class="ar">➜</div>
+  <div class="box"><b>token(JWT,1 小時)</b><br>C3 / REST Proxy 以 OAUTHBEARER 代表本人連 broker</div><div class="ar">➜</div>
+  <div class="box"><b>broker RBAC</b><br>role 綁 Group:orders-read 等<br>依「現在」的群組判斷</div></div>
+
+<div class="lane l2"><div class="who">服務(機器)<small>不在 AD;svc-orders</small></div>
+  <div class="box"><b>SCRAM-SHA-512</b><br>Kafka 內建帳號,密碼可輪替</div><div class="ar">➜</div>
+  <div class="box"><b>broker 9094 直接認證</b><br>不經 MDS、不經 AD</div><div class="ar">➜</div>
+  <div class="box"><b>broker RBAC</b><br>role 綁 User:svc-orders,最小權限(只有 orders.*)</div></div>
+
+<div class="lane l3"><div class="who">平台元件<small>C3、REST Proxy、bootstrap</small></div>
+  <div class="box"><b>client 憑證</b><br>CN = c3 / restproxy / bootstrap(各一張)</div><div class="ar">➜</div>
+  <div class="box"><b>MDS /authenticate</b><br>憑證 CN → 主體 → token</div><div class="ar">➜</div>
+  <div class="box"><b>OAUTHBEARER 連 broker</b><br>User:c3 = SystemAdmin(官方要求);bootstrap 只做初始化</div></div>
+
+<div class="lane l4"><div class="who">legacy app<small>只能用 HTTP</small></div>
+  <div class="box"><b>client 憑證</b><br>CN = legacy-orders</div><div class="ar">➜</div>
+  <div class="box"><b>REST Proxy(mTLS)</b><br>出示 restproxy 憑證向 MDS /impersonate「代為申請」</div><div class="ar">➜</div>
+  <div class="box"><b>token sub = legacy-orders</b><br>特權身分列入受保護清單(區分大小寫)</div><div class="ar">➜</div>
+  <div class="box"><b>broker RBAC</b><br>audit 看到的是 User:legacy-orders,不是 restproxy</div></div>
+
+<div class="lane l5"><div class="who">內部與線路<small>不經 AD、不經 MDS</small></div>
+  <div class="box"><b>broker ↔ broker</b><br>INTERNAL 9092:SCRAM(kafka-broker)</div>
+  <div class="box"><b>broker ↔ controller</b><br>CONTROLLER 9093:SASL/PLAIN 靜態帳號</div>
+  <div class="box"><b>共用 server 憑證</b><br>只做 TLS 加密;不當身分(Lab 8)</div>
+  <div class="box"><b>監控</b><br>Prometheus / Alertmanager:HTTPS + Basic(Lab 17)</div></div>
+
+<div class="foot">每個 Lab 的「Lab 地圖」會把這張圖裡用到的元件打亮,並標出那堂要證明的路徑是允許(✔)還是拒絕(✘)。</div>
+</div></body></html>

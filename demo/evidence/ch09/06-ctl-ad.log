@@ -1,0 +1,5 @@
+# 【內部通道】用 AD 人員帳密(yujie)連 CONTROLLER → 拒絕(controller 只認內部靜態帳號,不查 AD)
+$ kafka-broker-api-versions --bootstrap-server controller1:9093 --command-config yujie.properties
+ERROR [LegacyAdminClient clientId=admin-1] Connection to node -1 (controller1/172.20.0.2:9093) failed authentication due to: Authentication failed: Invalid username or password
+WARN [LegacyAdminClient clientId=admin-1] Bootstrap broker controller1:9093 (id: -1 rack: null isFenced: false) disconnected
+Authentication failed: Invalid username or password

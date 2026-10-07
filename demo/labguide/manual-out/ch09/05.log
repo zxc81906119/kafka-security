@@ -1,0 +1,5 @@
+Request METADATA failed on brokers [controller1:9093 (id: -1 rack: null isFenced: false)]
+java.lang.RuntimeException: Request METADATA failed on brokers [controller1:9093 (id: -1 rack: null isFenced: false)]
+ERROR [LegacyAdminClient clientId=admin-1] Connection to node -1 (controller1/172.20.0.2:9093) failed authentication due to: Authentication failed: Invalid username or password
+WARN [LegacyAdminClient clientId=admin-1] Bootstrap broker controller1:9093 (id: -1 rack: null isFenced: false) disconnected
+Authentication failed: Invalid username or password

@@ -1,0 +1,1 @@
+legacy app 經 REST Proxy:機器用 client 憑證,人用 Basic,並存

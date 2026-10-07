@@ -1,0 +1,17 @@
+# 【人 ①】gary 用瀏覽器登入 C3:第一個呼叫帶 Basic(AD 帳密,經 C3 轉給 MDS 換 token),之後全部是 Bearer token
+$ (瀏覽器開發者工具)Network → Authorization 標頭型態
+以 gary 登入並開啟 Topics 頁面時,瀏覽器 → C3 的 API 呼叫:
+  4x GET /2.0/feature/flags  [-]
+  2x GET /api/metadata/security/1.0/authenticate  [Bearer]
+  1x GET /api/metadata/security/1.0/authenticate  [Basic]
+  2x GET /2.0/health/status  [Bearer]
+  2x GET /api/permissions  [Bearer]
+  4x GET /2.0/clusters/kafka  [Bearer]
+  2x GET /2.0/clusters/kafka/display/cluster_management  [Bearer]
+  2x GET /2.0/clusters/kafka/display/stream-monitoring  [Bearer]
+  2x GET /2.0/clusters/kafka/display/CLUSTER_MANAGEMENT  [Bearer]
+  2x GET /2.0/clusters/ksql  [Bearer]
+  2x GET /2.0/clusters/connect  [Bearer]
+  2x GET /2.0/clusters/schema-registry  [Bearer]
+  2x GET /api/metadata/security/1.0/lookup/managed/clusters/principal/User:GARY  [Bearer]
+  1x GET /api/kafka-rest/<id>/v1/metadata/schemaRegistryUrls  [Bearer]

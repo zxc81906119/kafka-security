@@ -1,0 +1,4 @@
+[44] 匯出權限清單(permission review)  (授權與緊急)
+  列出各 role 的所有 principal 與資源範圍(CSV),交給定期權限覆核;需 SecurityAdmin 或 UserAdmin
+查詢 role SystemAdmin 失敗(HTTP 403);需要 SecurityAdmin 或 UserAdmin
+Kafka 拒絕:你的群組沒有這項權限,請依 ticket 申請。

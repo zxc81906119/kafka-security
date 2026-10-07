@@ -1,0 +1,7 @@
+27×  User:YUJIE         kafka.Produce       ALLOWED  orders.events
+   8×  User:svc-orders    kafka.Produce       ALLOWED  orders.events
+   6×  User:MING          kafka.Produce       ALLOWED  orders.events
+   6×  User:shared-ops    kafka.Produce       ALLOWED  orders.events
+   6×  User:svc-orders-v2 kafka.Produce       ALLOWED  orders.events
+   2×  User:GARY          kafka.Produce       ALLOWED  orders.events
+   1×  User:legacy-orders kafka.Produce       ALLOWED  orders.events

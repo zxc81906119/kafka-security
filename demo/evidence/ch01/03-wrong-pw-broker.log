@@ -1,0 +1,6 @@
+# 用 AD 帳號直連 broker,密碼錯誤 → 認證失敗
+$ kafka-topics --bootstrap-server broker1:9094 --command-config yujie-錯誤密碼.properties --list
+ERROR [AdminClient clientId=adminclient-1] Connection to node -1 (broker1/172.20.0.6:9094) failed authentication due to: Authentication failed: Invalid username or password
+org.apache.kafka.common.errors.SaslAuthenticationException: Authentication failed: Invalid username or password
+ERROR org.apache.kafka.common.errors.SaslAuthenticationException: Authentication failed: Invalid username or password
+Error while executing topic command : Authentication failed: Invalid username or password

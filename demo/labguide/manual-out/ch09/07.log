@@ -1,0 +1,5 @@
+openldap
+openldap
+ERROR [Producer clientId=console-producer] Connection to node -1 (broker1/172.20.0.6:9094) failed authentication due to: Authentication failed: Invalid username or password
+WARN [Producer clientId=console-producer] Bootstrap broker broker1:9094 (id: -1 rack: null isFenced: false) disconnected
+org.apache.kafka.common.errors.SaslAuthenticationException: Authentication failed: Invalid username or password

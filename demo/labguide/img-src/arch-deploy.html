@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="zh-Hant"><head><meta charset="utf-8">
+<style>
+  html,body{margin:0;background:#fff;font-family:"Microsoft JhengHei","Noto Sans TC","PingFang TC",sans-serif;color:#0f2a43}
+  .s{position:relative;width:1280px;height:720px;overflow:hidden;padding:36px 52px;box-sizing:border-box}
+  h1{margin:0 0 6px;font-size:34px}
+  .sub{font-size:18px;font-weight:700;color:#1a1a1a;margin-bottom:18px}
+  .row{display:flex;gap:18px;align-items:stretch}
+  .pc{width:250px;border:1.5px solid #17608f;border-radius:14px;padding:14px 16px;box-sizing:border-box;background:#f3f8fc}
+  .pc h2,.net h2{margin:0 0 8px;font-size:18px}
+  .pc .tool{background:#fff;border:1px solid #c9d8e6;border-radius:8px;padding:7px 10px;margin:7px 0;font-size:14px}
+  .pc .tool b{display:block;font-size:15px}
+  .net{flex:1;border:2px dashed #7a8a99;border-radius:16px;padding:12px 16px;box-sizing:border-box;position:relative}
+  .net h2{color:#4a5a6a}
+  .grp{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .g{border-radius:12px;padding:10px 12px;box-sizing:border-box}
+  .g h3{margin:0 0 6px;font-size:16px}
+  .g .c{background:#fff;border-radius:8px;padding:6px 10px;margin:6px 0;font-size:13.5px;line-height:1.35;box-shadow:0 1px 2px rgba(0,0,0,.08)}
+  .g .c b{font-size:15px}
+  .ad{background:#eef3f7;border:1.5px solid #6c7f93}
+  .kafka{background:#e6f1ea;border:1.5px solid #2e9e49}
+  .entry{background:#e8f1fb;border:1.5px solid #17608f}
+  .mon{background:#fdf1de;border:1.5px solid #e8890c}
+  .foot{position:absolute;left:52px;right:52px;bottom:26px;font-size:13.5px;color:#4a5a6a;border-top:1px solid #d5dee6;padding-top:8px}
+  .tag{display:inline-block;background:#0f2a43;color:#fff;border-radius:10px;padding:1px 7px;font-size:12px;margin-left:4px}
+</style></head><body><div class="s">
+<h1>Demo 部署元件</h1>
+<div class="sub">Docker Compose 的 9 個容器 + 你電腦上的工具;正式環境對應 RHEL 9 VM(見附錄 B)</div>
+<div class="row">
+  <div class="pc">
+    <h2>你的電腦</h2>
+    <div class="tool"><b>Git Bash</b>kc / hc 兩個函式 = docker run 跑 Kafka CLI 與 curl(與 demo 同一個網路)</div>
+    <div class="tool"><b>瀏覽器</b>Control Center(HTTPS 9022)、phpLDAPadmin(8081)</div>
+    <div class="tool"><b>Postman / newman</b>Lab 5:REST Proxy 與 MDS</div>
+    <div class="tool"><b>OP menu</b>demo/opmenu(Lab 16;正式環境放跳板機)</div>
+    <div class="tool"><b>demo/certs</b>一張共用 server 憑證 + client 憑證(c3、restproxy、bootstrap、legacy-orders)</div>
+  </div>
+  <div class="net">
+    <h2>Docker 網路 cpsec_default(主機埠 → 容器埠;可用 demo/.env 的 HOST_PORT_* 覆蓋)</h2>
+    <div class="grp">
+      <div class="g ad"><h3>模擬 AD</h3>
+        <div class="c"><b>openldap</b><span class="tag">389 / 636 LDAPS</span><br>使用者 = CN 大寫、多層 OU;8 個群組;bind DN 唯讀帳號</div>
+        <div class="c"><b>phpLDAPadmin</b><span class="tag">8081</span><br>模擬 AD 管理員操作(加入 / 移出群組)</div>
+      </div>
+      <div class="g kafka"><h3>Kafka 叢集(KRaft)</h3>
+        <div class="c"><b>controller1</b><span class="tag">9093 CONTROLLER</span><br>SASL/PLAIN 靜態帳號;RBAC authorizer</div>
+        <div class="c"><b>broker1</b><span class="tag">9094 CLIENT</span><span class="tag">8091 MDS</span><br><b>broker2</b><span class="tag">19194→9094</span><span class="tag">8092 MDS</span><br>INTERNAL 9092 = SCRAM;MDS 內嵌在 broker(RBAC、token、連 AD)</div>
+      </div>
+      <div class="g entry"><h3>入口</h3>
+        <div class="c"><b>REST Proxy</b><span class="tag">8086 HTTPS</span><br>人用 Basic;legacy app 用 client 憑證(impersonate)</div>
+        <div class="c"><b>Control Center</b><span class="tag">9022 HTTPS</span><br>人用 AD 帳密;C3 自己用 client 憑證(CN=c3);9021 只給容器內健康檢查</div>
+      </div>
+      <div class="g mon"><h3>監控</h3>
+        <div class="c"><b>Prometheus</b><span class="tag">9090 HTTPS+Basic</span><br>broker 推指標(OTLP);C3 讀取</div>
+        <div class="c"><b>Alertmanager</b><span class="tag">9093 HTTPS+Basic</span><br>告警路由;OP menu 維護模式建立 silence</div>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="foot">版本:Confluent Platform 8.3.2(cp-server、cp-kafka-rest)、Control Center next-gen 2.6.1、OpenLDAP 1.5.0。內部埠 9092 / 9093 與監控埠不對外;demo 用 docker compose,正式環境每個元件一台 VM、以防火牆限制內部埠。</div>
+</div></body></html>

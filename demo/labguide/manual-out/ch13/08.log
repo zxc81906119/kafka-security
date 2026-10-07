@@ -1,0 +1,7 @@
+--- 不帶帳密
+Unauthorized
+[HTTP 401]
+--- 帶 Basic 帳密(c3)
+{"silenceID":"de6a6aa5-24b2-4867-a884-413134177101"}
+[HTTP 200]
+[HTTP 200]

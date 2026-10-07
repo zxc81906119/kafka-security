@@ -1,0 +1,2 @@
+modifying entry "cn=orders-read,ou=groups,dc=corp,dc=demo"
+modifying entry "cn=orders-write,ou=groups,dc=corp,dc=demo"

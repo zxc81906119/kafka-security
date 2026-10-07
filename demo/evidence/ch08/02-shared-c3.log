@@ -1,0 +1,3 @@
+# 【以共用憑證當身分(1)】C3 出示「共用憑證」向 MDS 認證
+$ curl --cert shared-server.pem https://broker1:8091/security/1.0/authenticate   # 身分 = 憑證 DN
+MDS 看到的 principal = "kafka.demo.local"

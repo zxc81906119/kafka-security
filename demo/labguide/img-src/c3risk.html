@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="zh-Hant"><head><meta charset="utf-8">
+<style>
+  html,body{margin:0;background:#fff;font-family:"Microsoft JhengHei","Noto Sans TC","PingFang TC",sans-serif;color:#0f2a43}
+  .s{position:relative;width:1280px;height:720px;overflow:hidden}
+  h1{position:absolute;left:52px;top:40px;margin:0;font-size:38px}
+  .sub{position:absolute;left:52px;top:112px;font-size:20px;font-weight:700;color:#1a1a1a}
+  .card{position:absolute;top:178px;width:364px;height:400px;border-radius:14px;box-sizing:border-box;background:#fff}
+  .ic{position:absolute;left:50%;margin-left:-52px;top:26px;width:104px;height:104px;border-radius:52px;background:#eef2f6;display:flex;align-items:center;justify-content:center;font-size:48px}
+  .t{position:absolute;left:0;right:0;top:158px;text-align:center;font-size:25px;font-weight:700}
+  .f{position:absolute;left:22px;right:22px;border-radius:10px;padding:14px 14px;font-size:17px;line-height:1.35;text-align:center;box-sizing:border-box;display:flex;align-items:center;justify-content:center}
+  .test{top:204px;height:96px}
+  .fix{top:316px;height:84px;background:#e4f3e4;border:1px solid #2e9e49;color:#1f7a34;font-weight:600}
+  .bottom{position:absolute;left:58px;top:604px;width:1152px;height:48px;border-radius:24px;background:#fdf1de;border:1.5px solid #e8890c;text-align:center;line-height:48px;font-size:17px;color:#7a4a00;box-sizing:border-box}
+</style></head><body><div class="s">
+<h1>C3 的三個風險與對策</h1>
+<div class="sub">都是實測發現,導入時要處理(監控元件在 demo 已啟用 HTTPS + Basic)</div>
+
+<div class="card" style="left:58px;border:2px solid #c21a2c">
+  <div class="ic" style="color:#c21a2c">🔑</div><div class="t">c3 的憑證 = 管理員</div>
+  <div class="f test" style="background:#fbe5e8;border:1px solid #c21a2c;color:#c21a2c;top:204px">實測:換到的 token 可建立 / 刪除 role binding(204)</div>
+  <div class="f fix">對策:嚴控 client-c3 keystore 權限;User:c3 列入受保護清單</div>
+</div>
+<div class="card" style="left:458px;border:2px solid #e8890c">
+  <div class="ic" style="color:#e8890c">📈</div><div class="t">Prometheus 的 Basic 帳密</div>
+  <div class="f test" style="background:#fdf1de;border:1px solid #e8890c;color:#9a5a00;top:204px">實測:不帶帳密 401;有帳密就是完整讀寫</div>
+  <div class="f fix">對策:帳密依用途分開;C3 日誌會印出 Authorization 標頭,日誌要保護</div>
+</div>
+<div class="card" style="left:858px;border:2px solid #c21a2c">
+  <div class="ic" style="color:#c21a2c">🔔</div><div class="t">Alertmanager 的 Basic 帳密</div>
+  <div class="f test" style="background:#fbe5e8;border:1px solid #c21a2c;color:#c21a2c;top:204px">實測:不帶帳密建立靜音 401;帶帳密才能建立與刪除</div>
+  <div class="f fix">對策:C3 與 OP menu 用不同帳號;網路隔離 + 監看靜音變更</div>
+</div>
+<div class="bottom">官方文件:C3 的 MDS 憑證範例是帳密、且說 C3 以自己的主體查詢 Kafka;本環境用憑證、使用者操作帶使用者身分(實測)</div>
+</div></body></html>

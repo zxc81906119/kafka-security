@@ -1,0 +1,11 @@
+groups:
+  - name: demo-test
+    interval: 10s
+    rules:
+      - alert: DemoAlwaysFiring
+        expr: vector(1)
+        for: 0s
+        labels:
+          severity: test
+        annotations:
+          summary: "TLS+Basic 告警路徑測試"

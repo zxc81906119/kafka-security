@@ -1,0 +1,5 @@
+# 【MDS 日誌】人與機器走的路不同:人 → /authenticate(MDS 看到 yujie);機器 → /impersonate(MDS 看到 restproxy 代 legacy-orders 申請)
+$ docker logs broker | grep -E "/security/1.0/(authenticate|impersonate)"
+GET /security/1.0/authenticate   MDS 看到的主體: YUJIE
+GET /security/1.0/authenticate   MDS 看到的主體: bootstrap
+POST /security/1.0/impersonate   MDS 看到的主體: restproxy

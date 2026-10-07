@@ -1,0 +1,3 @@
+# 【注意:這是強角色】在自己的 Topic* 範圍內還能改授權:yujie 給 orders-write 開 infra.* 讀取權 → 204
+$ POST /security/1.0/principals/Group:orders-write/roles/DeveloperRead/bindings   # yujie(topic-admin)
+[HTTP 204]

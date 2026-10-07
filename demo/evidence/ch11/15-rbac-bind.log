@@ -1,0 +1,3 @@
+# 【授權管理】ming(rbac-admin)可以調整授權:替 orders-write 開 infra.* 讀取權 → 204
+$ POST /security/1.0/principals/Group:orders-write/roles/DeveloperRead/bindings   # ming
+[HTTP 204]

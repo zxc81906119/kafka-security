@@ -1,0 +1,48 @@
+# 使用者(模擬客戶 AD):使用者名稱 = CN(大寫),分散在多層 OU;不另設 uid。
+# 客戶 AD 的群組 member 長這樣:CN=<帳號大寫>,OU=<單位>,OU=…;所以 demo 也放多層 OU,才驗得到 ldap.user.search.scope=2 與 CN pattern。
+dn: ou=it,ou=users,{{ LDAP_BASE_DN }}
+objectClass: organizationalUnit
+ou: it
+
+dn: ou=platform,ou=it,ou=users,{{ LDAP_BASE_DN }}
+objectClass: organizationalUnit
+ou: platform
+
+dn: ou=dev,ou=users,{{ LDAP_BASE_DN }}
+objectClass: organizationalUnit
+ou: dev
+
+dn: ou=orders,ou=dev,ou=users,{{ LDAP_BASE_DN }}
+objectClass: organizationalUnit
+ou: orders
+
+dn: cn=GARY,ou=platform,ou=it,ou=users,{{ LDAP_BASE_DN }}
+objectClass: inetOrgPerson
+cn: GARY
+sn: Gary
+displayName: Gary (team lead)
+mail: gary@corp.demo
+userPassword: gary-pw
+
+dn: cn=YUJIE,ou=orders,ou=dev,ou=users,{{ LDAP_BASE_DN }}
+objectClass: inetOrgPerson
+cn: YUJIE
+sn: Yujie
+displayName: Yujie (team member)
+mail: yujie@corp.demo
+userPassword: yujie-pw
+
+dn: cn=MING,ou=platform,ou=it,ou=users,{{ LDAP_BASE_DN }}
+objectClass: inetOrgPerson
+cn: MING
+sn: Ming
+displayName: Ming (new member)
+mail: ming@corp.demo
+userPassword: ming-pw
+
+dn: cn=svc-kafka-ldap,ou=system,{{ LDAP_BASE_DN }}
+objectClass: organizationalRole
+objectClass: simpleSecurityObject
+cn: svc-kafka-ldap
+description: Read-only LDAP query account (bind DN) used by MDS and brokers
+userPassword: ldap-bind-pw

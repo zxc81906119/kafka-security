@@ -1,0 +1,3 @@
+# 【授權後】svc-orders 寫入 orders.events 成功
+$ echo order-S-1 | kafka-console-producer --command-config svc-orders.properties --topic orders.events
+→ 結果:成功

@@ -1,0 +1,19 @@
+# 【19 生效設定】每個值用了什麼、來源是 conf(設定檔)、derived(推算)還是 default(預設)
+$ ./opmenu.sh --run 19
+  每個值的來源:conf = opmenu.conf、derived = 自動推算、default = 預設
+BACKEND              conf      docker
+ENV_LABEL            conf      DEMO
+BOOTSTRAP            conf      broker1:9094,broker2:9094
+MDS_URL              conf      https://broker1:8091
+KAFKA_CLUSTER_ID     derived   XyZBQ3-GTvKH2qNfP7X33A
+CERT_DIR             default   /etc/kafka/secrets
+TRUSTSTORE           default   /etc/kafka/secrets/truststore.p12
+CA_PEM               default   /etc/kafka/secrets/ca.pem
+CONTROLLER_HOSTS     conf      controller1
+BROKER_SERVICES      conf      broker1 broker2
+AUX_SERVICES         conf      restproxy control-center
+HOSTS                derived   broker1 broker2 restproxy control-center controller1
+DATA_DIR             conf      /var/lib/kafka/data
+REPLICATION          derived   2
+SSH_AUTH             default   key
+TICKET_MODE          default   required

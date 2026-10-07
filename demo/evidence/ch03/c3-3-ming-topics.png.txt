@@ -1,0 +1,1 @@
+ming 加入 AD 群組後,C3 Topics 清單出現 orders.*(Kafka 端零變更)

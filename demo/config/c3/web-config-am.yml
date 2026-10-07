@@ -1,0 +1,7 @@
+# Alertmanager:HTTPS(共用 server 憑證)+ HTTP Basic;demo 測試帳密 c3 / am-pw
+tls_server_config:
+  cert_file: /etc/tls/server.pem
+  key_file: /etc/tls/server.key
+basic_auth_users:
+  c3: "$2y$10$h7C.m75dEz9yrnHknxY26uyjIlow357D8SLzGerUFy8/yiwXFFLGG"
+  opmenu: "$2y$10$G7J66OOFm64y1a8SAyI8z.cAgq0RTpiY6aKHXYfRCJMSlSeRU6TGO"   # OP menu 維護模式專用帳號(與 C3 的帳號分開;密碼 am-opmenu-pw 是 demo 測試值)

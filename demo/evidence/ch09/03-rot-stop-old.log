@@ -1,0 +1,3 @@
+# 【輪替 3/4】全部應用切換完成 → 停用舊帳號(刪除舊憑證)
+$ kafka-configs --alter --delete-config SCRAM-SHA-512 --entity-name svc-orders
+Completed updating config for user svc-orders.

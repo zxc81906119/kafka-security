@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="zh-Hant"><head><meta charset="utf-8">
+<style>
+  html,body{margin:0;background:#fff;font-family:"Microsoft JhengHei","Noto Sans TC","PingFang TC",sans-serif;color:#0f2a43}
+  .s{position:relative;width:1280px;height:720px;overflow:hidden}
+  h1{position:absolute;left:52px;top:40px;margin:0;font-size:38px}
+  .sub{position:absolute;left:52px;top:112px;font-size:20px;font-weight:700;color:#1a1a1a}
+  .box{position:absolute;border-radius:14px;background:#fff;box-sizing:border-box;padding:0 22px;display:flex;flex-direction:column;justify-content:center}
+  .box b{font-size:25px}.box span{font-size:16px;color:#5d6b79}
+  .pill{position:absolute;border-radius:30px;text-align:center;font-size:18px;box-sizing:border-box;padding:22px 10px}
+  .lbl{position:absolute;font-size:14px}
+</style></head><body><div class="s">
+<h1>Control Center:誰連到誰</h1>
+<div class="sub">人用本人身分,機器用自己的身分(憑證);連 Prometheus、Alertmanager 走 HTTPS + Basic</div>
+
+<svg width="1280" height="720" style="position:absolute;left:0;top:0">
+  <defs>
+    <marker id="a1" markerWidth="12" markerHeight="12" refX="11" refY="6" orient="auto" markerUnits="userSpaceOnUse"><path d="M0,0 L12,6 L0,12 z" fill="#17608f"/></marker>
+    <marker id="a2" markerWidth="12" markerHeight="12" refX="11" refY="6" orient="auto" markerUnits="userSpaceOnUse"><path d="M0,0 L12,6 L0,12 z" fill="#e8890c"/></marker>
+    <marker id="a3" markerWidth="12" markerHeight="12" refX="11" refY="6" orient="auto" markerUnits="userSpaceOnUse"><path d="M0,0 L12,6 L0,12 z" fill="#2e9e49"/></marker>
+  </defs>
+  <line x1="336" y1="240" x2="450" y2="322" stroke="#17608f" stroke-width="4" marker-end="url(#a1)"/>
+  <line x1="336" y1="508" x2="450" y2="412" stroke="#e8890c" stroke-width="4" marker-end="url(#a2)"/>
+  <line x1="740" y1="325" x2="910" y2="235" stroke="#17608f" stroke-width="4" marker-end="url(#a1)"/>
+  <line x1="740" y1="374" x2="910" y2="374" stroke="#17608f" stroke-width="4" marker-end="url(#a1)"/>
+  <line x1="740" y1="422" x2="910" y2="520" stroke="#2e9e49" stroke-width="4" marker-end="url(#a3)"/>
+</svg>
+
+<div class="box" style="left:58px;top:182px;width:278px;height:116px;border:1.5px solid #17608f"><b>gary / ming</b><span>瀏覽器 · AD 帳密</span></div>
+<div class="box" style="left:58px;top:452px;width:278px;height:116px;border:1.5px solid #e8890c"><b>CI / 自動化</b><span>憑證 → MDS token</span></div>
+<div class="box" style="left:452px;top:298px;width:288px;height:152px;background:#0f2a43;color:#fff;align-items:center;border-radius:28px"><b style="font-size:30px">Control Center</b><span style="color:#cfe0f0">HTTPS(9022)</span></div>
+<div class="box" style="left:912px;top:164px;width:298px;height:104px;border:1.5px solid #2e9e49"><b>MDS</b><span>驗證 + 授權</span></div>
+<div class="box" style="left:912px;top:322px;width:298px;height:104px;border:1.5px solid #2e9e49"><b>broker</b><span>RBAC</span></div>
+<div class="box" style="left:912px;top:480px;width:298px;height:116px;border:1.5px solid #2e9e49"><b>Prometheus<br>Alertmanager</b><span>HTTPS + Basic 帳密</span></div>
+
+<div class="lbl" style="left:356px;top:208px;color:#17608f">Basic 一次 → Bearer</div>
+<div class="lbl" style="left:356px;top:520px;color:#e8890c">憑證 → token → Bearer</div>
+<div class="lbl" style="left:712px;top:214px;color:#17608f">使用者 token / c3 憑證</div>
+<div class="lbl" style="left:758px;top:350px;color:#17608f">OAUTHBEARER</div>
+<div class="lbl" style="left:768px;top:482px;color:#2e9e49">HTTPS + Basic</div>
+
+<div class="pill" style="left:58px;top:610px;width:566px;background:#e8f1fb;border:1.5px solid #17608f">使用者操作 → 帶使用者本人身分(audit:User:MING)</div>
+<div class="pill" style="left:648px;top:610px;width:562px;background:#fdf1de;border:1.5px solid #e8890c">背景串流 → User:c3(SystemAdmin,憑證換 token)</div>
+</div></body></html>

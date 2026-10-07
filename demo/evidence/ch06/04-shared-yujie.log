@@ -1,0 +1,3 @@
+# 【反面教材】全組共用一份 client.properties(帳號 shared-ops):yujie 用 → 成功
+$ HOME=~shared  ./orders-heartbeat.sh        # yujie 執行
+OK: 已送出 heartbeat(使用 /home/appuser/.kafka/client.properties)

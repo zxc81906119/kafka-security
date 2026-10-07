@@ -1,0 +1,9 @@
+# 【監控 ②】Alertmanager:同樣 HTTPS + Basic;不帶帳密連「建立靜音」都被擋(401),帶帳密才成功
+$ curl https://alertmanager:9093/api/v2/status   # 對照:不帶帳密 / 錯誤密碼 / 正確帳密(不帶帳密連建立靜音都被擋,見第 13 章)
+--- 不帶帳密
+[HTTP 401]
+--- 錯誤密碼
+[HTTP 401]
+--- 正確帳密
+[HTTP 200]
+判定:Alertmanager 要帳密才能用

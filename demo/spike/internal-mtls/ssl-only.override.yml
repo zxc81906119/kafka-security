@@ -1,0 +1,17 @@
+# 對照實驗:內部埠只做 TLS 加密,不要求 client 憑證(沒有任何認證)。
+# 沒有憑證就沒有身分,Kafka 把來者一律當成 User:ANONYMOUS;要讓叢集運作,只能把 ANONYMOUS 列為 super user。
+x-o: &o
+  KAFKA_LISTENER_NAME_CONTROLLER_SSL_CLIENT_AUTH: none
+  KAFKA_SUPER_USERS: User:ANONYMOUS;User:bootstrap
+services:
+  mctl1:
+    environment:
+      <<: *o
+  mbk1:
+    environment:
+      <<: *o
+      KAFKA_LISTENER_NAME_INTERNAL_SSL_CLIENT_AUTH: none
+  mbk2:
+    environment:
+      <<: *o
+      KAFKA_LISTENER_NAME_INTERNAL_SSL_CLIENT_AUTH: none

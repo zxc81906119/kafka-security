@@ -1,0 +1,476 @@
+# Demo: Confluent Platform 8.3 (KRaft) + MDS RBAC + LDAP(模擬 AD) + 共用單一 server 憑證
+# 啟動請用 scripts/up.sh(需先產生憑證、設定 license 試用)。
+name: cpsec
+
+x-common-ssl: &common-ssl
+  KAFKA_SSL_KEYSTORE_FILENAME: server.keystore.p12
+  KAFKA_SSL_KEYSTORE_CREDENTIALS: keystore_creds
+  KAFKA_SSL_KEY_CREDENTIALS: sslkey_creds
+  KAFKA_SSL_KEYSTORE_TYPE: PKCS12
+  KAFKA_OPTS: "-Ddemo.cpsec=1"
+  KAFKA_CONFLUENT_BALANCER_ENABLE: "false"
+  KAFKA_SSL_TRUSTSTORE_LOCATION: /etc/kafka/secrets/truststore.p12
+  KAFKA_SSL_TRUSTSTORE_TYPE: PKCS12
+  KAFKA_SSL_TRUSTSTORE_PASSWORD: changeit
+  KAFKA_SSL_CLIENT_AUTH: none
+  KAFKA_SSL_ENDPOINT_IDENTIFICATION_ALGORITHM: https
+
+x-ldap-env: &ldap-env   # 只有 broker 需要(controller 不需要:實測無 LDAP 設定的 controller,群組型 role 的 CreateTopics 仍正確授權)
+  # --- LDAP(模擬 AD):bind DN 唯讀查詢帳號 + 以群組成員屬性對映 ---
+  KAFKA_LDAP_JAVA_NAMING_FACTORY_INITIAL: com.sun.jndi.ldap.LdapCtxFactory
+  KAFKA_LDAP_COM_SUN_JNDI_LDAP_READ_TIMEOUT: 3000
+  KAFKA_LDAP_JAVA_NAMING_PROVIDER_URL: ldaps://openldap:636     # AD 走 LDAPS(正式環境連 AD 的 636 或 3269);只有連 AD 的 JVM 需要 ldap.ssl.truststore
+  KAFKA_LDAP_JAVA_NAMING_SECURITY_PROTOCOL: SSL
+  KAFKA_LDAP_SSL_TRUSTSTORE_LOCATION: /etc/kafka/secrets/truststore.p12
+  KAFKA_LDAP_SSL_TRUSTSTORE_TYPE: PKCS12
+  KAFKA_LDAP_SSL_TRUSTSTORE_PASSWORD: changeit
+  KAFKA_LDAP_JAVA_NAMING_SECURITY_PRINCIPAL: cn=svc-kafka-ldap,ou=system,dc=corp,dc=demo
+  KAFKA_LDAP_JAVA_NAMING_SECURITY_CREDENTIALS: ldap-bind-pw
+  KAFKA_LDAP_JAVA_NAMING_SECURITY_AUTHENTICATION: simple
+  KAFKA_LDAP_SEARCH_MODE: GROUPS
+  KAFKA_LDAP_GROUP_SEARCH_BASE: ou=groups,dc=corp,dc=demo
+  KAFKA_LDAP_GROUP_OBJECT_CLASS: groupOfNames
+  KAFKA_LDAP_GROUP_NAME_ATTRIBUTE: cn
+  KAFKA_LDAP_GROUP_MEMBER_ATTRIBUTE: member
+  KAFKA_LDAP_GROUP_MEMBER_ATTRIBUTE_PATTERN: "(?i)CN=([^,]+),.*"   # 客戶 AD 的 member 格式 CN=<帳號大寫>,OU=…;(?i) 讓 demo 不管 DN 屬性名稱大小寫
+  KAFKA_LDAP_USER_SEARCH_BASE: ou=users,dc=corp,dc=demo
+  KAFKA_LDAP_USER_OBJECT_CLASS: inetOrgPerson
+  KAFKA_LDAP_USER_NAME_ATTRIBUTE: cn          # 客戶的使用者名稱 = CN
+  KAFKA_LDAP_USER_SEARCH_SCOPE: 2             # 使用者分散在多層 OU,要搜尋整個子樹(官方預設 1)
+  KAFKA_LDAP_REFRESH_INTERVAL_MS: 5000
+  # 登入後的身分用 AD 紀錄的大小寫,不是使用者輸入的字串(實測 2026-10-05:使用者輸入 GARY 也對得到群組);原本只在 spike override,2026-10-06 納入主設定
+  KAFKA_LDAP_PRINCIPAL_MAPPING: ldap
+
+x-broker-env: &broker-env
+  <<: [*common-ssl, *ldap-env]
+  CLUSTER_ID: XyZBQ3-GTvKH2qNfP7X33A
+  KAFKA_PROCESS_ROLES: broker
+  KAFKA_CONTROLLER_QUORUM_VOTERS: 1@controller1:9093
+  KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+  KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:SASL_SSL,INTERNAL:SASL_SSL,CLIENT:SASL_SSL
+  KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
+  KAFKA_HEAP_OPTS: "-Xms768m -Xmx768m"
+  # --- 內部通道:CONTROLLER = SASL/PLAIN(靜態帳號,無 LDAP callback);INTERNAL = SASL/SCRAM-SHA-512 ---
+  KAFKA_SASL_MECHANISM_CONTROLLER_PROTOCOL: PLAIN
+  KAFKA_LISTENER_NAME_CONTROLLER_SASL_ENABLED_MECHANISMS: PLAIN
+  KAFKA_LISTENER_NAME_CONTROLLER_PLAIN_SASL_JAAS_CONFIG: >-
+    org.apache.kafka.common.security.plain.PlainLoginModule required
+    username="kafka-broker" password="broker-secret";
+  KAFKA_SASL_MECHANISM_INTER_BROKER_PROTOCOL: SCRAM-SHA-512
+  KAFKA_LISTENER_NAME_INTERNAL_SASL_ENABLED_MECHANISMS: SCRAM-SHA-512
+  KAFKA_LISTENER_NAME_INTERNAL_SCRAM___SHA___512_SASL_JAAS_CONFIG: >-
+    org.apache.kafka.common.security.scram.ScramLoginModule required
+    username="kafka-broker" password="broker-secret";
+  # --- CLIENT listener:人 = PLAIN + LDAP;服務 = SCRAM ---
+  KAFKA_LISTENER_NAME_CLIENT_SASL_ENABLED_MECHANISMS: PLAIN,SCRAM-SHA-512,OAUTHBEARER
+  KAFKA_LISTENER_NAME_CLIENT_PLAIN_SASL_SERVER_CALLBACK_HANDLER_CLASS: io.confluent.security.auth.provider.ldap.LdapAuthenticateCallbackHandler
+  KAFKA_LISTENER_NAME_CLIENT_PLAIN_SASL_JAAS_CONFIG: org.apache.kafka.common.security.plain.PlainLoginModule required;
+  KAFKA_LISTENER_NAME_CLIENT_SCRAM___SHA___512_SASL_JAAS_CONFIG: org.apache.kafka.common.security.scram.ScramLoginModule required;
+  # --- CLIENT listener 同時接受 MDS 簽發的 token(OAUTHBEARER):C3 / REST Proxy 代表使用者、人用 confluent login 的腳本 ---
+  KAFKA_LISTENER_NAME_CLIENT_OAUTHBEARER_SASL_SERVER_CALLBACK_HANDLER_CLASS: io.confluent.kafka.server.plugins.auth.token.TokenBearerValidatorCallbackHandler
+  KAFKA_LISTENER_NAME_CLIENT_OAUTHBEARER_SASL_LOGIN_CALLBACK_HANDLER_CLASS: io.confluent.kafka.server.plugins.auth.token.TokenBearerServerLoginCallbackHandler
+  KAFKA_LISTENER_NAME_CLIENT_OAUTHBEARER_SASL_JAAS_CONFIG: org.apache.kafka.common.security.oauthbearer.OAuthBearerLoginModule required publicKeyPath="/etc/kafka/secrets/public.pem";
+  # --- 授權 ---
+  KAFKA_AUTHORIZER_CLASS_NAME: io.confluent.kafka.security.authorizer.ConfluentServerAuthorizer
+  KAFKA_LOG4J_LOGGERS: "kafka.authorizer.logger=INFO,io.confluent.security.authorizer=INFO"
+  KAFKA_CONFLUENT_AUTHORIZER_ACCESS_RULE_PROVIDERS: CONFLUENT,KRAFT_ACL
+  KAFKA_SUPER_USERS: User:kafka-broker;User:kafka-controller;User:bootstrap
+  KAFKA_ALLOW_EVERYONE_IF_NO_ACL_FOUND: "false"
+  # --- 副本數(只有 2 個 broker) ---
+  KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 2
+  KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 2
+  KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+  KAFKA_DEFAULT_REPLICATION_FACTOR: 2
+  KAFKA_AUTO_CREATE_TOPICS_ENABLE: "false"
+  KAFKA_CONFLUENT_LICENSE_TOPIC_REPLICATION_FACTOR: 2
+  KAFKA_CONFLUENT_METADATA_TOPIC_REPLICATION_FACTOR: 2
+  KAFKA_CONFLUENT_SECURITY_EVENT_LOGGER_EXPORTER_KAFKA_TOPIC_REPLICAS: 2
+  KAFKA_CONFLUENT_BALANCER_TOPIC_REPLICATION_FACTOR: 2
+  KAFKA_CONFLUENT_CLUSTER_LINK_METADATA_TOPIC_REPLICATION_FACTOR: 2
+  KAFKA_CONFLUENT_REPORTERS_TELEMETRY_AUTO_ENABLE: "false"
+  # --- MDS:token ---
+  KAFKA_CONFLUENT_SECURITY_EVENT_ROUTER_CONFIG: ${AUDIT_ROUTER_CONFIG}
+  KAFKA_CONFLUENT_METADATA_SERVER_AUTHENTICATION_METHOD: BEARER
+  KAFKA_CONFLUENT_METADATA_SERVER_TOKEN_KEY_PATH: /etc/kafka/secrets/keypair.pem
+  KAFKA_CONFLUENT_METADATA_SERVER_TOKEN_MAX_LIFETIME_MS: 3600000
+  KAFKA_CONFLUENT_METADATA_SERVER_TOKEN_SIGNATURE_ALGORITHM: RS256
+  KAFKA_CONFLUENT_METADATA_SERVER_SSL_KEYSTORE_LOCATION: /etc/kafka/secrets/server.keystore.p12
+  KAFKA_CONFLUENT_METADATA_SERVER_SSL_KEYSTORE_TYPE: PKCS12
+  KAFKA_CONFLUENT_METADATA_SERVER_SSL_KEYSTORE_PASSWORD: changeit
+  KAFKA_CONFLUENT_METADATA_SERVER_SSL_KEY_PASSWORD: changeit
+  KAFKA_CONFLUENT_METADATA_SERVER_SSL_TRUSTSTORE_LOCATION: /etc/kafka/secrets/truststore.p12
+  KAFKA_CONFLUENT_METADATA_SERVER_SSL_TRUSTSTORE_TYPE: PKCS12
+  KAFKA_CONFLUENT_METADATA_SERVER_SSL_TRUSTSTORE_PASSWORD: changeit
+  KAFKA_PASSWORD_ENCODER_SECRET: encoder-secret
+  # --- 指標送到 Prometheus(C3 next-gen 需要) ---
+  KAFKA_METRIC_REPORTERS: io.confluent.telemetry.reporter.TelemetryReporter
+  KAFKA_CONFLUENT_TELEMETRY_EXPORTER_C3PLUSPLUS_TYPE: "http"
+  KAFKA_CONFLUENT_TELEMETRY_EXPORTER_C3PLUSPLUS_ENABLED: "true"
+  KAFKA_CONFLUENT_TELEMETRY_EXPORTER_C3PLUSPLUS_METRICS_INCLUDE: "io.confluent.kafka.server.request.(?!.*delta).*|io.confluent.kafka.server.server.broker.state|io.confluent.kafka.server.replica.manager.leader.count|io.confluent.kafka.server.request.queue.size|io.confluent.kafka.server.broker.topic.failed.produce.requests.rate.1.min|io.confluent.kafka.server.tier.archiver.total.lag|io.confluent.kafka.server.request.total.time.ms.p99|io.confluent.kafka.server.broker.topic.failed.fetch.requests.rate.1.min|io.confluent.kafka.server.broker.topic.total.fetch.requests.rate.1.min|io.confluent.kafka.server.partition.caught.up.replicas.count|io.confluent.kafka.server.partition.observer.replicas.count|io.confluent.kafka.server.tier.tasks.num.partitions.in.error|io.confluent.kafka.server.broker.topic.bytes.out.rate.1.min|io.confluent.kafka.server.request.total.time.ms.p95|io.confluent.kafka.server.controller.active.controller.count|io.confluent.kafka.server.request.total.time.ms.p999|io.confluent.kafka.server.controller.active.broker.count|io.confluent.kafka.server.request.handler.pool.request.handler.avg.idle.percent.rate.1.min|io.confluent.kafka.server.controller.unclean.leader.elections.rate.1.min|io.confluent.kafka.server.replica.manager.partition.count|io.confluent.kafka.server.controller.unclean.leader.elections.total|io.confluent.kafka.server.partition.replicas.count|io.confluent.kafka.server.broker.topic.total.produce.requests.rate.1.min|io.confluent.kafka.server.controller.offline.partitions.count|io.confluent.kafka.server.socket.server.network.processor.avg.idle.percent|io.confluent.kafka.server.partition.under.replicated|io.confluent.kafka.server.log.log.start.offset|io.confluent.kafka.server.log.tier.size|io.confluent.kafka.server.log.size|io.confluent.kafka.server.tier.fetcher.bytes.fetched.total|io.confluent.kafka.server.request.total.time.ms.p50|io.confluent.kafka.server.tenant.consumer.lag.offsets|io.confluent.kafka.server.log.log.end.offset|io.confluent.kafka.server.broker.topic.bytes.in.rate.1.min|io.confluent.kafka.server.partition.under.min.isr|io.confluent.kafka.server.partition.in.sync.replicas.count|io.confluent.telemetry.http.exporter.batches.dropped|io.confluent.telemetry.http.exporter.items.total|io.confluent.telemetry.http.exporter.items.succeeded|io.confluent.telemetry.http.exporter.send.time.total.millis|io.confluent.kafka.server.controller.leader.election.rate.(?!.*delta).*|io.confluent.telemetry.http.exporter.batches.failed"
+  KAFKA_CONFLUENT_TELEMETRY_EXPORTER_C3PLUSPLUS_CLIENT_BASE_URL: "https://prometheus:9090/api/v1/otlp"
+  KAFKA_CONFLUENT_TELEMETRY_EXPORTER_C3PLUSPLUS_CLIENT_COMPRESSION: "gzip"
+  KAFKA_CONFLUENT_TELEMETRY_EXPORTER_C3PLUSPLUS_API_KEY: "c3"            # api.key / api.secret 就是 Prometheus 的 Basic 帳密
+  KAFKA_CONFLUENT_TELEMETRY_EXPORTER_C3PLUSPLUS_API_SECRET: "prom-pw"
+  KAFKA_CONFLUENT_TELEMETRY_EXPORTER_C3PLUSPLUS_HTTPS_SSL_TRUSTSTORE_LOCATION: /etc/kafka/secrets/truststore.p12
+  KAFKA_CONFLUENT_TELEMETRY_EXPORTER_C3PLUSPLUS_HTTPS_SSL_TRUSTSTORE_TYPE: PKCS12
+  KAFKA_CONFLUENT_TELEMETRY_EXPORTER_C3PLUSPLUS_HTTPS_SSL_TRUSTSTORE_PASSWORD: changeit
+  KAFKA_CONFLUENT_TELEMETRY_EXPORTER_C3PLUSPLUS_BUFFER_PENDING_BATCHES_MAX: "80"
+  KAFKA_CONFLUENT_TELEMETRY_EXPORTER_C3PLUSPLUS_BUFFER_BATCH_ITEMS_MAX: "4000"
+  KAFKA_CONFLUENT_TELEMETRY_EXPORTER_C3PLUSPLUS_BUFFER_INFLIGHT_SUBMISSIONS_MAX: "10"
+  KAFKA_CONFLUENT_TELEMETRY_METRICS_COLLECTOR_INTERVAL_MS: "60000"
+  KAFKA_CONFLUENT_TELEMETRY_REMOTECONFIG_CONFLUENT_ENABLED: "false"
+  KAFKA_CONFLUENT_METADATA_SERVER_IMPERSONATION_SUPER_USERS: "User:restproxy"
+  KAFKA_CONFLUENT_METADATA_SERVER_IMPERSONATION_PROTECTED_USERS: "User:bootstrap;User:kafka-broker;User:kafka-controller;User:c3;User:restproxy;User:GARY"
+  KAFKA_CONFLUENT_METADATA_SERVER_SSL_CLIENT_AUTHENTICATION: REQUESTED
+  KAFKA_CONFLUENT_METADATA_SERVER_AUTH_SSL_PRINCIPAL_MAPPING_RULES: "RULE:.*CN=([a-zA-Z0-9.-]*).*$$/$$1/,DEFAULT"
+  # --- broker 內建 Admin REST(/kafka/v3)的 RBAC 保護:屬性依官方 Admin REST Security 頁(kafka.rest. 前綴)。未設定時此 REST 完全無認證 ---
+  KAFKA_KAFKA_REST_REST_SERVLET_INITIALIZOR_CLASSES: io.confluent.common.security.jetty.initializer.InstallBearerOrBasicSecurityHandler
+  KAFKA_KAFKA_REST_KAFKA_REST_RESOURCE_EXTENSION_CLASS: io.confluent.kafkarest.security.KafkaRestSecurityResourceExtension
+  KAFKA_KAFKA_REST_PUBLIC_KEY_PATH: /etc/kafka/secrets/public.pem
+  KAFKA_KAFKA_REST_CONFLUENT_METADATA_BOOTSTRAP_SERVER_URLS: https://broker1:8091,https://broker2:8092
+  KAFKA_KAFKA_REST_CONFLUENT_METADATA_SSL_TRUSTSTORE_LOCATION: /etc/kafka/secrets/truststore.p12
+  KAFKA_KAFKA_REST_CONFLUENT_METADATA_SSL_TRUSTSTORE_TYPE: PKCS12
+  KAFKA_KAFKA_REST_CONFLUENT_METADATA_SSL_TRUSTSTORE_PASSWORD: changeit
+  KAFKA_KAFKA_REST_BOOTSTRAP_SERVERS: SASL_SSL://broker1:9094,SASL_SSL://broker2:9094
+  KAFKA_KAFKA_REST_CLIENT_SECURITY_PROTOCOL: SASL_SSL
+  KAFKA_KAFKA_REST_CLIENT_SSL_TRUSTSTORE_LOCATION: /etc/kafka/secrets/truststore.p12
+  KAFKA_KAFKA_REST_CLIENT_SSL_TRUSTSTORE_TYPE: PKCS12
+  KAFKA_KAFKA_REST_CLIENT_SSL_TRUSTSTORE_PASSWORD: changeit
+
+services:
+  openldap:
+    image: osixia/openldap:1.5.0
+    container_name: openldap
+    hostname: openldap
+    environment:
+      LDAP_ORGANISATION: "Corp Demo"
+      LDAP_DOMAIN: "corp.demo"
+      LDAP_BASE_DN: "dc=corp,dc=demo"
+      LDAP_ADMIN_PASSWORD: adminpw
+      LDAP_TLS: "true"                       # 模擬 AD 的 LDAPS(636);389 仍開著,只給 demo 的管理工具(phpLDAPadmin、ldapmodify)用
+      LDAP_TLS_CRT_FILENAME: ldap.crt
+      LDAP_TLS_KEY_FILENAME: ldap.key
+      LDAP_TLS_CA_CRT_FILENAME: ca.crt
+      LDAP_TLS_VERIFY_CLIENT: never
+    volumes:
+      - ./ldap:/container/service/slapd/assets/config/bootstrap/ldif/custom
+      - ./certs/server.pem:/container/service/slapd/assets/certs/ldap.crt:ro       # 共用 server 憑證(SAN 已含 openldap)
+      - ./certs/server.key:/container/service/slapd/assets/certs/ldap.key:ro
+      - ./certs/ca.pem:/container/service/slapd/assets/certs/ca.crt:ro
+    command: --copy-service
+    ports:
+      - "${HOST_PORT_LDAP:-389}:389"
+    healthcheck:   # 以 admin 查 base DN;osixia 映像內有 ldapsearch
+      test: ["CMD-SHELL", "ldapsearch -x -H ldap://localhost -b dc=corp,dc=demo -D cn=admin,dc=corp,dc=demo -w adminpw -s base dn >/dev/null 2>&1"]
+      interval: 5s
+      timeout: 5s
+      retries: 24
+      start_period: 10s
+
+  ldapadmin:
+    image: osixia/phpldapadmin:0.9.0
+    container_name: ldapadmin
+    hostname: ldapadmin
+    environment:
+      PHPLDAPADMIN_LDAP_HOSTS: openldap
+      PHPLDAPADMIN_HTTPS: "false"
+    ports:
+      - "${HOST_PORT_LDAPADMIN:-8081}:80"
+    depends_on: [openldap]
+
+  controller1:
+    stop_grace_period: 60s
+    image: confluentinc/cp-server:8.3.2
+    container_name: controller1
+    hostname: controller1
+    healthcheck:   # CP 映像沒有 curl/nc,用 bash 的 /dev/tcp 確認 controller 埠已在聽(只代表埠開了,功能就緒由 up.sh 的 MDS 檢查確認)
+      test: ["CMD-SHELL", "timeout 3 bash -c 'exec 3<>/dev/tcp/controller1/9093'"]
+      interval: 5s
+      timeout: 5s
+      retries: 24
+      start_period: 15s
+    volumes:
+      - ./certs:/etc/kafka/secrets:ro
+      - ./config/ensure-controller.sh:/etc/confluent/docker/ensure:ro
+    environment:
+      <<: *common-ssl
+      # 官方(MDS 設定頁):RBAC 下 KRaft controller 設 kraft.controller.enabled=true 並提供 token key;controller 不需要 ldap.*(只有 MDS writer broker 連 LDAP,實測 ch11 通過)
+      KAFKA_CONFLUENT_METADATA_SERVER_KRAFT_CONTROLLER_ENABLED: "true"
+      KAFKA_CONFLUENT_METADATA_SERVER_TOKEN_KEY_PATH: /etc/kafka/secrets/keypair.pem
+      CLUSTER_ID: XyZBQ3-GTvKH2qNfP7X33A
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: controller
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@controller1:9093
+      KAFKA_LISTENERS: CONTROLLER://controller1:9093
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:SASL_SSL
+      KAFKA_HEAP_OPTS: "-Xms256m -Xmx256m"
+      KAFKA_SASL_MECHANISM_CONTROLLER_PROTOCOL: PLAIN
+      KAFKA_LISTENER_NAME_CONTROLLER_SASL_ENABLED_MECHANISMS: PLAIN
+      KAFKA_LISTENER_NAME_CONTROLLER_PLAIN_SASL_JAAS_CONFIG: >-
+        org.apache.kafka.common.security.plain.PlainLoginModule required
+        username="kafka-controller" password="controller-secret"
+        user_kafka-controller="controller-secret"
+        user_kafka-broker="broker-secret";
+      # RBAC 部署:controller 也使用 ConfluentServerAuthorizer(CreateTopics 等請求在 controller 端授權,否則看不到 RBAC role binding)
+      KAFKA_AUTHORIZER_CLASS_NAME: io.confluent.kafka.security.authorizer.ConfluentServerAuthorizer
+      KAFKA_CONFLUENT_AUTHORIZER_ACCESS_RULE_PROVIDERS: CONFLUENT,KRAFT_ACL
+      # controller 端 RBAC provider 需連到 brokers 讀取 MDS 的授權資料(_confluent-metadata-auth),以獨立的內部 SCRAM 身分 kafka-controller(super user;與 broker 的 kafka-broker 分開,audit 與撤銷才分得清)
+      KAFKA_CONFLUENT_METADATA_BOOTSTRAP_SERVERS: broker1:9092,broker2:9092
+      KAFKA_CONFLUENT_METADATA_SECURITY_PROTOCOL: SASL_SSL
+      KAFKA_CONFLUENT_METADATA_SASL_MECHANISM: SCRAM-SHA-512
+      KAFKA_CONFLUENT_METADATA_SASL_JAAS_CONFIG: org.apache.kafka.common.security.scram.ScramLoginModule required username="kafka-controller" password="controller-secret";
+      KAFKA_CONFLUENT_METADATA_SSL_TRUSTSTORE_LOCATION: /etc/kafka/secrets/truststore.p12
+      KAFKA_CONFLUENT_METADATA_SSL_TRUSTSTORE_TYPE: PKCS12
+      KAFKA_CONFLUENT_METADATA_SSL_TRUSTSTORE_PASSWORD: changeit
+      KAFKA_CONFLUENT_METADATA_TOPIC_REPLICATION_FACTOR: 2
+      KAFKA_PASSWORD_ENCODER_SECRET: encoder-secret
+      # audit log 寫入器連線(controller 沒有 inter-broker 設定,需明列)
+      KAFKA_CONFLUENT_SECURITY_EVENT_LOGGER_EXPORTER_KAFKA_BOOTSTRAP_SERVERS: broker1:9092,broker2:9092
+      KAFKA_CONFLUENT_SECURITY_EVENT_LOGGER_EXPORTER_KAFKA_SECURITY_PROTOCOL: SASL_SSL
+      KAFKA_CONFLUENT_SECURITY_EVENT_LOGGER_EXPORTER_KAFKA_SASL_MECHANISM: SCRAM-SHA-512
+      KAFKA_CONFLUENT_SECURITY_EVENT_LOGGER_EXPORTER_KAFKA_SASL_JAAS_CONFIG: org.apache.kafka.common.security.scram.ScramLoginModule required username="kafka-controller" password="controller-secret";
+      KAFKA_CONFLUENT_SECURITY_EVENT_LOGGER_EXPORTER_KAFKA_SSL_TRUSTSTORE_LOCATION: /etc/kafka/secrets/truststore.p12
+      KAFKA_CONFLUENT_SECURITY_EVENT_LOGGER_EXPORTER_KAFKA_SSL_TRUSTSTORE_TYPE: PKCS12
+      KAFKA_CONFLUENT_SECURITY_EVENT_LOGGER_EXPORTER_KAFKA_SSL_TRUSTSTORE_PASSWORD: changeit
+      KAFKA_CONFLUENT_SECURITY_EVENT_ROUTER_CONFIG: ${AUDIT_ROUTER_CONFIG}
+      KAFKA_SUPER_USERS: User:kafka-broker;User:kafka-controller;User:bootstrap
+      KAFKA_ALLOW_EVERYONE_IF_NO_ACL_FOUND: "false"
+      # 啟動前預建內部通道用的 SCRAM 憑證(見 ensure-controller.sh):kafka-broker = broker↔broker;kafka-controller = controller→broker(9092)
+      SCRAM_BOOTSTRAP_1: "SCRAM-SHA-512=[name=kafka-broker,password=broker-secret]"
+      SCRAM_BOOTSTRAP_2: "SCRAM-SHA-512=[name=kafka-controller,password=controller-secret]"
+
+  broker1:
+    stop_grace_period: 60s
+    image: confluentinc/cp-server:8.3.2
+    container_name: broker1
+    hostname: broker1
+    depends_on:
+      controller1: { condition: service_healthy }
+      openldap: { condition: service_healthy }
+    healthcheck:   # Kafka 對外埠 9094 與 MDS 8091 都在聽
+      test: ["CMD-SHELL", "timeout 3 bash -c 'exec 3<>/dev/tcp/localhost/9094 && exec 3<>/dev/tcp/localhost/8091'"]
+      interval: 10s
+      timeout: 5s
+      retries: 18
+      start_period: 30s
+    volumes:
+      - ./certs:/etc/kafka/secrets:ro
+    ports:
+      - "${HOST_PORT_MDS:-8091}:8091"
+      - "${HOST_PORT_BROKER1:-9094}:9094"
+    environment:
+      <<: *broker-env
+      KAFKA_NODE_ID: 11
+      KAFKA_LISTENERS: INTERNAL://broker1:9092,CLIENT://0.0.0.0:9094
+      KAFKA_ADVERTISED_LISTENERS: INTERNAL://broker1:9092,CLIENT://broker1:9094
+      KAFKA_CONFLUENT_METADATA_SERVER_LISTENERS: https://0.0.0.0:8091
+      KAFKA_CONFLUENT_METADATA_SERVER_ADVERTISED_LISTENERS: https://broker1:8091
+
+  broker2:
+    stop_grace_period: 60s
+    image: confluentinc/cp-server:8.3.2
+    container_name: broker2
+    hostname: broker2
+    depends_on:
+      controller1: { condition: service_healthy }
+      openldap: { condition: service_healthy }
+    healthcheck:
+      test: ["CMD-SHELL", "timeout 3 bash -c 'exec 3<>/dev/tcp/localhost/9094 && exec 3<>/dev/tcp/localhost/8092'"]
+      interval: 10s
+      timeout: 5s
+      retries: 18
+      start_period: 30s
+    volumes:
+      - ./certs:/etc/kafka/secrets:ro
+    ports:
+      - "${HOST_PORT_MDS2:-8092}:8092"
+      - "${HOST_PORT_BROKER2:-19194}:9094"
+    environment:
+      <<: *broker-env
+      KAFKA_NODE_ID: 12
+      KAFKA_LISTENERS: INTERNAL://broker2:9092,CLIENT://0.0.0.0:9094
+      KAFKA_ADVERTISED_LISTENERS: INTERNAL://broker2:9092,CLIENT://broker2:9094
+      KAFKA_CONFLUENT_METADATA_SERVER_LISTENERS: https://0.0.0.0:8092
+      KAFKA_CONFLUENT_METADATA_SERVER_ADVERTISED_LISTENERS: https://broker2:8092
+
+  restproxy:
+    image: confluentinc/cp-kafka-rest:8.3.2
+    container_name: restproxy
+    hostname: restproxy
+    profiles: ["restproxy", "full"]
+    depends_on:
+      broker1: { condition: service_healthy }
+      broker2: { condition: service_healthy }
+    healthcheck:
+      test: ["CMD-SHELL", "timeout 3 bash -c 'exec 3<>/dev/tcp/localhost/8086'"]
+      interval: 10s
+      timeout: 5s
+      retries: 18
+      start_period: 20s
+    volumes:
+      - ./certs:/etc/kafka/secrets:ro
+    ports:
+      - "${HOST_PORT_RESTPROXY:-8086}:8086"
+    environment:
+      KAFKA_REST_HOST_NAME: restproxy
+      KAFKA_REST_LISTENERS: https://0.0.0.0:8086
+      KAFKA_REST_BOOTSTRAP_SERVERS: SASL_SSL://broker1:9094,SASL_SSL://broker2:9094
+      # REST Proxy 對外 HTTPS:共用 server 憑證
+      KAFKA_REST_SSL_KEYSTORE_LOCATION: /etc/kafka/secrets/server.keystore.p12
+      KAFKA_REST_SSL_KEYSTORE_TYPE: PKCS12
+      KAFKA_REST_SSL_KEYSTORE_PASSWORD: changeit
+      KAFKA_REST_SSL_KEY_PASSWORD: changeit
+      KAFKA_REST_SSL_TRUSTSTORE_LOCATION: /etc/kafka/secrets/truststore.p12
+      KAFKA_REST_SSL_TRUSTSTORE_TYPE: PKCS12
+      KAFKA_REST_SSL_TRUSTSTORE_PASSWORD: changeit
+      KAFKA_REST_SSL_CLIENT_AUTHENTICATION: "REQUESTED"
+      # 連 broker 的 Kafka client:CLIENT listener(全部用 OAUTHBEARER:代表使用者/機器的請求帶該主體的 token;REST Proxy 自身用 CN=restproxy 憑證換的 token)
+      KAFKA_REST_CLIENT_SECURITY_PROTOCOL: SASL_SSL
+      # REST Proxy 自身(license 檢查、kafka-ready 健康檢查)用 client 憑證(CN=restproxy)向 MDS 換 token,以 OAUTHBEARER 連 broker(官方 mTLS RBAC 範例做法);代表使用者的請求改用該使用者的 MDS token
+      KAFKA_REST_CLIENT_SASL_MECHANISM: OAUTHBEARER
+      KAFKA_REST_CLIENT_SASL_LOGIN_CALLBACK_HANDLER_CLASS: io.confluent.kafka.clients.plugins.auth.token.TokenCertificateLoginCallbackHandler
+      KAFKA_REST_CLIENT_SASL_JAAS_CONFIG: org.apache.kafka.common.security.oauthbearer.OAuthBearerLoginModule required metadataServerUrls="https://broker1:8091,https://broker2:8092";
+      KAFKA_REST_CLIENT_SSL_KEYSTORE_LOCATION: /etc/kafka/secrets/client-restproxy.keystore.p12
+      KAFKA_REST_CLIENT_SSL_KEYSTORE_TYPE: PKCS12
+      KAFKA_REST_CLIENT_SSL_KEYSTORE_PASSWORD: changeit
+      KAFKA_REST_CLIENT_SSL_KEY_PASSWORD: changeit
+      KAFKA_REST_CLIENT_SSL_TRUSTSTORE_LOCATION: /etc/kafka/secrets/truststore.p12
+      KAFKA_REST_CLIENT_SSL_TRUSTSTORE_TYPE: PKCS12
+      KAFKA_REST_CLIENT_SSL_TRUSTSTORE_PASSWORD: changeit
+      # RBAC + principal propagation(使用者以 Basic 進入,MDS 驗證後以其身分連 Kafka)
+      KAFKA_REST_KAFKA_REST_RESOURCE_EXTENSION_CLASS: io.confluent.kafkarest.security.KafkaRestSecurityResourceExtension
+      KAFKA_REST_REST_SERVLET_INITIALIZOR_CLASSES: io.confluent.common.security.jetty.initializer.AuthenticationHandler
+      KAFKA_REST_AUTH_SSL_PRINCIPAL_MAPPING_RULES: "RULE:^.*CN=([^,]*).*$$/$$1/,DEFAULT"
+      KAFKA_REST_PUBLIC_KEY_PATH: /etc/kafka/secrets/public.pem
+      # REST Proxy 自身向 MDS 認證:mTLS(CN=restproxy),不是 AD 帳號
+      KAFKA_REST_CONFLUENT_METADATA_BOOTSTRAP_SERVER_URLS: https://broker1:8091,https://broker2:8092
+      KAFKA_REST_CONFLUENT_METADATA_SERVER_URLS_MAX_AGE_MS: 60000
+      KAFKA_REST_CONFLUENT_METADATA_SSL_KEYSTORE_LOCATION: /etc/kafka/secrets/client-restproxy.keystore.p12
+      KAFKA_REST_CONFLUENT_METADATA_SSL_KEYSTORE_TYPE: PKCS12
+      KAFKA_REST_CONFLUENT_METADATA_SSL_KEYSTORE_PASSWORD: changeit
+      KAFKA_REST_CONFLUENT_METADATA_SSL_KEY_PASSWORD: changeit
+      KAFKA_REST_CONFLUENT_METADATA_SSL_TRUSTSTORE_LOCATION: /etc/kafka/secrets/truststore.p12
+      KAFKA_REST_CONFLUENT_METADATA_SSL_TRUSTSTORE_TYPE: PKCS12
+      KAFKA_REST_CONFLUENT_METADATA_SSL_TRUSTSTORE_PASSWORD: changeit
+      CUB_CLASSPATH: '/usr/share/java/confluent-security/kafka-rest/*:/usr/share/java/kafka-rest/*:/usr/share/java/cp-base-new/*'
+
+  # ---------------- Control Center (next-gen 2.x) + Prometheus + Alertmanager ----------------
+  prometheus:
+    image: confluentinc/cp-enterprise-prometheus:2.6.1
+    container_name: prometheus
+    hostname: prometheus
+    profiles: ["c3", "full"]
+    volumes:
+      - ./config/c3:/mnt/config
+      - ./certs:/etc/tls:ro        # web-config-prom.yml 的 TLS 憑證(共用 server 憑證)
+    environment:
+      CONFIG_PATH: "/mnt/config"
+      SHOULD_LOG_TO_FILE: "false"
+    mem_limit: 512m
+    healthcheck:
+      test: ["CMD-SHELL", "timeout 3 bash -c 'exec 3<>/dev/tcp/localhost/9090'"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 10s
+
+  alertmanager:
+    image: confluentinc/cp-enterprise-alertmanager:2.6.1
+    container_name: alertmanager
+    hostname: alertmanager
+    profiles: ["c3", "full"]
+    depends_on:
+      prometheus: { condition: service_healthy }
+    volumes:
+      - ./config/c3:/mnt/config
+      - ./certs:/etc/tls:ro        # web-config-am.yml 的 TLS 憑證
+    environment:
+      CONFIG_PATH: "/mnt/config"
+      SHOULD_LOG_TO_FILE: "false"
+    mem_limit: 256m
+    healthcheck:
+      test: ["CMD-SHELL", "timeout 3 bash -c 'exec 3<>/dev/tcp/localhost/9093'"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 10s
+
+  control-center:
+    image: confluentinc/cp-enterprise-control-center-next-gen:2.6.1
+    container_name: control-center
+    hostname: control-center
+    profiles: ["c3", "full"]
+    depends_on:
+      broker1: { condition: service_healthy }
+      broker2: { condition: service_healthy }
+      prometheus: { condition: service_healthy }
+      alertmanager: { condition: service_healthy }
+    healthcheck:
+      test: ["CMD-SHELL", "timeout 3 bash -c 'exec 3<>/dev/tcp/localhost/9021'"]
+      interval: 10s
+      timeout: 5s
+      retries: 18
+      start_period: 60s
+    volumes:
+      - ./certs:/etc/kafka/secrets:ro
+      - ./config/c3:/mnt/config
+    ports:
+      - "${HOST_PORT_C3:-9021}:9021"
+      - "${HOST_PORT_C3_2:-9022}:9022"
+    environment:
+      PORT: 9021
+      CONTROL_CENTER_BOOTSTRAP_SERVERS: SASL_SSL://broker1:9094,SASL_SSL://broker2:9094
+      CONTROL_CENTER_REPLICATION_FACTOR: 2
+      CONTROL_CENTER_INTERNAL_TOPICS_PARTITIONS: 1
+      CONTROL_CENTER_MONITORING_INTERCEPTOR_TOPIC_PARTITIONS: 1
+      CONTROL_CENTER_METRICS_TOPIC_PARTITIONS: 1
+      CONFLUENT_METRICS_TOPIC_REPLICATION: 2
+      CONTROL_CENTER_STREAMS_NUM_STREAM_THREADS: 1
+      # C3 自身連 Kafka(Streams):RBAC 下僅支援 OAUTHBEARER → 以 client 憑證(CN=c3)向 MDS 取 token,免 AD 帳號、免密碼
+      CONTROL_CENTER_STREAMS_SECURITY_PROTOCOL: SASL_SSL
+      CONTROL_CENTER_STREAMS_SASL_MECHANISM: OAUTHBEARER
+      CONTROL_CENTER_STREAMS_SASL_LOGIN_CALLBACK_HANDLER_CLASS: io.confluent.kafka.clients.plugins.auth.token.TokenCertificateLoginCallbackHandler
+      CONTROL_CENTER_STREAMS_SASL_JAAS_CONFIG: org.apache.kafka.common.security.oauthbearer.OAuthBearerLoginModule required metadataServerUrls="https://broker1:8091,https://broker2:8092";
+      CONTROL_CENTER_STREAMS_SSL_KEYSTORE_LOCATION: /etc/kafka/secrets/client-c3.keystore.p12
+      CONTROL_CENTER_STREAMS_SSL_KEYSTORE_TYPE: PKCS12
+      CONTROL_CENTER_STREAMS_SSL_KEYSTORE_PASSWORD: changeit
+      CONTROL_CENTER_STREAMS_SSL_KEY_PASSWORD: changeit
+      CONTROL_CENTER_STREAMS_SSL_TRUSTSTORE_LOCATION: /etc/kafka/secrets/truststore.p12
+      CONTROL_CENTER_STREAMS_SSL_TRUSTSTORE_TYPE: PKCS12
+      CONTROL_CENTER_STREAMS_SSL_TRUSTSTORE_PASSWORD: changeit
+      # C3 UI(HTTPS):共用 server 憑證
+      CONTROL_CENTER_REST_LISTENERS: http://0.0.0.0:9021,https://0.0.0.0:9022
+      CONTROL_CENTER_REST_SSL_KEYSTORE_LOCATION: /etc/kafka/secrets/server.keystore.p12
+      CONTROL_CENTER_REST_SSL_KEYSTORE_TYPE: PKCS12
+      CONTROL_CENTER_REST_SSL_KEYSTORE_PASSWORD: changeit
+      CONTROL_CENTER_REST_SSL_KEY_PASSWORD: changeit
+      CONTROL_CENTER_REST_SSL_TRUSTSTORE_LOCATION: /etc/kafka/secrets/truststore.p12
+      CONTROL_CENTER_REST_SSL_TRUSTSTORE_TYPE: PKCS12
+      CONTROL_CENTER_REST_SSL_TRUSTSTORE_PASSWORD: changeit
+      # RBAC:使用者以 AD 帳號(經 MDS)登入;C3 自身向 MDS 以 mTLS(CN=c3)認證
+      CONTROL_CENTER_REST_AUTHENTICATION_METHOD: BEARER
+      CONTROL_CENTER_SCHEMA_REGISTRY_ENABLE: "false"
+      PUBLIC_KEY_PATH: /etc/kafka/secrets/public.pem
+      CONFLUENT_METADATA_BOOTSTRAP_SERVER_URLS: https://broker1:8091,https://broker2:8092
+      CONFLUENT_METADATA_SSL_KEYSTORE_LOCATION: /etc/kafka/secrets/client-c3.keystore.p12
+      CONFLUENT_METADATA_SSL_KEYSTORE_TYPE: PKCS12
+      CONFLUENT_METADATA_SSL_KEYSTORE_PASSWORD: changeit
+      CONFLUENT_METADATA_SSL_KEY_PASSWORD: changeit
+      CONFLUENT_METADATA_SSL_TRUSTSTORE_LOCATION: /etc/kafka/secrets/truststore.p12
+      CONFLUENT_METADATA_SSL_TRUSTSTORE_TYPE: PKCS12
+      CONFLUENT_METADATA_SSL_TRUSTSTORE_PASSWORD: changeit
+      CONTROL_CENTER_STREAMS_CPREST_URL: https://broker1:8091,https://broker2:8092
+      # Prometheus / Alertmanager
+      CONTROL_CENTER_PROMETHEUS_ENABLE: "true"
+      CONTROL_CENTER_PROMETHEUS_URL: https://prometheus:9090
+      CONTROL_CENTER_PROMETHEUS_SSL_TRUSTSTORE_LOCATION: /etc/kafka/secrets/truststore.p12
+      CONTROL_CENTER_PROMETHEUS_SSL_TRUSTSTORE_PASSWORD: changeit
+      CONTROL_CENTER_PROMETHEUS_BASIC_AUTH_USER_INFO: c3:prom-pw
+      CONTROL_CENTER_PROMETHEUS_RULES_FILE: /mnt/config/trigger_rules-generated.yml
+      CONTROL_CENTER_ALERTMANAGER_URL: https://alertmanager:9093
+      CONTROL_CENTER_ALERTMANAGER_SSL_TRUSTSTORE_LOCATION: /etc/kafka/secrets/truststore.p12
+      CONTROL_CENTER_ALERTMANAGER_SSL_TRUSTSTORE_PASSWORD: changeit
+      CONTROL_CENTER_ALERTMANAGER_BASIC_AUTH_USER_INFO: c3:am-pw
+      CONTROL_CENTER_ALERTMANAGER_CONFIG_FILE: /mnt/config/alertmanager-generated.yml
+      CUB_CLASSPATH: '/usr/share/java/confluent-control-center/*:/usr/share/java/rest-utils/*:/usr/share/java/confluent-common/*:/usr/share/java/confluent-security/kafka-rest/*:/usr/share/java/kafka-rest/:/usr/share/java/cp-base-new/*'

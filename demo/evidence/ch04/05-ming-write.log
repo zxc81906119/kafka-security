@@ -1,0 +1,5 @@
+# ming(唯讀)寫入 → 被拒
+$ echo oops | kafka-console-producer --command-config ming.properties --topic orders.events
+ERROR [Producer clientId=console-producer] Aborting producer batches due to fatal error
+org.apache.kafka.common.errors.ClusterAuthorizationException: Cluster authorization failed.
+org.apache.kafka.common.errors.ClusterAuthorizationException: Cluster authorization failed.

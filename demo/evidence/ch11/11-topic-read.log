@@ -1,0 +1,6 @@
+# 【注意:這是強角色】ResourceOwner 連資料都讀得到:yujie 消費 infra.ops-demo → 讀到 ops-secret-1
+$ kafka-console-consumer --command-config yujie.properties --topic infra.ops-demo --from-beginning
+ops-secret-1
+ERROR Error processing message, terminating consumer process: 
+org.apache.kafka.common.errors.TimeoutException
+Processed a total of 1 messages

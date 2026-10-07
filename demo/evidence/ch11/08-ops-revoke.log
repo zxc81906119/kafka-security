@@ -1,0 +1,5 @@
+# 【收回 1】AD 管理員把 yujie 移出 ops
+$ (瀏覽器)phpLDAPadmin:ops 移除 yujie
+  📸 ch11/ldap-revoke-yujie-ops-before.png — LDAP(模擬 AD)群組 ops:移除 yujie 之前
+  📸 ch11/ldap-revoke-yujie-ops-after.png — LDAP(模擬 AD)群組 ops:移除 yujie 之後
+[21:42:31] AD 群組異動完成

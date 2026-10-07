@@ -1,0 +1,2 @@
+Error while executing topic command : Authorization failed.
+ERROR org.apache.kafka.common.errors.TopicAuthorizationException: Authorization failed.

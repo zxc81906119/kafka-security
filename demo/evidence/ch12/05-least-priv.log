@@ -1,0 +1,4 @@
+# 【最小權限】同一個 app 寫 payments.events → 403
+$ curl --cert client-legacy-orders.pem ... -X POST https://restproxy:8086/topics/payments.events
+{"offsets":[{"partition":null,"offset":null,"error_code":40301,"error":"Not authorized to access topics: [payments.events]"}],"key_schema_id":null,"value_schema_id":null}
+[HTTP 403]

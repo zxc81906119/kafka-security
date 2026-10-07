@@ -1,0 +1,5 @@
+# 【收回 3】AD 管理員把 ming 移出 rbac-admin
+$ (瀏覽器)phpLDAPadmin:rbac-admin 移除 ming
+  📸 ch11/ldap-revoke-ming-rbac-admin-before.png — LDAP(模擬 AD)群組 rbac-admin:移除 ming 之前
+  📸 ch11/ldap-revoke-ming-rbac-admin-after.png — LDAP(模擬 AD)群組 rbac-admin:移除 ming 之後
+[21:45:25] AD 群組異動完成

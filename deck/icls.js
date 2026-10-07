@@ -1,0 +1,4 @@
+const JSZip=require('jszip'),fs=require('fs'),path=require('path');
+(async()=>{const root=process.argv[2];let jar;(function w(d){for(const f of fs.readdirSync(d)){const p=path.join(d,f);let st;try{st=fs.lstatSync(p)}catch{continue}if(st.isDirectory())w(p);else if(f.startsWith('confluent-security-plugins-common')&&st.isFile())jar=p}})(root);
+const z=await JSZip.loadAsync(fs.readFileSync(jar));
+for(const n of ['io/confluent/common/security/auth/entity/ImpersonateTokenRequest.class','io/confluent/common/security/auth/ImpersonationTokenProvider.class']){const f=z.file(n);if(!f){console.log('no',n);continue}const b=await f.async('nodebuffer');const s=[...new Set(b.toString('latin1').match(/[A-Za-z0-9_.\-\/ :{}",]{4,}/g)||[])];console.log('=== '+n.split('/').pop());console.log(s.filter(x=>!/^(Lio|Ljava|java\/|\(L|\(\))/.test(x)&&/user|principal|impersonat|token|auth|path|security|bearer|header|json|expir|lifetime|request|post|get/i.test(x)).slice(0,40).join('\n'));}})();

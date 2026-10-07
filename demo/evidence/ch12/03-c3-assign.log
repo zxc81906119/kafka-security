@@ -1,0 +1,4 @@
+# 【C3 操作】gary 把 orders.* 寫入權限指派給「User:legacy-orders」(憑證身分只能綁 User:,不支援群組)
+$ (瀏覽器)C3 → Manage role assignments → Topic → Add role assignment(User / legacy-orders / DeveloperWrite / orders.)
+  📸 ch12/c12-1-legacy-form.png — C3:Add role assignment — User legacy-orders / DeveloperWrite / orders.
+  📸 ch12/c12-1-legacy-saved.png — C3:指派完成後的 Topic 範圍列表

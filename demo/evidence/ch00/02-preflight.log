@@ -1,0 +1,22 @@
+# 開場前自檢
+$ ./preflight.sh
+── 容器 ──
+  ✔ openldap 執行中
+  ✔ ldapadmin 執行中
+  ✔ controller1 執行中
+  ✔ broker1 執行中
+  ✔ broker2 執行中
+  ✔ restproxy 執行中
+  ✔ control-center 執行中
+  ✔ prometheus 執行中
+  ✔ alertmanager 執行中
+── 端點與登入 ──
+  ✔ MDS(8091)
+  ✔ AD 帳號 gary 可登入 MDS
+  ✔ 錯誤密碼被拒(401)
+  ✔ REST Proxy(8086)未帶帳密 401
+  ✔ C3 登入頁(9021)
+  ✔ LDAP 管理介面(8081)
+── 資源 ──
+  Docker 可用記憶體: 10 GB(建議 ≥ 10GB)
+── 結果:通過 15 / 失敗 0 ──

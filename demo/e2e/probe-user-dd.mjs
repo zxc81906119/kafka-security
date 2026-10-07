@@ -1,0 +1,16 @@
+import { launch, c3Login, C3, CLUSTER } from './lib.mjs';
+const { browser, page } = await launch();
+await c3Login(page, 'gary');
+await page.goto(`${C3}/access-control/manage/assignments/kafka/${CLUSTER}`); await page.waitForTimeout(2500);
+await page.getByText('Topic', { exact: true }).first().click(); await page.waitForTimeout(1800);
+await page.getByRole('button', { name: 'Add role assignment' }).click(); await page.waitForTimeout(1500);
+const c = page.locator('input[role=combobox]');
+await c.nth(0).click(); await page.locator('[id*="-option-"]').filter({ hasText: /^User$/ }).click(); await page.waitForTimeout(600);
+await c.nth(1).click(); await page.waitForTimeout(800);
+console.log('options (empty search):', (await page.$$eval('[id*="-option-"]', e => e.map(x => x.textContent.trim()))).join(' | '));
+await c.nth(1).fill('svc-orders'); await page.waitForTimeout(1000);
+console.log('options (svc-orders):', (await page.$$eval('[id*="-option-"]', e => e.map(x => x.textContent.trim()))).join(' | '));
+await page.screenshot({ path: '../evidence/_probe-user-dd.png' });
+await c.nth(1).fill('yujie'); await page.waitForTimeout(1000);
+console.log('options (yujie):', (await page.$$eval('[id*="-option-"]', e => e.map(x => x.textContent.trim()))).join(' | '));
+await browser.close();

@@ -1,0 +1,3 @@
+# 【yujie 執行】讀的是他自己的 ~/.kafka/client.properties(AD 帳號 yujie)→ 成功
+$ HOME=~yujie  ./orders-heartbeat.sh
+OK: 已送出 heartbeat(使用 /home/appuser/.kafka/client.properties)

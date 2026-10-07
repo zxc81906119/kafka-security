@@ -1,0 +1,142 @@
+[44] 匯出權限清單(permission review)  (授權與緊急)
+  列出各 role 的所有 principal 與資源範圍(CSV),交給定期權限覆核;需 SecurityAdmin 或 UserAdmin
+已匯出 10 筆權限:/c/Users/user/IdeaProjects/untitled6/demo/opmenu/log/permission-review-20261007-192306-gary.csv
+==> log/permission-review-20261006-234139-gary.csv <==
+role,principal,resource_type,resource_name,pattern_type
+"SystemAdmin","Group:kafka-admins","Cluster","",""
+"SystemAdmin","User:c3","Cluster","",""
+"UserAdmin","Group:kafka-rbac-admins","Cluster","",""
+"Operator","Group:kafka-ops","Cluster","",""
+"DeveloperRead","User:svc-opmtest","Group","opm.","PREFIXED"
+"DeveloperRead","User:svc-rktest","Group","rk.","PREFIXED"
+==> log/permission-review-20261006-235611-gary.csv <==
+role,principal,resource_type,resource_name,pattern_type
+"SystemAdmin","Group:kafka-admins","Cluster","",""
+"SystemAdmin","User:c3","Cluster","",""
+"UserAdmin","Group:kafka-rbac-admins","Cluster","",""
+"Operator","Group:kafka-ops","Cluster","",""
+"DeveloperRead","User:svc-opmtest","Group","opm.","PREFIXED"
+"DeveloperRead","User:svc-rktest","Group","rk.","PREFIXED"
+==> log/permission-review-20261007-000631-gary.csv <==
+role,principal,resource_type,resource_name,pattern_type
+"SystemAdmin","Group:kafka-admins","Cluster","",""
+"SystemAdmin","User:c3","Cluster","",""
+"UserAdmin","Group:kafka-rbac-admins","Cluster","",""
+"Operator","Group:kafka-ops","Cluster","",""
+"DeveloperRead","User:svc-opmtest","Group","opm.","PREFIXED"
+"DeveloperRead","User:svc-rktest","Group","rk.","PREFIXED"
+==> log/permission-review-20261007-074736-gary.csv <==
+role,principal,resource_type,resource_name,pattern_type
+"SystemAdmin","Group:kafka-admins","Cluster","",""
+"SystemAdmin","User:c3","Cluster","",""
+"UserAdmin","Group:kafka-rbac-admins","Cluster","",""
+"Operator","Group:kafka-ops","Cluster","",""
+"DeveloperRead","User:svc-opmtest","Group","opm.","PREFIXED"
+"DeveloperRead","User:svc-rktest","Group","rk.","PREFIXED"
+==> log/permission-review-20261007-093158-gary.csv <==
+role,principal,resource_type,resource_name,pattern_type
+"SystemAdmin","Group:kafka-admins","Cluster","",""
+"SystemAdmin","User:c3","Cluster","",""
+"UserAdmin","Group:kafka-rbac-admins","Cluster","",""
+"Operator","Group:kafka-ops","Cluster","",""
+"DeveloperRead","User:svc-opmtest","Group","opm.","PREFIXED"
+"DeveloperRead","User:svc-rktest","Group","rk.","PREFIXED"
+==> log/permission-review-20261007-132509-gary.csv <==
+role,principal,resource_type,resource_name,pattern_type
+"SystemAdmin","Group:breakglass","Cluster","",""
+"SystemAdmin","User:c3","Cluster","",""
+"ClusterAdmin","Group:cluster-admin","Cluster","",""
+"SecurityAdmin","Group:security","Cluster","",""
+"UserAdmin","Group:rbac-admin","Cluster","",""
+"AuditAdmin","Group:security","Cluster","",""
+"ResourceOwner","Group:topic-admin","Group","*","LITERAL"
+"Operator","Group:ops","Cluster","",""
+"DeveloperRead","Group:security","Group","audit-","PREFIXED"
+==> log/permission-review-20261007-142601-gary.csv <==
+role,principal,resource_type,resource_name,pattern_type
+"SystemAdmin","Group:breakglass","Cluster","",""
+"SystemAdmin","User:c3","Cluster","",""
+"ClusterAdmin","Group:cluster-admin","Cluster","",""
+"SecurityAdmin","Group:security","Cluster","",""
+"UserAdmin","Group:rbac-admin","Cluster","",""
+"AuditAdmin","Group:security","Cluster","",""
+"ResourceOwner","Group:topic-admin","Group","*","LITERAL"
+"Operator","Group:ops","Cluster","",""
+"DeveloperRead","Group:security","Group","audit-","PREFIXED"
+==> log/permission-review-20261007-145748-gary.csv <==
+role,principal,resource_type,resource_name,pattern_type
+"SystemAdmin","Group:breakglass","Cluster","",""
+"SystemAdmin","User:c3","Cluster","",""
+"ClusterAdmin","Group:cluster-admin","Cluster","",""
+"SecurityAdmin","Group:security","Cluster","",""
+"UserAdmin","Group:rbac-admin","Cluster","",""
+"AuditAdmin","Group:security","Cluster","",""
+"ResourceOwner","Group:topic-admin","Group","*","LITERAL"
+"Operator","Group:ops","Cluster","",""
+"DeveloperRead","Group:security","Group","audit-","PREFIXED"
+==> log/permission-review-20261007-150931-gary.csv <==
+role,principal,resource_type,resource_name,pattern_type
+"SystemAdmin","Group:breakglass","Cluster","",""
+"SystemAdmin","User:c3","Cluster","",""
+"ClusterAdmin","Group:cluster-admin","Cluster","",""
+"SecurityAdmin","Group:security","Cluster","",""
+"UserAdmin","Group:rbac-admin","Cluster","",""
+"AuditAdmin","Group:security","Cluster","",""
+"ResourceOwner","Group:topic-admin","Group","*","LITERAL"
+"Operator","Group:ops","Cluster","",""
+"DeveloperRead","Group:security","Group","audit-","PREFIXED"
+==> log/permission-review-20261007-154012-gary.csv <==
+role,principal,resource_type,resource_name,pattern_type
+"SystemAdmin","Group:breakglass","Cluster","",""
+"SystemAdmin","User:c3","Cluster","",""
+"ClusterAdmin","Group:cluster-admin","Cluster","",""
+"SecurityAdmin","Group:security","Cluster","",""
+"UserAdmin","Group:rbac-admin","Cluster","",""
+"AuditAdmin","Group:security","Cluster","",""
+"ResourceOwner","Group:topic-admin","Group","*","LITERAL"
+"Operator","Group:ops","Cluster","",""
+"DeveloperRead","Group:orders-read","Group","demo-","PREFIXED"
+==> log/permission-review-20261007-155848-gary.csv <==
+role,principal,resource_type,resource_name,pattern_type
+"SystemAdmin","Group:breakglass","Cluster","",""
+"SystemAdmin","User:c3","Cluster","",""
+"ClusterAdmin","Group:cluster-admin","Cluster","",""
+"SecurityAdmin","Group:security","Cluster","",""
+"UserAdmin","Group:rbac-admin","Cluster","",""
+"AuditAdmin","Group:security","Cluster","",""
+"ResourceOwner","Group:topic-admin","Group","*","LITERAL"
+"Operator","Group:ops","Cluster","",""
+"DeveloperRead","Group:security","Group","audit-","PREFIXED"
+==> log/permission-review-20261007-180012-gary.csv <==
+role,principal,resource_type,resource_name,pattern_type
+"SystemAdmin","Group:breakglass","Cluster","",""
+"SystemAdmin","User:c3","Cluster","",""
+"ClusterAdmin","Group:cluster-admin","Cluster","",""
+"SecurityAdmin","Group:security","Cluster","",""
+"UserAdmin","Group:rbac-admin","Cluster","",""
+"AuditAdmin","Group:security","Cluster","",""
+"ResourceOwner","Group:topic-admin","Group","*","LITERAL"
+"Operator","Group:ops","Cluster","",""
+"DeveloperRead","Group:security","Group","audit-","PREFIXED"
+==> log/permission-review-20261007-182723-gary.csv <==
+role,principal,resource_type,resource_name,pattern_type
+"SystemAdmin","Group:breakglass","Cluster","",""
+"SystemAdmin","User:c3","Cluster","",""
+"ClusterAdmin","Group:cluster-admin","Cluster","",""
+"SecurityAdmin","Group:security","Cluster","",""
+"UserAdmin","Group:rbac-admin","Cluster","",""
+"AuditAdmin","Group:security","Cluster","",""
+"ResourceOwner","Group:topic-admin","Group","*","LITERAL"
+"Operator","Group:ops","Cluster","",""
+"DeveloperRead","Group:security","Group","audit-","PREFIXED"
+==> log/permission-review-20261007-192306-gary.csv <==
+role,principal,resource_type,resource_name,pattern_type
+"SystemAdmin","Group:breakglass","Cluster","",""
+"SystemAdmin","User:c3","Cluster","",""
+"ClusterAdmin","Group:cluster-admin","Cluster","",""
+"SecurityAdmin","Group:security","Cluster","",""
+"UserAdmin","Group:rbac-admin","Cluster","",""
+"AuditAdmin","Group:security","Cluster","",""
+"ResourceOwner","Group:topic-admin","Group","*","LITERAL"
+"Operator","Group:ops","Cluster","",""
+"DeveloperRead","Group:orders-read","Group","demo-","PREFIXED"

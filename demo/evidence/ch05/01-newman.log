@@ -1,0 +1,38 @@
+# 以 newman 執行 Postman collection(與現場 Postman 匯入同一份檔案)
+$ newman run demo.postman_collection.json -e demo-humans.postman_environment.json
+↳ 1.1 未帶帳密 → 401
+  GET https://restproxy:8086/topics [401 Unauthorized, 196B, 41ms]
+  ✓  未帶帳密應回 401
+↳ 1.2 密碼錯誤 → 401
+  GET https://restproxy:8086/topics [401 Unauthorized, 196B, 82ms]
+  ✓  密碼錯誤應回 401
+↳ 5.1 gary(組長)列出 topics → 200
+  GET https://restproxy:8086/topics [200 OK, 485B, 106ms]
+  ✓  gary 應可列出 topics
+  ✓  可看到 orders.events
+↳ 5.2 yujie(developers)寫入 orders.events → 200
+  POST https://restproxy:8086/topics/orders.events [200 OK, 292B, 109ms]
+  ✓  yujie 應可寫入
+↳ 5.3 yujie 寫入 payments.events → 403
+  POST https://restproxy:8086/topics/payments.events [403 Forbidden, 329B, 69ms]
+  ✓  yujie 寫 payments 應被拒
+↳ 5.4 ming(readonly)寫入 orders.events → 403
+  POST https://restproxy:8086/topics/orders.events [403 Forbidden, 327B, 82ms]
+  ✓  ming(唯讀)寫入應被拒
+↳ 5.5 ming(readonly)列出 topics,仍看得到 orders.events → 200
+  GET https://restproxy:8086/topics [200 OK, 211B, 69ms]
+  ✓  ming 唯讀應可列出 topics
+  ✓  看得到 orders.events
+↳ M.1 gary 登入 MDS 取得 token → 200
+  GET https://broker1:8091/security/1.0/authenticate [200 OK, 1.38kB, 69ms]
+  ✓  應回 200 並含 auth_token
+  ✓  含 auth_token
+↳ M.2 列出 Group:orders-write 的 role binding
+  POST https://broker1:8091/security/1.0/lookup/principal/Group:orders-write/resources [200 OK, 278B, 9ms]
+  ✓  應回 200
+  ✓  含 DeveloperWrite
+↳ M.3 yujie 嘗試新增 role binding → 403
+  POST https://broker1:8091/security/1.0/principals/Group:orders-write/roles/DeveloperRead/bindings [403 Forbidden, 422B, 72ms]
+  ✓  非管理員不可新增 role binding
+requests │                10 │                0 │
+assertions │                14 │                0 │

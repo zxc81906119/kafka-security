@@ -1,0 +1,3 @@
+# 【錯誤密碼】AD 帳號但密碼錯 → 401
+$ curl -u gary:bad https://broker1:8091/kafka/v3/clusters
+[HTTP 401] 

@@ -1,0 +1,5 @@
+11:06:54  User:svc-orders-v2 kafka.Produce       ALLOWED  orders.events
+11:12:27  User:svc-orders    kafka.Metadata      DENIED   orders.events
+11:12:31  User:svc-orders    kafka.Metadata      DENIED   orders.events
+11:12:40  User:svc-orders    kafka.Produce       ALLOWED  orders.events
+11:12:43  User:svc-orders    kafka.Metadata      DENIED   payments.events

@@ -1,0 +1,11 @@
+# 暫時性實驗:只有 broker2 改連「由中繼 CA 簽發、伺服器只送葉憑證」的 LDAPS(ldaps-proxy 轉到 openldap:389)
+services:
+  broker2:
+    volumes:
+      - ./spike/ldaps-intermediate:/ldapsi:ro
+    environment:
+      KAFKA_LDAP_JAVA_NAMING_PROVIDER_URL: ldaps://ldaps-proxy:636
+      KAFKA_LDAP_JAVA_NAMING_SECURITY_PROTOCOL: SSL
+      KAFKA_LDAP_SSL_TRUSTSTORE_LOCATION: /ldapsi/trust-active.p12
+      KAFKA_LDAP_SSL_TRUSTSTORE_TYPE: PKCS12
+      KAFKA_LDAP_SSL_TRUSTSTORE_PASSWORD: changeit

@@ -1,0 +1,3 @@
+# 帳密正確(AD 登入成功)但尚未授權 → 看得到的 topic 是 0 個
+$ kafka-topics --bootstrap-server broker1:9094 --command-config ming.properties --list | grep -v -E '^(__|_confluent)' | wc -l   # 已認證、未授權
+可見的業務 topic 數: 0

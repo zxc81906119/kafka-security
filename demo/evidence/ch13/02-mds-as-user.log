@@ -1,0 +1,8 @@
+# 【人 ②】ming 開 C3 後,MDS 日誌裡的呼叫主體是「ming 本人」(authenticate / visibility / authorize),不是 c3
+$ docker logs broker | grep "User Principal: MING"
+     26 MING POST /security/1.0/lookup/principals/User:MING/visibility
+      4 MING PUT /security/1.0/authorize
+      2 MING GET /security/1.0/lookup/rolebindings/principal/User:MING
+      2 MING GET /security/1.0/lookup/managed/clusters/principal/User:MING
+      2 MING GET /security/1.0/authenticate
+      2 MING GET /security/1.0/activenodes/https

@@ -1,0 +1,6 @@
+# 【臨時提權 1】經核准,AD 管理員把 yujie 加進 ops(Kafka 端零變更)
+$ (瀏覽器)phpLDAPadmin:ops 加入 yujie
+  📸 ch11/ldap-grant-yujie-ops-before.png — LDAP(模擬 AD)群組 ops:加入 yujie 之前
+  📸 ch11/ldap-grant-yujie-ops-form.png — LDAP 管理介面:新增 member 值(yujie)
+  📸 ch11/ldap-grant-yujie-ops-after.png — LDAP(模擬 AD)群組 ops:加入 yujie 之後
+[21:41:58] AD 群組異動完成

@@ -1,0 +1,6 @@
+31 MING POST /security/1.0/lookup/principals/User:MING/visibility
+      4 MING PUT /security/1.0/authorize
+      2 MING GET /security/1.0/lookup/rolebindings/principal/User:MING
+      2 MING GET /security/1.0/lookup/managed/clusters/principal/User:MING
+      2 MING GET /security/1.0/authenticate
+      2 MING GET /security/1.0/activenodes/https

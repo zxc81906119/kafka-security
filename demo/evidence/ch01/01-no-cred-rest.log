@@ -1,0 +1,3 @@
+# 未帶任何帳密呼叫 REST Proxy → 401
+$ curl https://restproxy:8086/topics            # 無 Authorization 標頭
+[HTTP 401]

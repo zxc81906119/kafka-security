@@ -1,0 +1,57 @@
+# 群組(模擬客戶 AD,2026-10-07 對齊簡報的 7 組 + 一組示範用):
+#   <系統>-read(唯讀)、ops(Operator)、topic-admin(ResourceOwner)、cluster-admin(ClusterAdmin)、
+#   rbac-admin(UserAdmin)、security(SecurityAdmin + AuditAdmin + audit 讀取)、breakglass(SystemAdmin,平常是空的)
+#   orders-write:設計外,只為了在 demo 示範「人也能寫」的授權機制(第 3、12、15 章);正式環境人只能唯讀。
+# member 用客戶 AD 的格式 CN=<帳號大寫>,OU=…;每個群組都放一個不存在的 NOBODY 當佔位:groupOfNames 至少要有一個 member,沒有佔位的話,最後一位成員移不掉(ldap_modify: Object class violation)。真實 AD 沒有這個限制。
+dn: cn=orders-read,ou=groups,{{ LDAP_BASE_DN }}
+objectClass: groupOfNames
+cn: orders-read
+description: Read-only on orders.* (production troubleshooting)
+member: CN=NOBODY,OU=users,{{ LDAP_BASE_DN }}
+
+dn: cn=orders-write,ou=groups,{{ LDAP_BASE_DN }}
+objectClass: groupOfNames
+cn: orders-write
+description: Demo only - read/write on orders.* (humans are read-only in production)
+member: CN=YUJIE,OU=orders,OU=dev,OU=users,{{ LDAP_BASE_DN }}
+member: CN=NOBODY,OU=users,{{ LDAP_BASE_DN }}
+
+dn: cn=ops,ou=groups,{{ LDAP_BASE_DN }}
+objectClass: groupOfNames
+cn: ops
+description: Operators (Operator role) - temporary elevation after approval
+member: CN=NOBODY,OU=users,{{ LDAP_BASE_DN }}
+
+dn: cn=topic-admin,ou=groups,{{ LDAP_BASE_DN }}
+objectClass: groupOfNames
+cn: topic-admin
+description: Topic and consumer group management (ResourceOwner on Topic*, Group*)
+member: CN=GARY,OU=platform,OU=it,OU=users,{{ LDAP_BASE_DN }}
+member: CN=NOBODY,OU=users,{{ LDAP_BASE_DN }}
+
+dn: cn=cluster-admin,ou=groups,{{ LDAP_BASE_DN }}
+objectClass: groupOfNames
+cn: cluster-admin
+description: Cluster level operations (ClusterAdmin): SCRAM accounts, quotas, quorum
+member: CN=GARY,OU=platform,OU=it,OU=users,{{ LDAP_BASE_DN }}
+member: CN=NOBODY,OU=users,{{ LDAP_BASE_DN }}
+
+dn: cn=rbac-admin,ou=groups,{{ LDAP_BASE_DN }}
+objectClass: groupOfNames
+cn: rbac-admin
+description: Role binding management only (UserAdmin) - no topic or data access
+member: CN=GARY,OU=platform,OU=it,OU=users,{{ LDAP_BASE_DN }}
+member: CN=NOBODY,OU=users,{{ LDAP_BASE_DN }}
+
+dn: cn=security,ou=groups,{{ LDAP_BASE_DN }}
+objectClass: groupOfNames
+cn: security
+description: Security and audit (SecurityAdmin + AuditAdmin + read audit topic)
+member: CN=GARY,OU=platform,OU=it,OU=users,{{ LDAP_BASE_DN }}
+member: CN=NOBODY,OU=users,{{ LDAP_BASE_DN }}
+
+dn: cn=breakglass,ou=groups,{{ LDAP_BASE_DN }}
+objectClass: groupOfNames
+cn: breakglass
+description: Emergency only (SystemAdmin) - normally empty
+member: CN=NOBODY,OU=users,{{ LDAP_BASE_DN }}

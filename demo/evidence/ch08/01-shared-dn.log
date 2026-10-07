@@ -1,0 +1,8 @@
+# 【客戶的做法】Control Center 與 REST Proxy 共用同一張憑證(同一個 DN、同一把 private key)
+$ openssl x509 -in shared-server.pem -noout -subject -ext subjectAltName
+subject=CN=kafka.demo.local, O=Demo
+X509v3 Subject Alternative Name: 
+    DNS:kafka.demo.local
+ DNS:localhost
+ DNS:controller1
+ DNS:broker1

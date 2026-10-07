@@ -1,0 +1,15 @@
+# LB 實驗(獨立於主 compose):用 nginx 模擬 F5 的幾種虛擬伺服器設定,看 REST Proxy 的 mTLS 身分還傳不傳得進去。
+#   docker compose -f spike/lb-nginx/docker-compose.yml up -d     (在 demo/ 目錄;demo 主叢集與 restproxy 要先在跑)
+services:
+  lb:
+    image: nginx:1.27-alpine
+    container_name: lb-nginx
+    hostname: lb
+    networks: [cpsec]
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ../../certs:/certs:ro     # 實驗用:L7 終止 TLS 需要 server 私鑰;正式環境 F5 另有自己的憑證
+networks:
+  cpsec:
+    external: true
+    name: cpsec_default

@@ -1,0 +1,3 @@
+# 【AD 掛了】服務(SCRAM)不受影響:svc-orders 照常寫入
+$ (openldap 已停止)  producer(svc-orders)
+→ 結果:成功

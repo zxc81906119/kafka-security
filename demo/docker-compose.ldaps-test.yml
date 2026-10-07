@@ -1,0 +1,23 @@
+# 暫時性實驗(LDAPS):用法 docker compose -f docker-compose.yml -f docker-compose.ldaps-test.yml up -d openldap broker1 broker2
+services:
+  openldap:
+    environment:
+      LDAP_TLS: "true"
+      LDAP_TLS_CRT_FILENAME: ldap.crt
+      LDAP_TLS_KEY_FILENAME: ldap.key
+      LDAP_TLS_CA_CRT_FILENAME: adca.pem
+      LDAP_TLS_VERIFY_CLIENT: never
+    volumes:
+      - ./ldaps-test:/container/service/slapd/assets/certs
+  broker1: &b
+    volumes:
+      - ./ldaps-test:/ldaps:ro
+    environment:
+      KAFKA_LDAP_JAVA_NAMING_PROVIDER_URL: ldaps://openldap:636
+      KAFKA_LDAP_JAVA_NAMING_SECURITY_PROTOCOL: SSL
+      KAFKA_LDAP_SSL_TRUSTSTORE_LOCATION: /ldaps/adca-truststore.p12
+      KAFKA_LDAP_SSL_TRUSTSTORE_TYPE: PKCS12
+      KAFKA_LDAP_SSL_TRUSTSTORE_PASSWORD: changeit
+      KAFKA_LISTENER_NAME_CLIENT_SASL_ENABLED_MECHANISMS: PLAIN,SCRAM-SHA-512,SCRAM-SHA-256,OAUTHBEARER
+      KAFKA_LISTENER_NAME_CLIENT_SCRAM___SHA___256_SASL_JAAS_CONFIG: org.apache.kafka.common.security.scram.ScramLoginModule required;
+  broker2: *b

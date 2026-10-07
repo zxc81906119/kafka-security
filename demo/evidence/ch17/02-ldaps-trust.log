@@ -1,0 +1,5 @@
+# 【AD ②】LDAPS 要信任簽發憑證的 CA:信任 demo CA 才連得上;不信任就失敗(所以連 AD 的 JVM 才需要 ldap.ssl.truststore)
+$ ldapsearch -H ldaps://openldap:636   # 對照:信任 / 不信任 CA
+信任 demo CA:   result: 0 Success
+不信任 demo CA: ldap_sasl_bind(SIMPLE): Can't contact LDAP server (-1)
+判定:信任 CA 才連得上

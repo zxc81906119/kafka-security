@@ -1,0 +1,6 @@
+# 讓「唯讀查詢帳號 (bind DN)」可讀取使用者與群組(userPassword 仍由前一條規則擋住)。
+# 真實 AD 的作法:將此帳號加入有讀取權限的群組,不需要寫入權限。
+dn: olcDatabase={1}mdb,cn=config
+changetype: modify
+add: olcAccess
+olcAccess: {2}to * by dn.exact="cn=svc-kafka-ldap,ou=system,dc=corp,dc=demo" read by self read by dn="cn=admin,dc=corp,dc=demo" write by * none

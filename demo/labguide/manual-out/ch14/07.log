@@ -1,0 +1,2 @@
+{"error_code":200,"cluster_id":"XyZBQ3-GTvKH2qNfP7X33A","topic_name":"orders.events","partition_id":0,"offset":59,"timestamp":"2026-10-07T11:21:49.496Z","value":{"type":"JSON","size":7}}
+[HTTP 200]

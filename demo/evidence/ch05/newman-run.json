@@ -1,0 +1,4645 @@
+{
+  "collection": {
+    "item": [
+      {
+        "id": "fcb479b2-d1cd-477a-88b3-ae553b8d99ce",
+        "name": "1 沒有身分進不來",
+        "description": {
+          "content": "建立「預設全拒絕」的基準",
+          "type": "text/plain"
+        },
+        "item": [
+          {
+            "id": "2af1cace-dab8-40c6-95ae-38d478f1cbb2",
+            "name": "1.1 未帶帳密 → 401",
+            "request": {
+              "description": {
+                "content": "**講稿**:沒有身分,REST Proxy 直接拒絕。",
+                "type": "text/plain"
+              },
+              "url": {
+                "path": [
+                  "topics"
+                ],
+                "host": [
+                  "{{rest_proxy}}"
+                ],
+                "query": [],
+                "variable": []
+              },
+              "header": [
+                {
+                  "key": "Accept",
+                  "value": "application/vnd.kafka.v2+json"
+                }
+              ],
+              "method": "GET",
+              "auth": {
+                "type": "noauth",
+                "noauth": []
+              }
+            },
+            "response": [],
+            "event": [
+              {
+                "listen": "test",
+                "script": {
+                  "id": "471e5384-de81-40f3-9df9-be0c9361f390",
+                  "type": "text/javascript",
+                  "exec": [
+                    "pm.test(\"未帶帳密應回 401\", function () { pm.response.to.have.status(401); });"
+                  ],
+                  "_lastExecutionId": "e31e5937-eb40-41e0-b326-5c7ad5f8ba3f"
+                }
+              }
+            ]
+          },
+          {
+            "id": "b6a6e6e5-1ed2-49e4-881f-9b2260d01bd5",
+            "name": "1.2 密碼錯誤 → 401",
+            "request": {
+              "description": {
+                "content": "**講稿**:帳號是 AD 的,密碼錯誤由 AD 驗證失敗。",
+                "type": "text/plain"
+              },
+              "url": {
+                "path": [
+                  "topics"
+                ],
+                "host": [
+                  "{{rest_proxy}}"
+                ],
+                "query": [],
+                "variable": []
+              },
+              "header": [
+                {
+                  "key": "Accept",
+                  "value": "application/vnd.kafka.v2+json"
+                }
+              ],
+              "method": "GET",
+              "auth": {
+                "type": "basic",
+                "basic": [
+                  {
+                    "type": "any",
+                    "value": "{{yujie_user}}",
+                    "key": "username"
+                  },
+                  {
+                    "type": "any",
+                    "value": "{{bad_pass}}",
+                    "key": "password"
+                  }
+                ]
+              }
+            },
+            "response": [],
+            "event": [
+              {
+                "listen": "test",
+                "script": {
+                  "id": "727d1142-2dd1-4649-a29b-2717dcd1a9fc",
+                  "type": "text/javascript",
+                  "exec": [
+                    "pm.test(\"密碼錯誤應回 401\", function () { pm.response.to.have.status(401); });"
+                  ],
+                  "_lastExecutionId": "2c84869e-036d-4676-8390-0335977da523"
+                }
+              }
+            ]
+          }
+        ],
+        "event": []
+      },
+      {
+        "id": "f7d36523-c8f9-4202-b3ec-e24b5a776b24",
+        "name": "5 人:同一份 AD 身分用在工具上",
+        "description": {
+          "content": "同一組 AD 帳密,Postman 與 C3 是同一個身分;授權由 AD 群組對應的 role 決定",
+          "type": "text/plain"
+        },
+        "item": [
+          {
+            "id": "30510a59-8282-4078-9d6e-3f64d671d8a5",
+            "name": "5.1 gary(組長)列出 topics → 200",
+            "request": {
+              "description": {
+                "content": "**講稿**:gary 屬 cluster-admin、topic-admin、rbac-admin、security(沒有 SystemAdmin),看得到全部 topic。",
+                "type": "text/plain"
+              },
+              "url": {
+                "path": [
+                  "topics"
+                ],
+                "host": [
+                  "{{rest_proxy}}"
+                ],
+                "query": [],
+                "variable": []
+              },
+              "header": [
+                {
+                  "key": "Accept",
+                  "value": "application/vnd.kafka.v2+json"
+                }
+              ],
+              "method": "GET",
+              "auth": {
+                "type": "basic",
+                "basic": [
+                  {
+                    "type": "any",
+                    "value": "{{gary_user}}",
+                    "key": "username"
+                  },
+                  {
+                    "type": "any",
+                    "value": "{{gary_pass}}",
+                    "key": "password"
+                  }
+                ]
+              }
+            },
+            "response": [],
+            "event": [
+              {
+                "listen": "test",
+                "script": {
+                  "id": "d7f723f7-ce1c-44c5-9fae-422017b6d955",
+                  "type": "text/javascript",
+                  "exec": [
+                    "pm.test(\"gary 應可列出 topics\", function () { pm.response.to.have.status(200); });",
+                    "pm.test('可看到 orders.events', function(){ pm.expect(pm.response.text()).to.include('orders.events'); });"
+                  ],
+                  "_lastExecutionId": "20178b5e-020a-4b31-8328-e2ca31716e37"
+                }
+              }
+            ]
+          },
+          {
+            "id": "3ed7ed9d-c549-4b82-984c-06e8a7b7adef",
+            "name": "5.2 yujie(developers)寫入 orders.events → 200",
+            "request": {
+              "description": {
+                "content": "**講稿**:yujie 的權限來自 AD 群組 orders-write。",
+                "type": "text/plain"
+              },
+              "url": {
+                "path": [
+                  "topics",
+                  "orders.events"
+                ],
+                "host": [
+                  "{{rest_proxy}}"
+                ],
+                "query": [],
+                "variable": []
+              },
+              "header": [
+                {
+                  "key": "Accept",
+                  "value": "application/vnd.kafka.v2+json"
+                },
+                {
+                  "key": "Content-Type",
+                  "value": "application/vnd.kafka.json.v2+json"
+                }
+              ],
+              "method": "POST",
+              "body": {
+                "mode": "raw",
+                "raw": "{\n  \"records\": [\n    {\n      \"value\": {\n        \"order\": \"A-3001\",\n        \"by\": \"yujie\"\n      }\n    }\n  ]\n}"
+              },
+              "auth": {
+                "type": "basic",
+                "basic": [
+                  {
+                    "type": "any",
+                    "value": "{{yujie_user}}",
+                    "key": "username"
+                  },
+                  {
+                    "type": "any",
+                    "value": "{{yujie_pass}}",
+                    "key": "password"
+                  }
+                ]
+              }
+            },
+            "response": [],
+            "event": [
+              {
+                "listen": "test",
+                "script": {
+                  "id": "8a5168bf-4b82-4a91-807e-37e20aef19fe",
+                  "type": "text/javascript",
+                  "exec": [
+                    "pm.test(\"yujie 應可寫入\", function () { pm.response.to.have.status(200); });"
+                  ],
+                  "_lastExecutionId": "9d1b7f1b-7527-44e5-a8b7-c7baafcb29fa"
+                }
+              }
+            ]
+          },
+          {
+            "id": "47f0a654-91ff-4cf2-bb6d-406b3c82028d",
+            "name": "5.3 yujie 寫入 payments.events → 403",
+            "request": {
+              "description": {
+                "content": "**講稿**:最小權限:developers 只被授權 orders.*,碰 payments.* 被拒。",
+                "type": "text/plain"
+              },
+              "url": {
+                "path": [
+                  "topics",
+                  "payments.events"
+                ],
+                "host": [
+                  "{{rest_proxy}}"
+                ],
+                "query": [],
+                "variable": []
+              },
+              "header": [
+                {
+                  "key": "Accept",
+                  "value": "application/vnd.kafka.v2+json"
+                },
+                {
+                  "key": "Content-Type",
+                  "value": "application/vnd.kafka.json.v2+json"
+                }
+              ],
+              "method": "POST",
+              "body": {
+                "mode": "raw",
+                "raw": "{\n  \"records\": [\n    {\n      \"value\": {\n        \"order\": \"A-3001\",\n        \"by\": \"yujie\"\n      }\n    }\n  ]\n}"
+              },
+              "auth": {
+                "type": "basic",
+                "basic": [
+                  {
+                    "type": "any",
+                    "value": "{{yujie_user}}",
+                    "key": "username"
+                  },
+                  {
+                    "type": "any",
+                    "value": "{{yujie_pass}}",
+                    "key": "password"
+                  }
+                ]
+              }
+            },
+            "response": [],
+            "event": [
+              {
+                "listen": "test",
+                "script": {
+                  "id": "22bdb198-851b-4272-aae6-3db3d41ceba3",
+                  "type": "text/javascript",
+                  "exec": [
+                    "pm.test(\"yujie 寫 payments 應被拒\", function () { pm.response.to.have.status(403); });"
+                  ],
+                  "_lastExecutionId": "4bcd141a-4a6e-4c00-b3a6-7190979e687c"
+                }
+              }
+            ]
+          },
+          {
+            "id": "70b4d65a-9269-4f88-973f-d45517301666",
+            "name": "5.4 ming(readonly)寫入 orders.events → 403",
+            "request": {
+              "description": {
+                "content": "**講稿**:ming 已移到唯讀群組,寫入被拒(第 4 章)。",
+                "type": "text/plain"
+              },
+              "url": {
+                "path": [
+                  "topics",
+                  "orders.events"
+                ],
+                "host": [
+                  "{{rest_proxy}}"
+                ],
+                "query": [],
+                "variable": []
+              },
+              "header": [
+                {
+                  "key": "Accept",
+                  "value": "application/vnd.kafka.v2+json"
+                },
+                {
+                  "key": "Content-Type",
+                  "value": "application/vnd.kafka.json.v2+json"
+                }
+              ],
+              "method": "POST",
+              "body": {
+                "mode": "raw",
+                "raw": "{\n  \"records\": [\n    {\n      \"value\": {\n        \"order\": \"A-3001\",\n        \"by\": \"ming\"\n      }\n    }\n  ]\n}"
+              },
+              "auth": {
+                "type": "basic",
+                "basic": [
+                  {
+                    "type": "any",
+                    "value": "{{ming_user}}",
+                    "key": "username"
+                  },
+                  {
+                    "type": "any",
+                    "value": "{{ming_pass}}",
+                    "key": "password"
+                  }
+                ]
+              }
+            },
+            "response": [],
+            "event": [
+              {
+                "listen": "test",
+                "script": {
+                  "id": "5507469e-cd17-4da4-a625-f1ba37e46307",
+                  "type": "text/javascript",
+                  "exec": [
+                    "pm.test(\"ming(唯讀)寫入應被拒\", function () { pm.response.to.have.status(403); });"
+                  ],
+                  "_lastExecutionId": "33c7ea94-efd1-4934-8a66-5d36444c4c47"
+                }
+              }
+            ]
+          },
+          {
+            "id": "e409aee1-8c78-45d3-a785-d6d56ff74174",
+            "name": "5.5 ming(readonly)列出 topics,仍看得到 orders.events → 200",
+            "request": {
+              "description": {
+                "content": "**講稿**:唯讀可以「看」:列出與讀取資料;但不能寫(5.4)。",
+                "type": "text/plain"
+              },
+              "url": {
+                "path": [
+                  "topics"
+                ],
+                "host": [
+                  "{{rest_proxy}}"
+                ],
+                "query": [],
+                "variable": []
+              },
+              "header": [
+                {
+                  "key": "Accept",
+                  "value": "application/vnd.kafka.v2+json"
+                }
+              ],
+              "method": "GET",
+              "auth": {
+                "type": "basic",
+                "basic": [
+                  {
+                    "type": "any",
+                    "value": "{{ming_user}}",
+                    "key": "username"
+                  },
+                  {
+                    "type": "any",
+                    "value": "{{ming_pass}}",
+                    "key": "password"
+                  }
+                ]
+              }
+            },
+            "response": [],
+            "event": [
+              {
+                "listen": "test",
+                "script": {
+                  "id": "cdbdd0c2-5e55-4162-9aff-067b328199a0",
+                  "type": "text/javascript",
+                  "exec": [
+                    "pm.test(\"ming 唯讀應可列出 topics\", function () { pm.response.to.have.status(200); });",
+                    "pm.test('看得到 orders.events', function(){ pm.expect(pm.response.text()).to.include('orders.events'); });"
+                  ],
+                  "_lastExecutionId": "baf718c7-1069-4f37-afbf-69203213069c"
+                }
+              }
+            ]
+          }
+        ],
+        "event": []
+      },
+      {
+        "id": "4f8a61a5-8f9c-44e3-a6a5-506c9d90c076",
+        "name": "M MDS API(與 C3 同一份資料)",
+        "description": {
+          "content": "C3 畫面上點的 role assignment,就是這裡查到的資料",
+          "type": "text/plain"
+        },
+        "item": [
+          {
+            "id": "d740f3ae-f09d-4642-9d27-e55a98a55bf8",
+            "name": "M.1 gary 登入 MDS 取得 token → 200",
+            "request": {
+              "description": {
+                "content": "**講稿**:AD 帳密換取 MDS token(短效),之後可用 Bearer 呼叫。",
+                "type": "text/plain"
+              },
+              "url": {
+                "path": [
+                  "security",
+                  "1.0",
+                  "authenticate"
+                ],
+                "host": [
+                  "{{mds}}"
+                ],
+                "query": [],
+                "variable": []
+              },
+              "header": [
+                {
+                  "key": "Accept",
+                  "value": "application/json"
+                }
+              ],
+              "method": "GET",
+              "auth": {
+                "type": "basic",
+                "basic": [
+                  {
+                    "type": "any",
+                    "value": "{{gary_user}}",
+                    "key": "username"
+                  },
+                  {
+                    "type": "any",
+                    "value": "{{gary_pass}}",
+                    "key": "password"
+                  }
+                ]
+              }
+            },
+            "response": [],
+            "event": [
+              {
+                "listen": "test",
+                "script": {
+                  "id": "830eb806-cdc7-4d7f-bb5f-af2b41bea05a",
+                  "type": "text/javascript",
+                  "exec": [
+                    "pm.test(\"應回 200 並含 auth_token\", function () { pm.response.to.have.status(200); });",
+                    "pm.test('含 auth_token', function(){ pm.expect(pm.response.json()).to.have.property('auth_token'); }); pm.collectionVariables.set('gary_token', pm.response.json().auth_token);"
+                  ],
+                  "_lastExecutionId": "8ef6ce88-f848-4f68-b048-f90df1d84501"
+                }
+              }
+            ]
+          },
+          {
+            "id": "daf01642-f814-4ec3-838a-041c7de251c3",
+            "name": "M.2 列出 Group:orders-write 的 role binding",
+            "request": {
+              "description": {
+                "content": "**講稿**:這就是 C3「Manage role assignments」顯示的內容。",
+                "type": "text/plain"
+              },
+              "url": {
+                "path": [
+                  "security",
+                  "1.0",
+                  "lookup",
+                  "principal",
+                  "Group:orders-write",
+                  "resources"
+                ],
+                "host": [
+                  "{{mds}}"
+                ],
+                "query": [],
+                "variable": []
+              },
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "method": "POST",
+              "body": {
+                "mode": "raw",
+                "raw": "{\n  \"clusters\": {\n    \"kafka-cluster\": \"{{kafka_cluster_id}}\"\n  }\n}"
+              },
+              "auth": {
+                "type": "bearer",
+                "bearer": [
+                  {
+                    "type": "any",
+                    "value": "{{gary_token}}",
+                    "key": "token"
+                  }
+                ]
+              }
+            },
+            "response": [],
+            "event": [
+              {
+                "listen": "test",
+                "script": {
+                  "id": "88c61814-eba9-41e5-95c0-5dc01169d405",
+                  "type": "text/javascript",
+                  "exec": [
+                    "pm.test(\"應回 200\", function () { pm.response.to.have.status(200); });",
+                    "pm.test('含 DeveloperWrite', function(){ pm.expect(pm.response.text()).to.include('DeveloperWrite'); });"
+                  ],
+                  "_lastExecutionId": "c1c19d6c-fd5f-4b18-af67-fb937806801c"
+                }
+              }
+            ]
+          },
+          {
+            "id": "c9c9165a-1747-47e1-be9b-d75ffbfb64bc",
+            "name": "M.3 yujie 嘗試新增 role binding → 403",
+            "request": {
+              "description": {
+                "content": "**講稿**:不是授權管理員(rbac-admin)就不能改授權。",
+                "type": "text/plain"
+              },
+              "url": {
+                "path": [
+                  "security",
+                  "1.0",
+                  "principals",
+                  "Group:orders-write",
+                  "roles",
+                  "DeveloperRead",
+                  "bindings"
+                ],
+                "host": [
+                  "{{mds}}"
+                ],
+                "query": [],
+                "variable": []
+              },
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "method": "POST",
+              "body": {
+                "mode": "raw",
+                "raw": "{\n  \"scope\": {\n    \"clusters\": {\n      \"kafka-cluster\": \"{{kafka_cluster_id}}\"\n    }\n  },\n  \"resourcePatterns\": [\n    {\n      \"resourceType\": \"Topic\",\n      \"name\": \"payments.\",\n      \"patternType\": \"PREFIXED\"\n    }\n  ]\n}"
+              },
+              "auth": {
+                "type": "basic",
+                "basic": [
+                  {
+                    "type": "any",
+                    "value": "{{yujie_user}}",
+                    "key": "username"
+                  },
+                  {
+                    "type": "any",
+                    "value": "{{yujie_pass}}",
+                    "key": "password"
+                  }
+                ]
+              }
+            },
+            "response": [],
+            "event": [
+              {
+                "listen": "test",
+                "script": {
+                  "id": "3be492e6-18b9-47da-aec4-334030a330f1",
+                  "type": "text/javascript",
+                  "exec": [
+                    "pm.test(\"非管理員不可新增 role binding\", function () { pm.response.to.have.status(403); });"
+                  ],
+                  "_lastExecutionId": "f62416ee-b152-499f-8012-4b6dfa54d15d"
+                }
+              }
+            ]
+          }
+        ],
+        "event": []
+      }
+    ],
+    "event": [
+      {
+        "listen": "prerequest",
+        "script": {
+          "id": "ada3fb11-c99e-4d3e-a91e-60215c603198",
+          "type": "text/javascript",
+          "exec": [
+            "// MDS 驗證成功後會設定 auth_token cookie;若不清除,之後「換成另一個人的帳密」的請求仍會以前一個人的身分執行(Postman 與 newman 都是)。",
+            "const resolved = pm.variables.replaceIn(pm.request.url.toString());",
+            "pm.cookies.jar().clear(resolved, function () {});"
+          ],
+          "_lastExecutionId": "386f01e0-b421-4f3c-aee3-b4f57679a4b0"
+        }
+      }
+    ],
+    "variable": [],
+    "info": {
+      "_postman_id": "00151fa1-1e93-440a-914d-80793919106c",
+      "name": "Confluent 安全方案 Demo(AD 人員 + 服務)",
+      "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+      "description": {
+        "content": "REST Proxy 與 MDS API。帳密不寫在 collection:請在 environment 的 secret 變數填入(人 = AD 帳號)。注意:服務帳號(SCRAM)不能用 Basic 進 REST Proxy(實測 401);機器請用 client 憑證(Postman:Settings → Certificates → Add client certificate,Host = localhost:8086,見 Lab 12)或原生 Kafka client。\n每個 request 的描述欄就是講稿;Tests 分頁會顯示綠/紅(符合預期與否)。",
+        "type": "text/plain"
+      }
+    }
+  },
+  "environment": {
+    "_": {
+      "postman_variable_scope": "environment"
+    },
+    "id": "770b3b97-82bf-4137-b280-ea93a635295b",
+    "name": "Demo - 人(AD 帳號)",
+    "values": [
+      {
+        "type": "any",
+        "value": "https://restproxy:8086",
+        "key": "rest_proxy"
+      },
+      {
+        "type": "any",
+        "value": "https://broker1:8091",
+        "key": "mds"
+      },
+      {
+        "type": "any",
+        "value": "XyZBQ3-GTvKH2qNfP7X33A",
+        "key": "kafka_cluster_id"
+      },
+      {
+        "type": "any",
+        "value": "gary",
+        "key": "gary_user"
+      },
+      {
+        "type": "any",
+        "value": "wrong-password",
+        "key": "bad_pass"
+      },
+      {
+        "type": "any",
+        "value": "gary-pw",
+        "key": "gary_pass"
+      },
+      {
+        "type": "any",
+        "value": "yujie",
+        "key": "yujie_user"
+      },
+      {
+        "type": "any",
+        "value": "yujie-pw",
+        "key": "yujie_pass"
+      },
+      {
+        "type": "any",
+        "value": "ming",
+        "key": "ming_user"
+      },
+      {
+        "type": "any",
+        "value": "ming-pw",
+        "key": "ming_pass"
+      }
+    ]
+  },
+  "globals": {
+    "id": "8a6d1fd1-69ec-466e-a102-74fb00ccb566",
+    "values": []
+  },
+  "run": {
+    "stats": {
+      "iterations": {
+        "total": 1,
+        "pending": 0,
+        "failed": 0
+      },
+      "items": {
+        "total": 10,
+        "pending": 0,
+        "failed": 0
+      },
+      "scripts": {
+        "total": 20,
+        "pending": 0,
+        "failed": 0
+      },
+      "prerequests": {
+        "total": 10,
+        "pending": 0,
+        "failed": 0
+      },
+      "requests": {
+        "total": 10,
+        "pending": 0,
+        "failed": 0
+      },
+      "tests": {
+        "total": 10,
+        "pending": 0,
+        "failed": 0
+      },
+      "assertions": {
+        "total": 14,
+        "pending": 0,
+        "failed": 0
+      },
+      "testScripts": {
+        "total": 10,
+        "pending": 0,
+        "failed": 0
+      },
+      "prerequestScripts": {
+        "total": 10,
+        "pending": 0,
+        "failed": 0
+      }
+    },
+    "timings": {
+      "responseAverage": 70.8,
+      "responseMin": 9,
+      "responseMax": 109,
+      "responseSd": 27.690431560378396,
+      "dnsAverage": 0,
+      "dnsMin": 0,
+      "dnsMax": 0,
+      "dnsSd": 0,
+      "firstByteAverage": 0,
+      "firstByteMin": 0,
+      "firstByteMax": 0,
+      "firstByteSd": 0,
+      "started": 1791384636716,
+      "completed": 1791384637698
+    },
+    "executions": [
+      {
+        "cursor": {
+          "position": 0,
+          "iteration": 0,
+          "length": 10,
+          "cycles": 1,
+          "empty": false,
+          "eof": false,
+          "bof": true,
+          "cr": false,
+          "ref": "95996190-b2b5-40ba-beef-16b7e0e77c09",
+          "httpRequestId": "823b4a2f-863a-486f-b9a7-8b7f99f6aab5"
+        },
+        "item": {
+          "id": "2af1cace-dab8-40c6-95ae-38d478f1cbb2",
+          "name": "1.1 未帶帳密 → 401",
+          "request": {
+            "description": {
+              "content": "**講稿**:沒有身分,REST Proxy 直接拒絕。",
+              "type": "text/plain"
+            },
+            "url": {
+              "path": [
+                "topics"
+              ],
+              "host": [
+                "{{rest_proxy}}"
+              ],
+              "query": [],
+              "variable": []
+            },
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/vnd.kafka.v2+json"
+              }
+            ],
+            "method": "GET",
+            "auth": {
+              "type": "noauth",
+              "noauth": []
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "id": "471e5384-de81-40f3-9df9-be0c9361f390",
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"未帶帳密應回 401\", function () { pm.response.to.have.status(401); });"
+                ],
+                "_lastExecutionId": "e31e5937-eb40-41e0-b326-5c7ad5f8ba3f"
+              }
+            }
+          ]
+        },
+        "request": {
+          "description": {
+            "content": "**講稿**:沒有身分,REST Proxy 直接拒絕。",
+            "type": "text/plain"
+          },
+          "url": {
+            "protocol": "https",
+            "port": "8086",
+            "path": [
+              "topics"
+            ],
+            "host": [
+              "restproxy"
+            ],
+            "query": [],
+            "variable": []
+          },
+          "header": [
+            {
+              "key": "Accept",
+              "value": "application/vnd.kafka.v2+json"
+            },
+            {
+              "key": "User-Agent",
+              "value": "PostmanRuntime/7.39.0",
+              "system": true
+            },
+            {
+              "key": "Cache-Control",
+              "value": "no-cache",
+              "system": true
+            },
+            {
+              "key": "Postman-Token",
+              "value": "00c4c9d7-3c74-40c9-a73f-95b1d3bceb38",
+              "system": true
+            },
+            {
+              "key": "Host",
+              "value": "restproxy:8086",
+              "system": true
+            },
+            {
+              "key": "Accept-Encoding",
+              "value": "gzip, deflate, br",
+              "system": true
+            },
+            {
+              "key": "Connection",
+              "value": "keep-alive",
+              "system": true
+            }
+          ],
+          "method": "GET",
+          "auth": {
+            "type": "noauth",
+            "noauth": []
+          }
+        },
+        "response": {
+          "id": "daaa424d-85e2-4443-8c60-123dbd998fc3",
+          "status": "Unauthorized",
+          "code": 401,
+          "header": [
+            {
+              "key": "Date",
+              "value": "Wed, 07 Oct 2026 14:50:36 GMT"
+            },
+            {
+              "key": "Vary",
+              "value": "Accept-Encoding"
+            },
+            {
+              "key": "WWW-Authenticate",
+              "value": "Basic realm=\"null\""
+            },
+            {
+              "key": "Cache-Control",
+              "value": "must-revalidate,no-cache,no-store"
+            },
+            {
+              "key": "Content-Length",
+              "value": "0"
+            }
+          ],
+          "stream": {
+            "type": "Buffer",
+            "data": []
+          },
+          "cookie": [],
+          "responseTime": 41,
+          "responseSize": 0
+        },
+        "id": "2af1cace-dab8-40c6-95ae-38d478f1cbb2",
+        "assertions": [
+          {
+            "assertion": "未帶帳密應回 401",
+            "skipped": false
+          }
+        ]
+      },
+      {
+        "cursor": {
+          "ref": "3bd3320b-b76f-4d7f-b6b8-829e9ec6385e",
+          "length": 10,
+          "cycles": 1,
+          "position": 1,
+          "iteration": 0,
+          "httpRequestId": "53c26ec2-ef7d-41c5-9007-8fafa8b89961"
+        },
+        "item": {
+          "id": "b6a6e6e5-1ed2-49e4-881f-9b2260d01bd5",
+          "name": "1.2 密碼錯誤 → 401",
+          "request": {
+            "description": {
+              "content": "**講稿**:帳號是 AD 的,密碼錯誤由 AD 驗證失敗。",
+              "type": "text/plain"
+            },
+            "url": {
+              "path": [
+                "topics"
+              ],
+              "host": [
+                "{{rest_proxy}}"
+              ],
+              "query": [],
+              "variable": []
+            },
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/vnd.kafka.v2+json"
+              }
+            ],
+            "method": "GET",
+            "auth": {
+              "type": "basic",
+              "basic": [
+                {
+                  "type": "any",
+                  "value": "{{yujie_user}}",
+                  "key": "username"
+                },
+                {
+                  "type": "any",
+                  "value": "{{bad_pass}}",
+                  "key": "password"
+                }
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "id": "727d1142-2dd1-4649-a29b-2717dcd1a9fc",
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"密碼錯誤應回 401\", function () { pm.response.to.have.status(401); });"
+                ],
+                "_lastExecutionId": "2c84869e-036d-4676-8390-0335977da523"
+              }
+            }
+          ]
+        },
+        "request": {
+          "description": {
+            "content": "**講稿**:帳號是 AD 的,密碼錯誤由 AD 驗證失敗。",
+            "type": "text/plain"
+          },
+          "url": {
+            "protocol": "https",
+            "port": "8086",
+            "path": [
+              "topics"
+            ],
+            "host": [
+              "restproxy"
+            ],
+            "query": [],
+            "variable": []
+          },
+          "header": [
+            {
+              "key": "Accept",
+              "value": "application/vnd.kafka.v2+json"
+            },
+            {
+              "key": "Authorization",
+              "value": "Basic eXVqaWU6d3JvbmctcGFzc3dvcmQ=",
+              "system": true
+            },
+            {
+              "key": "User-Agent",
+              "value": "PostmanRuntime/7.39.0",
+              "system": true
+            },
+            {
+              "key": "Cache-Control",
+              "value": "no-cache",
+              "system": true
+            },
+            {
+              "key": "Postman-Token",
+              "value": "99b0fd21-eeda-4520-8c50-157f274bb40b",
+              "system": true
+            },
+            {
+              "key": "Host",
+              "value": "restproxy:8086",
+              "system": true
+            },
+            {
+              "key": "Accept-Encoding",
+              "value": "gzip, deflate, br",
+              "system": true
+            },
+            {
+              "key": "Connection",
+              "value": "keep-alive",
+              "system": true
+            }
+          ],
+          "method": "GET",
+          "auth": {
+            "type": "basic",
+            "basic": [
+              {
+                "type": "any",
+                "value": "yujie",
+                "key": "username"
+              },
+              {
+                "type": "any",
+                "value": "wrong-password",
+                "key": "password"
+              }
+            ]
+          }
+        },
+        "response": {
+          "id": "0709d9f2-ece4-4e11-9e52-105cd4ea281f",
+          "status": "Unauthorized",
+          "code": 401,
+          "header": [
+            {
+              "key": "Date",
+              "value": "Wed, 07 Oct 2026 14:50:36 GMT"
+            },
+            {
+              "key": "Vary",
+              "value": "Accept-Encoding"
+            },
+            {
+              "key": "WWW-Authenticate",
+              "value": "Basic realm=\"null\""
+            },
+            {
+              "key": "Cache-Control",
+              "value": "must-revalidate,no-cache,no-store"
+            },
+            {
+              "key": "Content-Length",
+              "value": "0"
+            }
+          ],
+          "stream": {
+            "type": "Buffer",
+            "data": []
+          },
+          "cookie": [],
+          "responseTime": 82,
+          "responseSize": 0
+        },
+        "id": "b6a6e6e5-1ed2-49e4-881f-9b2260d01bd5",
+        "assertions": [
+          {
+            "assertion": "密碼錯誤應回 401",
+            "skipped": false
+          }
+        ]
+      },
+      {
+        "cursor": {
+          "ref": "0d9717cd-da09-494c-9e4a-478d06be0c29",
+          "length": 10,
+          "cycles": 1,
+          "position": 2,
+          "iteration": 0,
+          "httpRequestId": "26d90e90-aac8-4074-967e-46eef4eaacbe"
+        },
+        "item": {
+          "id": "30510a59-8282-4078-9d6e-3f64d671d8a5",
+          "name": "5.1 gary(組長)列出 topics → 200",
+          "request": {
+            "description": {
+              "content": "**講稿**:gary 屬 cluster-admin、topic-admin、rbac-admin、security(沒有 SystemAdmin),看得到全部 topic。",
+              "type": "text/plain"
+            },
+            "url": {
+              "path": [
+                "topics"
+              ],
+              "host": [
+                "{{rest_proxy}}"
+              ],
+              "query": [],
+              "variable": []
+            },
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/vnd.kafka.v2+json"
+              }
+            ],
+            "method": "GET",
+            "auth": {
+              "type": "basic",
+              "basic": [
+                {
+                  "type": "any",
+                  "value": "{{gary_user}}",
+                  "key": "username"
+                },
+                {
+                  "type": "any",
+                  "value": "{{gary_pass}}",
+                  "key": "password"
+                }
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "id": "d7f723f7-ce1c-44c5-9fae-422017b6d955",
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"gary 應可列出 topics\", function () { pm.response.to.have.status(200); });",
+                  "pm.test('可看到 orders.events', function(){ pm.expect(pm.response.text()).to.include('orders.events'); });"
+                ],
+                "_lastExecutionId": "20178b5e-020a-4b31-8328-e2ca31716e37"
+              }
+            }
+          ]
+        },
+        "request": {
+          "description": {
+            "content": "**講稿**:gary 屬 cluster-admin、topic-admin、rbac-admin、security(沒有 SystemAdmin),看得到全部 topic。",
+            "type": "text/plain"
+          },
+          "url": {
+            "protocol": "https",
+            "port": "8086",
+            "path": [
+              "topics"
+            ],
+            "host": [
+              "restproxy"
+            ],
+            "query": [],
+            "variable": []
+          },
+          "header": [
+            {
+              "key": "Accept",
+              "value": "application/vnd.kafka.v2+json"
+            },
+            {
+              "key": "Authorization",
+              "value": "Basic Z2FyeTpnYXJ5LXB3",
+              "system": true
+            },
+            {
+              "key": "User-Agent",
+              "value": "PostmanRuntime/7.39.0",
+              "system": true
+            },
+            {
+              "key": "Cache-Control",
+              "value": "no-cache",
+              "system": true
+            },
+            {
+              "key": "Postman-Token",
+              "value": "d5dc26db-abdd-479b-8e4e-6e376d15d84d",
+              "system": true
+            },
+            {
+              "key": "Host",
+              "value": "restproxy:8086",
+              "system": true
+            },
+            {
+              "key": "Accept-Encoding",
+              "value": "gzip, deflate, br",
+              "system": true
+            },
+            {
+              "key": "Connection",
+              "value": "keep-alive",
+              "system": true
+            }
+          ],
+          "method": "GET",
+          "auth": {
+            "type": "basic",
+            "basic": [
+              {
+                "type": "any",
+                "value": "gary",
+                "key": "username"
+              },
+              {
+                "type": "any",
+                "value": "gary-pw",
+                "key": "password"
+              }
+            ]
+          }
+        },
+        "response": {
+          "id": "0fe839c0-dfbb-4d4d-89e4-f731a4344a8b",
+          "status": "OK",
+          "code": 200,
+          "header": [
+            {
+              "key": "Date",
+              "value": "Wed, 07 Oct 2026 14:50:36 GMT"
+            },
+            {
+              "key": "Vary",
+              "value": "Accept-Encoding"
+            },
+            {
+              "key": "Content-Type",
+              "value": "application/vnd.kafka.v2+json"
+            },
+            {
+              "key": "Content-Encoding",
+              "value": "gzip"
+            },
+            {
+              "key": "Transfer-Encoding",
+              "value": "chunked"
+            }
+          ],
+          "stream": {
+            "type": "Buffer",
+            "data": [
+              91,
+              34,
+              111,
+              114,
+              100,
+              101,
+              114,
+              115,
+              46,
+              101,
+              118,
+              101,
+              110,
+              116,
+              115,
+              34,
+              44,
+              34,
+              111,
+              114,
+              100,
+              101,
+              114,
+              115,
+              46,
+              112,
+              97,
+              121,
+              109,
+              101,
+              110,
+              116,
+              115,
+              34,
+              44,
+              34,
+              95,
+              99,
+              111,
+              110,
+              102,
+              108,
+              117,
+              101,
+              110,
+              116,
+              45,
+              99,
+              111,
+              110,
+              116,
+              114,
+              111,
+              108,
+              99,
+              101,
+              110,
+              116,
+              101,
+              114,
+              45,
+              50,
+              45,
+              54,
+              45,
+              49,
+              45,
+              49,
+              45,
+              65,
+              108,
+              101,
+              114,
+              116,
+              72,
+              105,
+              115,
+              116,
+              111,
+              114,
+              121,
+              83,
+              116,
+              111,
+              114,
+              101,
+              45,
+              99,
+              104,
+              97,
+              110,
+              103,
+              101,
+              108,
+              111,
+              103,
+              34,
+              44,
+              34,
+              95,
+              99,
+              111,
+              110,
+              102,
+              108,
+              117,
+              101,
+              110,
+              116,
+              45,
+              97,
+              108,
+              101,
+              114,
+              116,
+              115,
+              34,
+              44,
+              34,
+              95,
+              99,
+              111,
+              110,
+              102,
+              108,
+              117,
+              101,
+              110,
+              116,
+              45,
+              109,
+              101,
+              116,
+              97,
+              100,
+              97,
+              116,
+              97,
+              45,
+              97,
+              117,
+              116,
+              104,
+              34,
+              44,
+              34,
+              99,
+              111,
+              110,
+              102,
+              108,
+              117,
+              101,
+              110,
+              116,
+              45,
+              97,
+              117,
+              100,
+              105,
+              116,
+              45,
+              108,
+              111,
+              103,
+              45,
+              101,
+              118,
+              101,
+              110,
+              116,
+              115,
+              34,
+              44,
+              34,
+              112,
+              97,
+              121,
+              109,
+              101,
+              110,
+              116,
+              115,
+              46,
+              101,
+              118,
+              101,
+              110,
+              116,
+              115,
+              34,
+              44,
+              34,
+              95,
+              99,
+              111,
+              110,
+              102,
+              108,
+              117,
+              101,
+              110,
+              116,
+              45,
+              99,
+              111,
+              110,
+              116,
+              114,
+              111,
+              108,
+              99,
+              101,
+              110,
+              116,
+              101,
+              114,
+              45,
+              50,
+              45,
+              54,
+              45,
+              49,
+              45,
+              49,
+              45,
+              65,
+              108,
+              101,
+              114,
+              116,
+              72,
+              105,
+              115,
+              116,
+              111,
+              114,
+              121,
+              83,
+              116,
+              111,
+              114,
+              101,
+              45,
+              114,
+              101,
+              112,
+              97,
+              114,
+              116,
+              105,
+              116,
+              105,
+              111,
+              110,
+              34,
+              44,
+              34,
+              95,
+              99,
+              111,
+              110,
+              102,
+              108,
+              117,
+              101,
+              110,
+              116,
+              45,
+              99,
+              111,
+              109,
+              109,
+              97,
+              110,
+              100,
+              34,
+              44,
+              34,
+              95,
+              99,
+              111,
+              110,
+              102,
+              108,
+              117,
+              101,
+              110,
+              116,
+              45,
+              116,
+              101,
+              108,
+              101,
+              109,
+              101,
+              116,
+              114,
+              121,
+              45,
+              109,
+              101,
+              116,
+              114,
+              105,
+              99,
+              115,
+              34,
+              93
+            ]
+          },
+          "cookie": [],
+          "responseTime": 106,
+          "responseSize": 309
+        },
+        "id": "30510a59-8282-4078-9d6e-3f64d671d8a5",
+        "assertions": [
+          {
+            "assertion": "gary 應可列出 topics",
+            "skipped": false
+          },
+          {
+            "assertion": "可看到 orders.events",
+            "skipped": false
+          }
+        ]
+      },
+      {
+        "cursor": {
+          "ref": "601392e8-4286-4a89-b002-c666113821b5",
+          "length": 10,
+          "cycles": 1,
+          "position": 3,
+          "iteration": 0,
+          "httpRequestId": "d297e290-f7c6-41af-8838-77b51f082bfa"
+        },
+        "item": {
+          "id": "3ed7ed9d-c549-4b82-984c-06e8a7b7adef",
+          "name": "5.2 yujie(developers)寫入 orders.events → 200",
+          "request": {
+            "description": {
+              "content": "**講稿**:yujie 的權限來自 AD 群組 orders-write。",
+              "type": "text/plain"
+            },
+            "url": {
+              "path": [
+                "topics",
+                "orders.events"
+              ],
+              "host": [
+                "{{rest_proxy}}"
+              ],
+              "query": [],
+              "variable": []
+            },
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/vnd.kafka.v2+json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/vnd.kafka.json.v2+json"
+              }
+            ],
+            "method": "POST",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"records\": [\n    {\n      \"value\": {\n        \"order\": \"A-3001\",\n        \"by\": \"yujie\"\n      }\n    }\n  ]\n}"
+            },
+            "auth": {
+              "type": "basic",
+              "basic": [
+                {
+                  "type": "any",
+                  "value": "{{yujie_user}}",
+                  "key": "username"
+                },
+                {
+                  "type": "any",
+                  "value": "{{yujie_pass}}",
+                  "key": "password"
+                }
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "id": "8a5168bf-4b82-4a91-807e-37e20aef19fe",
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"yujie 應可寫入\", function () { pm.response.to.have.status(200); });"
+                ],
+                "_lastExecutionId": "9d1b7f1b-7527-44e5-a8b7-c7baafcb29fa"
+              }
+            }
+          ]
+        },
+        "request": {
+          "description": {
+            "content": "**講稿**:yujie 的權限來自 AD 群組 orders-write。",
+            "type": "text/plain"
+          },
+          "url": {
+            "protocol": "https",
+            "port": "8086",
+            "path": [
+              "topics",
+              "orders.events"
+            ],
+            "host": [
+              "restproxy"
+            ],
+            "query": [],
+            "variable": []
+          },
+          "header": [
+            {
+              "key": "Accept",
+              "value": "application/vnd.kafka.v2+json"
+            },
+            {
+              "key": "Content-Type",
+              "value": "application/vnd.kafka.json.v2+json"
+            },
+            {
+              "key": "Authorization",
+              "value": "Basic eXVqaWU6eXVqaWUtcHc=",
+              "system": true
+            },
+            {
+              "key": "User-Agent",
+              "value": "PostmanRuntime/7.39.0",
+              "system": true
+            },
+            {
+              "key": "Cache-Control",
+              "value": "no-cache",
+              "system": true
+            },
+            {
+              "key": "Postman-Token",
+              "value": "793ab8ed-d04d-4367-b6fa-39d086eec8b4",
+              "system": true
+            },
+            {
+              "key": "Host",
+              "value": "restproxy:8086",
+              "system": true
+            },
+            {
+              "key": "Accept-Encoding",
+              "value": "gzip, deflate, br",
+              "system": true
+            },
+            {
+              "key": "Connection",
+              "value": "keep-alive",
+              "system": true
+            },
+            {
+              "key": "Content-Length",
+              "value": "108",
+              "system": true
+            }
+          ],
+          "method": "POST",
+          "body": {
+            "mode": "raw",
+            "raw": "{\n  \"records\": [\n    {\n      \"value\": {\n        \"order\": \"A-3001\",\n        \"by\": \"yujie\"\n      }\n    }\n  ]\n}"
+          },
+          "auth": {
+            "type": "basic",
+            "basic": [
+              {
+                "type": "any",
+                "value": "yujie",
+                "key": "username"
+              },
+              {
+                "type": "any",
+                "value": "yujie-pw",
+                "key": "password"
+              }
+            ]
+          }
+        },
+        "response": {
+          "id": "6bc72fc8-1895-4778-9311-368a82d7bbe7",
+          "status": "OK",
+          "code": 200,
+          "header": [
+            {
+              "key": "Date",
+              "value": "Wed, 07 Oct 2026 14:50:37 GMT"
+            },
+            {
+              "key": "Vary",
+              "value": "Accept-Encoding"
+            },
+            {
+              "key": "Content-Type",
+              "value": "application/vnd.kafka.v2+json"
+            },
+            {
+              "key": "Content-Encoding",
+              "value": "gzip"
+            },
+            {
+              "key": "Transfer-Encoding",
+              "value": "chunked"
+            }
+          ],
+          "stream": {
+            "type": "Buffer",
+            "data": [
+              123,
+              34,
+              111,
+              102,
+              102,
+              115,
+              101,
+              116,
+              115,
+              34,
+              58,
+              91,
+              123,
+              34,
+              112,
+              97,
+              114,
+              116,
+              105,
+              116,
+              105,
+              111,
+              110,
+              34,
+              58,
+              48,
+              44,
+              34,
+              111,
+              102,
+              102,
+              115,
+              101,
+              116,
+              34,
+              58,
+              56,
+              50,
+              44,
+              34,
+              101,
+              114,
+              114,
+              111,
+              114,
+              95,
+              99,
+              111,
+              100,
+              101,
+              34,
+              58,
+              110,
+              117,
+              108,
+              108,
+              44,
+              34,
+              101,
+              114,
+              114,
+              111,
+              114,
+              34,
+              58,
+              110,
+              117,
+              108,
+              108,
+              125,
+              93,
+              44,
+              34,
+              107,
+              101,
+              121,
+              95,
+              115,
+              99,
+              104,
+              101,
+              109,
+              97,
+              95,
+              105,
+              100,
+              34,
+              58,
+              110,
+              117,
+              108,
+              108,
+              44,
+              34,
+              118,
+              97,
+              108,
+              117,
+              101,
+              95,
+              115,
+              99,
+              104,
+              101,
+              109,
+              97,
+              95,
+              105,
+              100,
+              34,
+              58,
+              110,
+              117,
+              108,
+              108,
+              125
+            ]
+          },
+          "cookie": [],
+          "responseTime": 109,
+          "responseSize": 116
+        },
+        "id": "3ed7ed9d-c549-4b82-984c-06e8a7b7adef",
+        "assertions": [
+          {
+            "assertion": "yujie 應可寫入",
+            "skipped": false
+          }
+        ]
+      },
+      {
+        "cursor": {
+          "ref": "57147357-0999-4d52-889d-9834b958d6d0",
+          "length": 10,
+          "cycles": 1,
+          "position": 4,
+          "iteration": 0,
+          "httpRequestId": "ac29aab3-f529-4c20-aded-8c6ea9c16040"
+        },
+        "item": {
+          "id": "47f0a654-91ff-4cf2-bb6d-406b3c82028d",
+          "name": "5.3 yujie 寫入 payments.events → 403",
+          "request": {
+            "description": {
+              "content": "**講稿**:最小權限:developers 只被授權 orders.*,碰 payments.* 被拒。",
+              "type": "text/plain"
+            },
+            "url": {
+              "path": [
+                "topics",
+                "payments.events"
+              ],
+              "host": [
+                "{{rest_proxy}}"
+              ],
+              "query": [],
+              "variable": []
+            },
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/vnd.kafka.v2+json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/vnd.kafka.json.v2+json"
+              }
+            ],
+            "method": "POST",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"records\": [\n    {\n      \"value\": {\n        \"order\": \"A-3001\",\n        \"by\": \"yujie\"\n      }\n    }\n  ]\n}"
+            },
+            "auth": {
+              "type": "basic",
+              "basic": [
+                {
+                  "type": "any",
+                  "value": "{{yujie_user}}",
+                  "key": "username"
+                },
+                {
+                  "type": "any",
+                  "value": "{{yujie_pass}}",
+                  "key": "password"
+                }
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "id": "22bdb198-851b-4272-aae6-3db3d41ceba3",
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"yujie 寫 payments 應被拒\", function () { pm.response.to.have.status(403); });"
+                ],
+                "_lastExecutionId": "4bcd141a-4a6e-4c00-b3a6-7190979e687c"
+              }
+            }
+          ]
+        },
+        "request": {
+          "description": {
+            "content": "**講稿**:最小權限:developers 只被授權 orders.*,碰 payments.* 被拒。",
+            "type": "text/plain"
+          },
+          "url": {
+            "protocol": "https",
+            "port": "8086",
+            "path": [
+              "topics",
+              "payments.events"
+            ],
+            "host": [
+              "restproxy"
+            ],
+            "query": [],
+            "variable": []
+          },
+          "header": [
+            {
+              "key": "Accept",
+              "value": "application/vnd.kafka.v2+json"
+            },
+            {
+              "key": "Content-Type",
+              "value": "application/vnd.kafka.json.v2+json"
+            },
+            {
+              "key": "Authorization",
+              "value": "Basic eXVqaWU6eXVqaWUtcHc=",
+              "system": true
+            },
+            {
+              "key": "User-Agent",
+              "value": "PostmanRuntime/7.39.0",
+              "system": true
+            },
+            {
+              "key": "Cache-Control",
+              "value": "no-cache",
+              "system": true
+            },
+            {
+              "key": "Postman-Token",
+              "value": "6882b2d2-f58d-4bad-a867-d1e8d9f49b22",
+              "system": true
+            },
+            {
+              "key": "Host",
+              "value": "restproxy:8086",
+              "system": true
+            },
+            {
+              "key": "Accept-Encoding",
+              "value": "gzip, deflate, br",
+              "system": true
+            },
+            {
+              "key": "Connection",
+              "value": "keep-alive",
+              "system": true
+            },
+            {
+              "key": "Content-Length",
+              "value": "108",
+              "system": true
+            }
+          ],
+          "method": "POST",
+          "body": {
+            "mode": "raw",
+            "raw": "{\n  \"records\": [\n    {\n      \"value\": {\n        \"order\": \"A-3001\",\n        \"by\": \"yujie\"\n      }\n    }\n  ]\n}"
+          },
+          "auth": {
+            "type": "basic",
+            "basic": [
+              {
+                "type": "any",
+                "value": "yujie",
+                "key": "username"
+              },
+              {
+                "type": "any",
+                "value": "yujie-pw",
+                "key": "password"
+              }
+            ]
+          }
+        },
+        "response": {
+          "id": "63286b26-fc99-4bf4-9819-8166b70ebef9",
+          "status": "Forbidden",
+          "code": 403,
+          "header": [
+            {
+              "key": "Date",
+              "value": "Wed, 07 Oct 2026 14:50:37 GMT"
+            },
+            {
+              "key": "Vary",
+              "value": "Accept-Encoding"
+            },
+            {
+              "key": "Content-Type",
+              "value": "application/vnd.kafka.v2+json"
+            },
+            {
+              "key": "Transfer-Encoding",
+              "value": "chunked"
+            }
+          ],
+          "stream": {
+            "type": "Buffer",
+            "data": [
+              123,
+              34,
+              111,
+              102,
+              102,
+              115,
+              101,
+              116,
+              115,
+              34,
+              58,
+              91,
+              123,
+              34,
+              112,
+              97,
+              114,
+              116,
+              105,
+              116,
+              105,
+              111,
+              110,
+              34,
+              58,
+              110,
+              117,
+              108,
+              108,
+              44,
+              34,
+              111,
+              102,
+              102,
+              115,
+              101,
+              116,
+              34,
+              58,
+              110,
+              117,
+              108,
+              108,
+              44,
+              34,
+              101,
+              114,
+              114,
+              111,
+              114,
+              95,
+              99,
+              111,
+              100,
+              101,
+              34,
+              58,
+              52,
+              48,
+              51,
+              48,
+              49,
+              44,
+              34,
+              101,
+              114,
+              114,
+              111,
+              114,
+              34,
+              58,
+              34,
+              78,
+              111,
+              116,
+              32,
+              97,
+              117,
+              116,
+              104,
+              111,
+              114,
+              105,
+              122,
+              101,
+              100,
+              32,
+              116,
+              111,
+              32,
+              97,
+              99,
+              99,
+              101,
+              115,
+              115,
+              32,
+              116,
+              111,
+              112,
+              105,
+              99,
+              115,
+              58,
+              32,
+              91,
+              112,
+              97,
+              121,
+              109,
+              101,
+              110,
+              116,
+              115,
+              46,
+              101,
+              118,
+              101,
+              110,
+              116,
+              115,
+              93,
+              34,
+              125,
+              93,
+              44,
+              34,
+              107,
+              101,
+              121,
+              95,
+              115,
+              99,
+              104,
+              101,
+              109,
+              97,
+              95,
+              105,
+              100,
+              34,
+              58,
+              110,
+              117,
+              108,
+              108,
+              44,
+              34,
+              118,
+              97,
+              108,
+              117,
+              101,
+              95,
+              115,
+              99,
+              104,
+              101,
+              109,
+              97,
+              95,
+              105,
+              100,
+              34,
+              58,
+              110,
+              117,
+              108,
+              108,
+              125
+            ]
+          },
+          "cookie": [],
+          "responseTime": 69,
+          "responseSize": 170
+        },
+        "id": "47f0a654-91ff-4cf2-bb6d-406b3c82028d",
+        "assertions": [
+          {
+            "assertion": "yujie 寫 payments 應被拒",
+            "skipped": false
+          }
+        ]
+      },
+      {
+        "cursor": {
+          "ref": "3a697b10-6f72-4738-9d30-0feddb9db9e6",
+          "length": 10,
+          "cycles": 1,
+          "position": 5,
+          "iteration": 0,
+          "httpRequestId": "d04c4211-0b5a-4cb9-be37-04af8e70379b"
+        },
+        "item": {
+          "id": "70b4d65a-9269-4f88-973f-d45517301666",
+          "name": "5.4 ming(readonly)寫入 orders.events → 403",
+          "request": {
+            "description": {
+              "content": "**講稿**:ming 已移到唯讀群組,寫入被拒(第 4 章)。",
+              "type": "text/plain"
+            },
+            "url": {
+              "path": [
+                "topics",
+                "orders.events"
+              ],
+              "host": [
+                "{{rest_proxy}}"
+              ],
+              "query": [],
+              "variable": []
+            },
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/vnd.kafka.v2+json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/vnd.kafka.json.v2+json"
+              }
+            ],
+            "method": "POST",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"records\": [\n    {\n      \"value\": {\n        \"order\": \"A-3001\",\n        \"by\": \"ming\"\n      }\n    }\n  ]\n}"
+            },
+            "auth": {
+              "type": "basic",
+              "basic": [
+                {
+                  "type": "any",
+                  "value": "{{ming_user}}",
+                  "key": "username"
+                },
+                {
+                  "type": "any",
+                  "value": "{{ming_pass}}",
+                  "key": "password"
+                }
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "id": "5507469e-cd17-4da4-a625-f1ba37e46307",
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"ming(唯讀)寫入應被拒\", function () { pm.response.to.have.status(403); });"
+                ],
+                "_lastExecutionId": "33c7ea94-efd1-4934-8a66-5d36444c4c47"
+              }
+            }
+          ]
+        },
+        "request": {
+          "description": {
+            "content": "**講稿**:ming 已移到唯讀群組,寫入被拒(第 4 章)。",
+            "type": "text/plain"
+          },
+          "url": {
+            "protocol": "https",
+            "port": "8086",
+            "path": [
+              "topics",
+              "orders.events"
+            ],
+            "host": [
+              "restproxy"
+            ],
+            "query": [],
+            "variable": []
+          },
+          "header": [
+            {
+              "key": "Accept",
+              "value": "application/vnd.kafka.v2+json"
+            },
+            {
+              "key": "Content-Type",
+              "value": "application/vnd.kafka.json.v2+json"
+            },
+            {
+              "key": "Authorization",
+              "value": "Basic bWluZzptaW5nLXB3",
+              "system": true
+            },
+            {
+              "key": "User-Agent",
+              "value": "PostmanRuntime/7.39.0",
+              "system": true
+            },
+            {
+              "key": "Cache-Control",
+              "value": "no-cache",
+              "system": true
+            },
+            {
+              "key": "Postman-Token",
+              "value": "6a922edb-dc1e-4eb2-9a8b-af48de17cd44",
+              "system": true
+            },
+            {
+              "key": "Host",
+              "value": "restproxy:8086",
+              "system": true
+            },
+            {
+              "key": "Accept-Encoding",
+              "value": "gzip, deflate, br",
+              "system": true
+            },
+            {
+              "key": "Connection",
+              "value": "keep-alive",
+              "system": true
+            },
+            {
+              "key": "Content-Length",
+              "value": "107",
+              "system": true
+            }
+          ],
+          "method": "POST",
+          "body": {
+            "mode": "raw",
+            "raw": "{\n  \"records\": [\n    {\n      \"value\": {\n        \"order\": \"A-3001\",\n        \"by\": \"ming\"\n      }\n    }\n  ]\n}"
+          },
+          "auth": {
+            "type": "basic",
+            "basic": [
+              {
+                "type": "any",
+                "value": "ming",
+                "key": "username"
+              },
+              {
+                "type": "any",
+                "value": "ming-pw",
+                "key": "password"
+              }
+            ]
+          }
+        },
+        "response": {
+          "id": "902fc52a-051d-4e07-bca3-63f58a9f1d6d",
+          "status": "Forbidden",
+          "code": 403,
+          "header": [
+            {
+              "key": "Date",
+              "value": "Wed, 07 Oct 2026 14:50:37 GMT"
+            },
+            {
+              "key": "Vary",
+              "value": "Accept-Encoding"
+            },
+            {
+              "key": "Content-Type",
+              "value": "application/vnd.kafka.v2+json"
+            },
+            {
+              "key": "Transfer-Encoding",
+              "value": "chunked"
+            }
+          ],
+          "stream": {
+            "type": "Buffer",
+            "data": [
+              123,
+              34,
+              111,
+              102,
+              102,
+              115,
+              101,
+              116,
+              115,
+              34,
+              58,
+              91,
+              123,
+              34,
+              112,
+              97,
+              114,
+              116,
+              105,
+              116,
+              105,
+              111,
+              110,
+              34,
+              58,
+              110,
+              117,
+              108,
+              108,
+              44,
+              34,
+              111,
+              102,
+              102,
+              115,
+              101,
+              116,
+              34,
+              58,
+              110,
+              117,
+              108,
+              108,
+              44,
+              34,
+              101,
+              114,
+              114,
+              111,
+              114,
+              95,
+              99,
+              111,
+              100,
+              101,
+              34,
+              58,
+              52,
+              48,
+              51,
+              48,
+              49,
+              44,
+              34,
+              101,
+              114,
+              114,
+              111,
+              114,
+              34,
+              58,
+              34,
+              78,
+              111,
+              116,
+              32,
+              97,
+              117,
+              116,
+              104,
+              111,
+              114,
+              105,
+              122,
+              101,
+              100,
+              32,
+              116,
+              111,
+              32,
+              97,
+              99,
+              99,
+              101,
+              115,
+              115,
+              32,
+              116,
+              111,
+              112,
+              105,
+              99,
+              115,
+              58,
+              32,
+              91,
+              111,
+              114,
+              100,
+              101,
+              114,
+              115,
+              46,
+              101,
+              118,
+              101,
+              110,
+              116,
+              115,
+              93,
+              34,
+              125,
+              93,
+              44,
+              34,
+              107,
+              101,
+              121,
+              95,
+              115,
+              99,
+              104,
+              101,
+              109,
+              97,
+              95,
+              105,
+              100,
+              34,
+              58,
+              110,
+              117,
+              108,
+              108,
+              44,
+              34,
+              118,
+              97,
+              108,
+              117,
+              101,
+              95,
+              115,
+              99,
+              104,
+              101,
+              109,
+              97,
+              95,
+              105,
+              100,
+              34,
+              58,
+              110,
+              117,
+              108,
+              108,
+              125
+            ]
+          },
+          "cookie": [],
+          "responseTime": 82,
+          "responseSize": 168
+        },
+        "id": "70b4d65a-9269-4f88-973f-d45517301666",
+        "assertions": [
+          {
+            "assertion": "ming(唯讀)寫入應被拒",
+            "skipped": false
+          }
+        ]
+      },
+      {
+        "cursor": {
+          "ref": "782c3bf3-c4cd-47c1-bcca-ddfce755f0c7",
+          "length": 10,
+          "cycles": 1,
+          "position": 6,
+          "iteration": 0,
+          "httpRequestId": "d59f1a23-5abf-4274-b4c6-140c89f4c26c"
+        },
+        "item": {
+          "id": "e409aee1-8c78-45d3-a785-d6d56ff74174",
+          "name": "5.5 ming(readonly)列出 topics,仍看得到 orders.events → 200",
+          "request": {
+            "description": {
+              "content": "**講稿**:唯讀可以「看」:列出與讀取資料;但不能寫(5.4)。",
+              "type": "text/plain"
+            },
+            "url": {
+              "path": [
+                "topics"
+              ],
+              "host": [
+                "{{rest_proxy}}"
+              ],
+              "query": [],
+              "variable": []
+            },
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/vnd.kafka.v2+json"
+              }
+            ],
+            "method": "GET",
+            "auth": {
+              "type": "basic",
+              "basic": [
+                {
+                  "type": "any",
+                  "value": "{{ming_user}}",
+                  "key": "username"
+                },
+                {
+                  "type": "any",
+                  "value": "{{ming_pass}}",
+                  "key": "password"
+                }
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "id": "cdbdd0c2-5e55-4162-9aff-067b328199a0",
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"ming 唯讀應可列出 topics\", function () { pm.response.to.have.status(200); });",
+                  "pm.test('看得到 orders.events', function(){ pm.expect(pm.response.text()).to.include('orders.events'); });"
+                ],
+                "_lastExecutionId": "baf718c7-1069-4f37-afbf-69203213069c"
+              }
+            }
+          ]
+        },
+        "request": {
+          "description": {
+            "content": "**講稿**:唯讀可以「看」:列出與讀取資料;但不能寫(5.4)。",
+            "type": "text/plain"
+          },
+          "url": {
+            "protocol": "https",
+            "port": "8086",
+            "path": [
+              "topics"
+            ],
+            "host": [
+              "restproxy"
+            ],
+            "query": [],
+            "variable": []
+          },
+          "header": [
+            {
+              "key": "Accept",
+              "value": "application/vnd.kafka.v2+json"
+            },
+            {
+              "key": "Authorization",
+              "value": "Basic bWluZzptaW5nLXB3",
+              "system": true
+            },
+            {
+              "key": "User-Agent",
+              "value": "PostmanRuntime/7.39.0",
+              "system": true
+            },
+            {
+              "key": "Cache-Control",
+              "value": "no-cache",
+              "system": true
+            },
+            {
+              "key": "Postman-Token",
+              "value": "2f64bfe9-9a67-42a8-a333-d66390351d33",
+              "system": true
+            },
+            {
+              "key": "Host",
+              "value": "restproxy:8086",
+              "system": true
+            },
+            {
+              "key": "Accept-Encoding",
+              "value": "gzip, deflate, br",
+              "system": true
+            },
+            {
+              "key": "Connection",
+              "value": "keep-alive",
+              "system": true
+            }
+          ],
+          "method": "GET",
+          "auth": {
+            "type": "basic",
+            "basic": [
+              {
+                "type": "any",
+                "value": "ming",
+                "key": "username"
+              },
+              {
+                "type": "any",
+                "value": "ming-pw",
+                "key": "password"
+              }
+            ]
+          }
+        },
+        "response": {
+          "id": "3a5dcfcf-36a0-432a-a36d-be90f0239163",
+          "status": "OK",
+          "code": 200,
+          "header": [
+            {
+              "key": "Date",
+              "value": "Wed, 07 Oct 2026 14:50:37 GMT"
+            },
+            {
+              "key": "Vary",
+              "value": "Accept-Encoding"
+            },
+            {
+              "key": "Content-Type",
+              "value": "application/vnd.kafka.v2+json"
+            },
+            {
+              "key": "Content-Encoding",
+              "value": "gzip"
+            },
+            {
+              "key": "Transfer-Encoding",
+              "value": "chunked"
+            }
+          ],
+          "stream": {
+            "type": "Buffer",
+            "data": [
+              91,
+              34,
+              111,
+              114,
+              100,
+              101,
+              114,
+              115,
+              46,
+              101,
+              118,
+              101,
+              110,
+              116,
+              115,
+              34,
+              44,
+              34,
+              111,
+              114,
+              100,
+              101,
+              114,
+              115,
+              46,
+              112,
+              97,
+              121,
+              109,
+              101,
+              110,
+              116,
+              115,
+              34,
+              93
+            ]
+          },
+          "cookie": [],
+          "responseTime": 69,
+          "responseSize": 35
+        },
+        "id": "e409aee1-8c78-45d3-a785-d6d56ff74174",
+        "assertions": [
+          {
+            "assertion": "ming 唯讀應可列出 topics",
+            "skipped": false
+          },
+          {
+            "assertion": "看得到 orders.events",
+            "skipped": false
+          }
+        ]
+      },
+      {
+        "cursor": {
+          "ref": "fc320460-7da7-4c4e-bf3c-dd5a5605fbe3",
+          "length": 10,
+          "cycles": 1,
+          "position": 7,
+          "iteration": 0,
+          "httpRequestId": "99ae8809-81ad-4192-bc2e-aa0eb5e30b29"
+        },
+        "item": {
+          "id": "d740f3ae-f09d-4642-9d27-e55a98a55bf8",
+          "name": "M.1 gary 登入 MDS 取得 token → 200",
+          "request": {
+            "description": {
+              "content": "**講稿**:AD 帳密換取 MDS token(短效),之後可用 Bearer 呼叫。",
+              "type": "text/plain"
+            },
+            "url": {
+              "path": [
+                "security",
+                "1.0",
+                "authenticate"
+              ],
+              "host": [
+                "{{mds}}"
+              ],
+              "query": [],
+              "variable": []
+            },
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "method": "GET",
+            "auth": {
+              "type": "basic",
+              "basic": [
+                {
+                  "type": "any",
+                  "value": "{{gary_user}}",
+                  "key": "username"
+                },
+                {
+                  "type": "any",
+                  "value": "{{gary_pass}}",
+                  "key": "password"
+                }
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "id": "830eb806-cdc7-4d7f-bb5f-af2b41bea05a",
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"應回 200 並含 auth_token\", function () { pm.response.to.have.status(200); });",
+                  "pm.test('含 auth_token', function(){ pm.expect(pm.response.json()).to.have.property('auth_token'); }); pm.collectionVariables.set('gary_token', pm.response.json().auth_token);"
+                ],
+                "_lastExecutionId": "8ef6ce88-f848-4f68-b048-f90df1d84501"
+              }
+            }
+          ]
+        },
+        "request": {
+          "description": {
+            "content": "**講稿**:AD 帳密換取 MDS token(短效),之後可用 Bearer 呼叫。",
+            "type": "text/plain"
+          },
+          "url": {
+            "protocol": "https",
+            "port": "8091",
+            "path": [
+              "security",
+              "1.0",
+              "authenticate"
+            ],
+            "host": [
+              "broker1"
+            ],
+            "query": [],
+            "variable": []
+          },
+          "header": [
+            {
+              "key": "Accept",
+              "value": "application/json"
+            },
+            {
+              "key": "Authorization",
+              "value": "Basic Z2FyeTpnYXJ5LXB3",
+              "system": true
+            },
+            {
+              "key": "User-Agent",
+              "value": "PostmanRuntime/7.39.0",
+              "system": true
+            },
+            {
+              "key": "Cache-Control",
+              "value": "no-cache",
+              "system": true
+            },
+            {
+              "key": "Postman-Token",
+              "value": "9f0b0ea0-2076-4f2d-81a3-b27313fb8d4a",
+              "system": true
+            },
+            {
+              "key": "Host",
+              "value": "broker1:8091",
+              "system": true
+            },
+            {
+              "key": "Accept-Encoding",
+              "value": "gzip, deflate, br",
+              "system": true
+            },
+            {
+              "key": "Connection",
+              "value": "keep-alive",
+              "system": true
+            }
+          ],
+          "method": "GET",
+          "auth": {
+            "type": "basic",
+            "basic": [
+              {
+                "type": "any",
+                "value": "gary",
+                "key": "username"
+              },
+              {
+                "type": "any",
+                "value": "gary-pw",
+                "key": "password"
+              }
+            ]
+          }
+        },
+        "response": {
+          "id": "4f81bb19-02ac-440b-bcd7-035958b9e060",
+          "status": "OK",
+          "code": 200,
+          "header": [
+            {
+              "key": "Date",
+              "value": "Wed, 07 Oct 2026 14:50:37 GMT"
+            },
+            {
+              "key": "Vary",
+              "value": "Accept-Encoding"
+            },
+            {
+              "key": "Set-Cookie",
+              "value": "auth_token=eyJhbGciOiJSUzI1NiIsImtpZCI6bnVsbH0.eyJqdGkiOiJncHpMWFZCSEtxTTBOSi02LVdlMlF3IiwiaXNzIjoiQ29uZmx1ZW50Iiwic3ViIjoiR0FSWSIsImV4cCI6MTc5MTM4ODIzNywiaWF0IjoxNzkxMzg0NjM3LCJuYmYiOjE3OTEzODQ1NzcsImF6cCI6IkdBUlkiLCJhdXRoX3RpbWUiOjE3OTEzODQ2Mzd9.J4QxyO-DUgZu3u-7P3hZuxldLDi-bYhTcopYJvRph5gaDSqQj3thQbcdnA20w3ecVzUGqbuL2yr6qDVJdFo--6LjArPWdcAs_69dAlze6LFopScw3nkwmPS_P6LlNlJzFMNGS3pn1xGn6CTYvtmjew38Ewhm94ztrHWgId_0NHmIkNDUsbiAV2JaJbcP_Tjn4ugHo5gpwjk3coE0mtHZv13SlAfwqDlBb431E4-0pq8gn-Up2KPQP4BwJ-sFZVJAKRrxTQAlORrmt2t3MQ241TPpUPTzJt85lhwAOFV5I1k-xCcMlbvZ8vey6lAuA5Bu2QtcBVzKdg9CVdA7ZCNPmQ; HttpOnly; Secure; Path=/; Expires=Wed, 07 Oct 2026 15:50:37 GMT; SameSite=Lax; Max-Age=3600"
+            },
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "key": "Content-Encoding",
+              "value": "gzip"
+            },
+            {
+              "key": "Content-Length",
+              "value": "523"
+            }
+          ],
+          "stream": {
+            "type": "Buffer",
+            "data": [
+              123,
+              34,
+              97,
+              117,
+              116,
+              104,
+              95,
+              116,
+              111,
+              107,
+              101,
+              110,
+              34,
+              58,
+              34,
+              101,
+              121,
+              74,
+              104,
+              98,
+              71,
+              99,
+              105,
+              79,
+              105,
+              74,
+              83,
+              85,
+              122,
+              73,
+              49,
+              78,
+              105,
+              73,
+              115,
+              73,
+              109,
+              116,
+              112,
+              90,
+              67,
+              73,
+              54,
+              98,
+              110,
+              86,
+              115,
+              98,
+              72,
+              48,
+              46,
+              101,
+              121,
+              74,
+              113,
+              100,
+              71,
+              107,
+              105,
+              79,
+              105,
+              74,
+              110,
+              99,
+              72,
+              112,
+              77,
+              87,
+              70,
+              90,
+              67,
+              83,
+              69,
+              116,
+              120,
+              84,
+              84,
+              66,
+              79,
+              83,
+              105,
+              48,
+              50,
+              76,
+              86,
+              100,
+              108,
+              77,
+              108,
+              70,
+              51,
+              73,
+              105,
+              119,
+              105,
+              97,
+              88,
+              78,
+              122,
+              73,
+              106,
+              111,
+              105,
+              81,
+              50,
+              57,
+              117,
+              90,
+              109,
+              120,
+              49,
+              90,
+              87,
+              53,
+              48,
+              73,
+              105,
+              119,
+              105,
+              99,
+              51,
+              86,
+              105,
+              73,
+              106,
+              111,
+              105,
+              82,
+              48,
+              70,
+              83,
+              87,
+              83,
+              73,
+              115,
+              73,
+              109,
+              86,
+              52,
+              99,
+              67,
+              73,
+              54,
+              77,
+              84,
+              99,
+              53,
+              77,
+              84,
+              77,
+              52,
+              79,
+              68,
+              73,
+              122,
+              78,
+              121,
+              119,
+              105,
+              97,
+              87,
+              70,
+              48,
+              73,
+              106,
+              111,
+              120,
+              78,
+              122,
+              107,
+              120,
+              77,
+              122,
+              103,
+              48,
+              78,
+              106,
+              77,
+              51,
+              76,
+              67,
+              74,
+              117,
+              89,
+              109,
+              89,
+              105,
+              79,
+              106,
+              69,
+              51,
+              79,
+              84,
+              69,
+              122,
+              79,
+              68,
+              81,
+              49,
+              78,
+              122,
+              99,
+              115,
+              73,
+              109,
+              70,
+              54,
+              99,
+              67,
+              73,
+              54,
+              73,
+              107,
+              100,
+              66,
+              85,
+              108,
+              107,
+              105,
+              76,
+              67,
+              74,
+              104,
+              100,
+              88,
+              82,
+              111,
+              88,
+              51,
+              82,
+              112,
+              98,
+              87,
+              85,
+              105,
+              79,
+              106,
+              69,
+              51,
+              79,
+              84,
+              69,
+              122,
+              79,
+              68,
+              81,
+              50,
+              77,
+              122,
+              100,
+              57,
+              46,
+              74,
+              52,
+              81,
+              120,
+              121,
+              79,
+              45,
+              68,
+              85,
+              103,
+              90,
+              117,
+              51,
+              117,
+              45,
+              55,
+              80,
+              51,
+              104,
+              90,
+              117,
+              120,
+              108,
+              100,
+              76,
+              68,
+              105,
+              45,
+              98,
+              89,
+              104,
+              84,
+              99,
+              111,
+              112,
+              89,
+              74,
+              118,
+              82,
+              112,
+              104,
+              53,
+              103,
+              97,
+              68,
+              83,
+              113,
+              81,
+              106,
+              51,
+              116,
+              104,
+              81,
+              98,
+              99,
+              100,
+              110,
+              65,
+              50,
+              48,
+              119,
+              51,
+              101,
+              99,
+              86,
+              122,
+              85,
+              71,
+              113,
+              98,
+              117,
+              76,
+              50,
+              121,
+              114,
+              54,
+              113,
+              68,
+              86,
+              74,
+              100,
+              70,
+              111,
+              45,
+              45,
+              54,
+              76,
+              106,
+              65,
+              114,
+              80,
+              87,
+              100,
+              99,
+              65,
+              115,
+              95,
+              54,
+              57,
+              100,
+              65,
+              108,
+              122,
+              101,
+              54,
+              76,
+              70,
+              111,
+              112,
+              83,
+              99,
+              119,
+              51,
+              110,
+              107,
+              119,
+              109,
+              80,
+              83,
+              95,
+              80,
+              54,
+              76,
+              108,
+              78,
+              108,
+              74,
+              122,
+              70,
+              77,
+              78,
+              71,
+              83,
+              51,
+              112,
+              110,
+              49,
+              120,
+              71,
+              110,
+              54,
+              67,
+              84,
+              89,
+              118,
+              116,
+              109,
+              106,
+              101,
+              119,
+              51,
+              56,
+              69,
+              119,
+              104,
+              109,
+              57,
+              52,
+              122,
+              116,
+              114,
+              72,
+              87,
+              103,
+              73,
+              100,
+              95,
+              48,
+              78,
+              72,
+              109,
+              73,
+              107,
+              78,
+              68,
+              85,
+              115,
+              98,
+              105,
+              65,
+              86,
+              50,
+              74,
+              97,
+              74,
+              98,
+              99,
+              80,
+              95,
+              84,
+              106,
+              110,
+              52,
+              117,
+              103,
+              72,
+              111,
+              53,
+              103,
+              112,
+              119,
+              106,
+              107,
+              51,
+              99,
+              111,
+              69,
+              48,
+              109,
+              116,
+              72,
+              90,
+              118,
+              49,
+              51,
+              83,
+              108,
+              65,
+              102,
+              119,
+              113,
+              68,
+              108,
+              66,
+              98,
+              52,
+              51,
+              49,
+              69,
+              52,
+              45,
+              48,
+              112,
+              113,
+              56,
+              103,
+              110,
+              45,
+              85,
+              112,
+              50,
+              75,
+              80,
+              81,
+              80,
+              52,
+              66,
+              119,
+              74,
+              45,
+              115,
+              70,
+              90,
+              86,
+              74,
+              65,
+              75,
+              82,
+              114,
+              120,
+              84,
+              81,
+              65,
+              108,
+              79,
+              82,
+              114,
+              109,
+              116,
+              50,
+              116,
+              51,
+              77,
+              81,
+              50,
+              52,
+              49,
+              84,
+              80,
+              112,
+              85,
+              80,
+              84,
+              122,
+              74,
+              116,
+              56,
+              53,
+              108,
+              104,
+              119,
+              65,
+              79,
+              70,
+              86,
+              53,
+              73,
+              49,
+              107,
+              45,
+              120,
+              67,
+              99,
+              77,
+              108,
+              98,
+              118,
+              90,
+              56,
+              118,
+              101,
+              121,
+              54,
+              108,
+              65,
+              117,
+              65,
+              53,
+              66,
+              117,
+              50,
+              81,
+              116,
+              99,
+              66,
+              86,
+              122,
+              75,
+              100,
+              103,
+              57,
+              67,
+              86,
+              100,
+              65,
+              55,
+              90,
+              67,
+              78,
+              80,
+              109,
+              81,
+              34,
+              44,
+              34,
+              116,
+              111,
+              107,
+              101,
+              110,
+              95,
+              116,
+              121,
+              112,
+              101,
+              34,
+              58,
+              34,
+              66,
+              101,
+              97,
+              114,
+              101,
+              114,
+              34,
+              44,
+              34,
+              101,
+              120,
+              112,
+              105,
+              114,
+              101,
+              115,
+              95,
+              105,
+              110,
+              34,
+              58,
+              51,
+              54,
+              48,
+              48,
+              125
+            ]
+          },
+          "cookie": [],
+          "responseTime": 69,
+          "responseSize": 636
+        },
+        "id": "d740f3ae-f09d-4642-9d27-e55a98a55bf8",
+        "assertions": [
+          {
+            "assertion": "應回 200 並含 auth_token",
+            "skipped": false
+          },
+          {
+            "assertion": "含 auth_token",
+            "skipped": false
+          }
+        ]
+      },
+      {
+        "cursor": {
+          "ref": "3f3d3e0d-c49d-454c-bfd0-31f4ef5f6b4c",
+          "length": 10,
+          "cycles": 1,
+          "position": 8,
+          "iteration": 0,
+          "httpRequestId": "ffb53740-d2a9-422a-a51d-93260e1d2051"
+        },
+        "item": {
+          "id": "daf01642-f814-4ec3-838a-041c7de251c3",
+          "name": "M.2 列出 Group:orders-write 的 role binding",
+          "request": {
+            "description": {
+              "content": "**講稿**:這就是 C3「Manage role assignments」顯示的內容。",
+              "type": "text/plain"
+            },
+            "url": {
+              "path": [
+                "security",
+                "1.0",
+                "lookup",
+                "principal",
+                "Group:orders-write",
+                "resources"
+              ],
+              "host": [
+                "{{mds}}"
+              ],
+              "query": [],
+              "variable": []
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "method": "POST",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"clusters\": {\n    \"kafka-cluster\": \"{{kafka_cluster_id}}\"\n  }\n}"
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "type": "any",
+                  "value": "{{gary_token}}",
+                  "key": "token"
+                }
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "id": "88c61814-eba9-41e5-95c0-5dc01169d405",
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"應回 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test('含 DeveloperWrite', function(){ pm.expect(pm.response.text()).to.include('DeveloperWrite'); });"
+                ],
+                "_lastExecutionId": "c1c19d6c-fd5f-4b18-af67-fb937806801c"
+              }
+            }
+          ]
+        },
+        "request": {
+          "description": {
+            "content": "**講稿**:這就是 C3「Manage role assignments」顯示的內容。",
+            "type": "text/plain"
+          },
+          "url": {
+            "protocol": "https",
+            "port": "8091",
+            "path": [
+              "security",
+              "1.0",
+              "lookup",
+              "principal",
+              "Group:orders-write",
+              "resources"
+            ],
+            "host": [
+              "broker1"
+            ],
+            "query": [],
+            "variable": []
+          },
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "key": "Authorization",
+              "value": "Bearer eyJhbGciOiJSUzI1NiIsImtpZCI6bnVsbH0.eyJqdGkiOiJncHpMWFZCSEtxTTBOSi02LVdlMlF3IiwiaXNzIjoiQ29uZmx1ZW50Iiwic3ViIjoiR0FSWSIsImV4cCI6MTc5MTM4ODIzNywiaWF0IjoxNzkxMzg0NjM3LCJuYmYiOjE3OTEzODQ1NzcsImF6cCI6IkdBUlkiLCJhdXRoX3RpbWUiOjE3OTEzODQ2Mzd9.J4QxyO-DUgZu3u-7P3hZuxldLDi-bYhTcopYJvRph5gaDSqQj3thQbcdnA20w3ecVzUGqbuL2yr6qDVJdFo--6LjArPWdcAs_69dAlze6LFopScw3nkwmPS_P6LlNlJzFMNGS3pn1xGn6CTYvtmjew38Ewhm94ztrHWgId_0NHmIkNDUsbiAV2JaJbcP_Tjn4ugHo5gpwjk3coE0mtHZv13SlAfwqDlBb431E4-0pq8gn-Up2KPQP4BwJ-sFZVJAKRrxTQAlORrmt2t3MQ241TPpUPTzJt85lhwAOFV5I1k-xCcMlbvZ8vey6lAuA5Bu2QtcBVzKdg9CVdA7ZCNPmQ",
+              "system": true
+            },
+            {
+              "key": "User-Agent",
+              "value": "PostmanRuntime/7.39.0",
+              "system": true
+            },
+            {
+              "key": "Accept",
+              "value": "*/*",
+              "system": true
+            },
+            {
+              "key": "Cache-Control",
+              "value": "no-cache",
+              "system": true
+            },
+            {
+              "key": "Postman-Token",
+              "value": "936e2d5a-3b50-4107-a951-c3d36fee91b1",
+              "system": true
+            },
+            {
+              "key": "Host",
+              "value": "broker1:8091",
+              "system": true
+            },
+            {
+              "key": "Accept-Encoding",
+              "value": "gzip, deflate, br",
+              "system": true
+            },
+            {
+              "key": "Connection",
+              "value": "keep-alive",
+              "system": true
+            },
+            {
+              "key": "Content-Length",
+              "value": "69",
+              "system": true
+            }
+          ],
+          "method": "POST",
+          "body": {
+            "mode": "raw",
+            "raw": "{\n  \"clusters\": {\n    \"kafka-cluster\": \"XyZBQ3-GTvKH2qNfP7X33A\"\n  }\n}"
+          },
+          "auth": {
+            "type": "bearer",
+            "bearer": [
+              {
+                "type": "any",
+                "value": "eyJhbGciOiJSUzI1NiIsImtpZCI6bnVsbH0.eyJqdGkiOiJncHpMWFZCSEtxTTBOSi02LVdlMlF3IiwiaXNzIjoiQ29uZmx1ZW50Iiwic3ViIjoiR0FSWSIsImV4cCI6MTc5MTM4ODIzNywiaWF0IjoxNzkxMzg0NjM3LCJuYmYiOjE3OTEzODQ1NzcsImF6cCI6IkdBUlkiLCJhdXRoX3RpbWUiOjE3OTEzODQ2Mzd9.J4QxyO-DUgZu3u-7P3hZuxldLDi-bYhTcopYJvRph5gaDSqQj3thQbcdnA20w3ecVzUGqbuL2yr6qDVJdFo--6LjArPWdcAs_69dAlze6LFopScw3nkwmPS_P6LlNlJzFMNGS3pn1xGn6CTYvtmjew38Ewhm94ztrHWgId_0NHmIkNDUsbiAV2JaJbcP_Tjn4ugHo5gpwjk3coE0mtHZv13SlAfwqDlBb431E4-0pq8gn-Up2KPQP4BwJ-sFZVJAKRrxTQAlORrmt2t3MQ241TPpUPTzJt85lhwAOFV5I1k-xCcMlbvZ8vey6lAuA5Bu2QtcBVzKdg9CVdA7ZCNPmQ",
+                "key": "token"
+              }
+            ]
+          }
+        },
+        "response": {
+          "id": "fcd46eb1-442f-4b92-a656-ddf691455f46",
+          "status": "OK",
+          "code": 200,
+          "header": [
+            {
+              "key": "Date",
+              "value": "Wed, 07 Oct 2026 14:50:37 GMT"
+            },
+            {
+              "key": "Vary",
+              "value": "Accept-Encoding"
+            },
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "key": "Content-Encoding",
+              "value": "gzip"
+            },
+            {
+              "key": "Content-Length",
+              "value": "122"
+            }
+          ],
+          "stream": {
+            "type": "Buffer",
+            "data": [
+              123,
+              34,
+              71,
+              114,
+              111,
+              117,
+              112,
+              58,
+              111,
+              114,
+              100,
+              101,
+              114,
+              115,
+              45,
+              119,
+              114,
+              105,
+              116,
+              101,
+              34,
+              58,
+              123,
+              34,
+              68,
+              101,
+              118,
+              101,
+              108,
+              111,
+              112,
+              101,
+              114,
+              87,
+              114,
+              105,
+              116,
+              101,
+              34,
+              58,
+              91,
+              123,
+              34,
+              114,
+              101,
+              115,
+              111,
+              117,
+              114,
+              99,
+              101,
+              84,
+              121,
+              112,
+              101,
+              34,
+              58,
+              34,
+              84,
+              111,
+              112,
+              105,
+              99,
+              34,
+              44,
+              34,
+              110,
+              97,
+              109,
+              101,
+              34,
+              58,
+              34,
+              111,
+              114,
+              100,
+              101,
+              114,
+              115,
+              46,
+              34,
+              44,
+              34,
+              112,
+              97,
+              116,
+              116,
+              101,
+              114,
+              110,
+              84,
+              121,
+              112,
+              101,
+              34,
+              58,
+              34,
+              80,
+              82,
+              69,
+              70,
+              73,
+              88,
+              69,
+              68,
+              34,
+              125,
+              93,
+              44,
+              34,
+              68,
+              101,
+              118,
+              101,
+              108,
+              111,
+              112,
+              101,
+              114,
+              82,
+              101,
+              97,
+              100,
+              34,
+              58,
+              91,
+              123,
+              34,
+              114,
+              101,
+              115,
+              111,
+              117,
+              114,
+              99,
+              101,
+              84,
+              121,
+              112,
+              101,
+              34,
+              58,
+              34,
+              84,
+              111,
+              112,
+              105,
+              99,
+              34,
+              44,
+              34,
+              110,
+              97,
+              109,
+              101,
+              34,
+              58,
+              34,
+              111,
+              114,
+              100,
+              101,
+              114,
+              115,
+              46,
+              34,
+              44,
+              34,
+              112,
+              97,
+              116,
+              116,
+              101,
+              114,
+              110,
+              84,
+              121,
+              112,
+              101,
+              34,
+              58,
+              34,
+              80,
+              82,
+              69,
+              70,
+              73,
+              88,
+              69,
+              68,
+              34,
+              125,
+              93,
+              125,
+              125
+            ]
+          },
+          "cookie": [],
+          "responseTime": 9,
+          "responseSize": 195
+        },
+        "id": "daf01642-f814-4ec3-838a-041c7de251c3",
+        "assertions": [
+          {
+            "assertion": "應回 200",
+            "skipped": false
+          },
+          {
+            "assertion": "含 DeveloperWrite",
+            "skipped": false
+          }
+        ]
+      },
+      {
+        "cursor": {
+          "ref": "8e9bae8b-3828-4ade-8128-f732cc6937c6",
+          "length": 10,
+          "cycles": 1,
+          "position": 9,
+          "iteration": 0,
+          "httpRequestId": "a7d1645c-643c-4306-89d2-dc32599f32ae"
+        },
+        "item": {
+          "id": "c9c9165a-1747-47e1-be9b-d75ffbfb64bc",
+          "name": "M.3 yujie 嘗試新增 role binding → 403",
+          "request": {
+            "description": {
+              "content": "**講稿**:不是授權管理員(rbac-admin)就不能改授權。",
+              "type": "text/plain"
+            },
+            "url": {
+              "path": [
+                "security",
+                "1.0",
+                "principals",
+                "Group:orders-write",
+                "roles",
+                "DeveloperRead",
+                "bindings"
+              ],
+              "host": [
+                "{{mds}}"
+              ],
+              "query": [],
+              "variable": []
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "method": "POST",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"scope\": {\n    \"clusters\": {\n      \"kafka-cluster\": \"{{kafka_cluster_id}}\"\n    }\n  },\n  \"resourcePatterns\": [\n    {\n      \"resourceType\": \"Topic\",\n      \"name\": \"payments.\",\n      \"patternType\": \"PREFIXED\"\n    }\n  ]\n}"
+            },
+            "auth": {
+              "type": "basic",
+              "basic": [
+                {
+                  "type": "any",
+                  "value": "{{yujie_user}}",
+                  "key": "username"
+                },
+                {
+                  "type": "any",
+                  "value": "{{yujie_pass}}",
+                  "key": "password"
+                }
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "id": "3be492e6-18b9-47da-aec4-334030a330f1",
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"非管理員不可新增 role binding\", function () { pm.response.to.have.status(403); });"
+                ],
+                "_lastExecutionId": "f62416ee-b152-499f-8012-4b6dfa54d15d"
+              }
+            }
+          ]
+        },
+        "request": {
+          "description": {
+            "content": "**講稿**:不是授權管理員(rbac-admin)就不能改授權。",
+            "type": "text/plain"
+          },
+          "url": {
+            "protocol": "https",
+            "port": "8091",
+            "path": [
+              "security",
+              "1.0",
+              "principals",
+              "Group:orders-write",
+              "roles",
+              "DeveloperRead",
+              "bindings"
+            ],
+            "host": [
+              "broker1"
+            ],
+            "query": [],
+            "variable": []
+          },
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "key": "Authorization",
+              "value": "Basic eXVqaWU6eXVqaWUtcHc=",
+              "system": true
+            },
+            {
+              "key": "User-Agent",
+              "value": "PostmanRuntime/7.39.0",
+              "system": true
+            },
+            {
+              "key": "Accept",
+              "value": "*/*",
+              "system": true
+            },
+            {
+              "key": "Cache-Control",
+              "value": "no-cache",
+              "system": true
+            },
+            {
+              "key": "Postman-Token",
+              "value": "ff34cfa6-5c00-435f-9f05-95e772254e8d",
+              "system": true
+            },
+            {
+              "key": "Host",
+              "value": "broker1:8091",
+              "system": true
+            },
+            {
+              "key": "Accept-Encoding",
+              "value": "gzip, deflate, br",
+              "system": true
+            },
+            {
+              "key": "Connection",
+              "value": "keep-alive",
+              "system": true
+            },
+            {
+              "key": "Content-Length",
+              "value": "223",
+              "system": true
+            }
+          ],
+          "method": "POST",
+          "body": {
+            "mode": "raw",
+            "raw": "{\n  \"scope\": {\n    \"clusters\": {\n      \"kafka-cluster\": \"XyZBQ3-GTvKH2qNfP7X33A\"\n    }\n  },\n  \"resourcePatterns\": [\n    {\n      \"resourceType\": \"Topic\",\n      \"name\": \"payments.\",\n      \"patternType\": \"PREFIXED\"\n    }\n  ]\n}"
+          },
+          "auth": {
+            "type": "basic",
+            "basic": [
+              {
+                "type": "any",
+                "value": "yujie",
+                "key": "username"
+              },
+              {
+                "type": "any",
+                "value": "yujie-pw",
+                "key": "password"
+              }
+            ]
+          }
+        },
+        "response": {
+          "id": "c87dd0be-a4e0-4f2a-950f-67ff7adaaf4e",
+          "status": "Forbidden",
+          "code": 403,
+          "header": [
+            {
+              "key": "Date",
+              "value": "Wed, 07 Oct 2026 14:50:37 GMT"
+            },
+            {
+              "key": "Vary",
+              "value": "Accept-Encoding"
+            },
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "key": "Content-Length",
+              "value": "283"
+            }
+          ],
+          "stream": {
+            "type": "Buffer",
+            "data": [
+              123,
+              34,
+              101,
+              114,
+              114,
+              111,
+              114,
+              95,
+              99,
+              111,
+              100,
+              101,
+              34,
+              58,
+              52,
+              48,
+              51,
+              48,
+              49,
+              44,
+              34,
+              109,
+              101,
+              115,
+              115,
+              97,
+              103,
+              101,
+              34,
+              58,
+              34,
+              65,
+              99,
+              116,
+              105,
+              111,
+              110,
+              40,
+              115,
+              99,
+              111,
+              112,
+              101,
+              61,
+              39,
+              83,
+              99,
+              111,
+              112,
+              101,
+              40,
+              112,
+              97,
+              116,
+              104,
+              61,
+              39,
+              91,
+              93,
+              39,
+              44,
+              32,
+              99,
+              108,
+              117,
+              115,
+              116,
+              101,
+              114,
+              115,
+              61,
+              39,
+              123,
+              107,
+              97,
+              102,
+              107,
+              97,
+              45,
+              99,
+              108,
+              117,
+              115,
+              116,
+              101,
+              114,
+              61,
+              88,
+              121,
+              90,
+              66,
+              81,
+              51,
+              45,
+              71,
+              84,
+              118,
+              75,
+              72,
+              50,
+              113,
+              78,
+              102,
+              80,
+              55,
+              88,
+              51,
+              51,
+              65,
+              125,
+              39,
+              41,
+              39,
+              44,
+              32,
+              114,
+              101,
+              115,
+              111,
+              117,
+              114,
+              99,
+              101,
+              80,
+              97,
+              116,
+              116,
+              101,
+              114,
+              110,
+              61,
+              39,
+              84,
+              111,
+              112,
+              105,
+              99,
+              58,
+              80,
+              82,
+              69,
+              70,
+              73,
+              88,
+              69,
+              68,
+              58,
+              112,
+              97,
+              121,
+              109,
+              101,
+              110,
+              116,
+              115,
+              46,
+              39,
+              44,
+              32,
+              111,
+              112,
+              101,
+              114,
+              97,
+              116,
+              105,
+              111,
+              110,
+              61,
+              39,
+              65,
+              108,
+              116,
+              101,
+              114,
+              65,
+              99,
+              99,
+              101,
+              115,
+              115,
+              39,
+              44,
+              32,
+              114,
+              101,
+              115,
+              111,
+              117,
+              114,
+              99,
+              101,
+              82,
+              101,
+              102,
+              101,
+              114,
+              101,
+              110,
+              99,
+              101,
+              67,
+              111,
+              117,
+              110,
+              116,
+              61,
+              39,
+              49,
+              39,
+              44,
+              32,
+              108,
+              111,
+              103,
+              73,
+              102,
+              65,
+              108,
+              108,
+              111,
+              119,
+              101,
+              100,
+              61,
+              39,
+              116,
+              114,
+              117,
+              101,
+              39,
+              44,
+              32,
+              108,
+              111,
+              103,
+              73,
+              102,
+              68,
+              101,
+              110,
+              105,
+              101,
+              100,
+              61,
+              39,
+              116,
+              114,
+              117,
+              101,
+              39,
+              41,
+              32,
+              110,
+              111,
+              116,
+              32,
+              112,
+              101,
+              114,
+              109,
+              105,
+              116,
+              116,
+              101,
+              100,
+              32,
+              102,
+              111,
+              114,
+              32,
+              85,
+              115,
+              101,
+              114,
+              58,
+              89,
+              85,
+              74,
+              73,
+              69,
+              34,
+              125
+            ]
+          },
+          "cookie": [],
+          "responseTime": 72,
+          "responseSize": 283
+        },
+        "id": "c9c9165a-1747-47e1-be9b-d75ffbfb64bc",
+        "assertions": [
+          {
+            "assertion": "非管理員不可新增 role binding",
+            "skipped": false
+          }
+        ]
+      }
+    ],
+    "transfers": {
+      "responseTotal": 1726
+    },
+    "failures": [],
+    "error": null
+  }
+}

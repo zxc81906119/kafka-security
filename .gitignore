@@ -1,0 +1,41 @@
+# --- 私鑰與憑證(demo 用 scripts/make-certs.sh 重新產生;不要進版本庫) ---
+demo/certs/
+demo/ldaps-test/*.key
+demo/ldaps-test/*.p12
+demo/spike/**/*.key
+demo/spike/**/*.p12
+demo/spike/**/certs/
+demo/spike/**/keypair.pem
+demo/rocky/keys/
+# (demo/opmenu/alertmanager.auth 是 demo 測試值,Lab 16 需要,故納入版本庫)
+
+# --- 相依套件與大型二進位 ---
+node_modules/
+*.jar
+*.dll
+
+# --- 快照與備份 ---
+*.tgz
+*.bak-*
+*.bak
+*.bak-*.dir/
+*.bak-*/
+
+# --- 執行時產生的日誌與暫存 ---
+demo/log/
+demo/opmenu/log/
+demo/opmenu/*.log
+demo/rocky/*.log
+demo/labguide/verify*.log
+demo/labguide/verify*.json
+demo/spike/**/*.log
+demo/pull.log
+*.out
+
+# --- IDE 與 Office 暫存 ---
+.idea/
+*.iml
+~$*.docx
+~$*.pptx
+.DS_Store
+Thumbs.db

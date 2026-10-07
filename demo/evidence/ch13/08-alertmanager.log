@@ -1,0 +1,3 @@
+# 【機器 ④】Alertmanager:HTTPS + Basic;不帶帳密連「建立靜音」都被擋(401),帶帳密才行(沒保護的 Alertmanager,攻擊者能靜音告警)
+$ curl -X POST https://alertmanager:9093/api/v2/silences ...   # 對照:不帶憑證 / 帶 Basic 帳密
+不帶憑證建立靜音 → [HTTP 401] ;帶 Basic 帳密建立 → [HTTP 200] ;清除 → [HTTP 200]

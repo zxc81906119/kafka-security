@@ -1,0 +1,14 @@
+# 實驗:controller 不開授權、controller listener 只做 TLS(不要求 client 憑證);broker 的 INTERNAL listener 維持 mTLS。
+# 假設:controller 沒有授權器就不需要連 broker 讀 RBAC 資料。
+services:
+  mctl1:
+    environment:
+      KAFKA_AUTHORIZER_CLASS_NAME: ""
+      KAFKA_CONFLUENT_METADATA_SERVER_KRAFT_CONTROLLER_ENABLED: "false"
+      KAFKA_LISTENER_NAME_CONTROLLER_SSL_CLIENT_AUTH: none
+  mbk1:
+    environment:
+      KAFKA_LISTENER_NAME_CONTROLLER_SSL_CLIENT_AUTH: none
+  mbk2:
+    environment:
+      KAFKA_LISTENER_NAME_CONTROLLER_SSL_CLIENT_AUTH: none

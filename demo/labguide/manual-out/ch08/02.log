@@ -1,0 +1,3 @@
+subject=CN=kafka.demo.local, O=Demo
+MDS 看到的 principal = "kafka.demo.local"
+MDS 看到的 principal = "kafka.demo.local"

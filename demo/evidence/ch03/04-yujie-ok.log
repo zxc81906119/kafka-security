@@ -1,0 +1,3 @@
+# 【授權後】yujie 寫入 orders.events 成功(他的權限來自 AD 群組,而不是個人帳號)
+$ echo order-A-1001 | kafka-console-producer ... --command-config yujie.properties --topic orders.events
+→ 結果:成功

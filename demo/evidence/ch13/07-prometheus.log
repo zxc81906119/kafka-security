@@ -1,0 +1,3 @@
+# 【機器 ③】Prometheus:HTTPS + Basic(C3 與 broker 用 c3 帳密);不帶帳密讀不到指標(401),帶帳密才行(詳見第 17 章)
+$ curl https://prometheus:9090/api/v1/query?query=count(up)    # 對照:不帶帳密 / 帶 Basic 帳密
+不帶帳密 [HTTP 401];帶帳密 [HTTP 200]

@@ -1,0 +1,4 @@
+# 【MDS API / Postman 同一份資料】列出 Group:orders-write 的 role binding —— 與 C3 畫面一致
+$ curl -u gary:*** -X POST https://broker1:8091/security/1.0/lookup/principal/Group:orders-write/resources
+{"Group:orders-write":{"DeveloperWrite":[{"resourceType":"Topic","name":"orders.","patternType":"PREFIXED"}],"DeveloperRead":[{"resourceType":"Topic","name":"orders.","patternType":"PREFIXED"}]}}
+[HTTP 200]

@@ -1,0 +1,3 @@
+# 【帳號仍在 AD】他還是能登入(AD 帳號沒停用),只是沒有任何 role → 看不到業務 topic
+$ curl -u yujie:*** https://restproxy:8086/topics
+[HTTP 200] 

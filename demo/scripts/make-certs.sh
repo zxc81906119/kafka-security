@@ -1,0 +1,71 @@
+#!/usr/bin/env bash
+# 產生 demo 用 CA、「單一共用 server 憑證」、MDS token 金鑰。
+# 客戶情境:所有元件共用同一張 server 憑證(同一把 private key、同一個 DN),憑證只做傳輸加密。
+# 另外為「對照章節(第 8 章)」產生兩張不同 DN 的 client 憑證,用來示範:共用 DN 無法區分元件。
+set -euo pipefail
+cd "$(dirname "$0")/.."
+export MSYS_NO_PATHCONV=1
+OUT="$(pwd -W 2>/dev/null || pwd)/certs"
+mkdir -p certs
+PASS=changeit
+
+if [ -f certs/.done ]; then
+  # 已有 CA:共用 server 憑證的 SAN 若缺 prometheus / alertmanager(監控 TLS 用),用同一把 key、同一個 CA 重簽(不換身分、不用重發 client 憑證)
+  if ! grep -q "DNS:alertmanager" certs/san.cnf 2>/dev/null; then
+    sed -i "s/DNS:openldap,IP:127.0.0.1/DNS:openldap,DNS:prometheus,DNS:alertmanager,IP:127.0.0.1/" certs/san.cnf
+    docker run --rm -v "$OUT:/certs" --entrypoint sh alpine/openssl -c "cd /certs; openssl x509 -req -in server.csr -CA ca.pem -CAkey ca.key -CAcreateserial -out server.pem -days 825 -sha256 -extfile san.cnf -extensions v3 2>/dev/null; openssl pkcs12 -export -in server.pem -inkey server.key -certfile ca.pem -name server -out server.keystore.p12 -passout pass:$PASS; chmod 644 server.*"
+    echo "server 憑證 SAN 已補 prometheus / alertmanager(同 key、同 CA)"
+  fi
+  # 已有 CA:僅補產缺少的 client 憑證
+  for n in c3 restproxy bootstrap legacy-orders; do
+    if [ ! -f certs/client-$n.keystore.p12 ]; then
+      docker run --rm -v "$OUT:/certs" --entrypoint sh alpine/openssl -c "cd /certs; openssl genrsa -out client-$n.key 2048 2>/dev/null; openssl req -new -key client-$n.key -subj \"/CN=$n/O=Demo\" -out client-$n.csr; openssl x509 -req -in client-$n.csr -CA ca.pem -CAkey ca.key -CAcreateserial -out client-$n.pem -days 825 -sha256 2>/dev/null; openssl pkcs12 -export -in client-$n.pem -inkey client-$n.key -certfile ca.pem -name $n -out client-$n.keystore.p12 -passout pass:$PASS; chmod 644 client-$n.*"
+      echo "補產 client 憑證: $n"
+    fi
+  done
+  echo "certs 已存在,略過其餘"; exit 0
+fi
+
+docker run --rm -v "$OUT:/certs" --entrypoint sh alpine/openssl -c '
+set -e
+cd /certs
+# --- CA ---
+openssl genrsa -out ca.key 4096 2>/dev/null
+openssl req -x509 -new -nodes -key ca.key -sha256 -days 3650 -subj "/CN=Demo Private CA/O=Demo" -out ca.pem
+# --- 共用 server 憑證(單一 DN、多 SAN) ---
+cat > san.cnf <<EOF
+[req]
+distinguished_name=dn
+req_extensions=v3
+prompt=no
+[dn]
+CN=kafka.demo.local
+O=Demo
+[v3]
+subjectAltName=DNS:kafka.demo.local,DNS:localhost,DNS:controller1,DNS:broker1,DNS:broker2,DNS:restproxy,DNS:control-center,DNS:openldap,DNS:prometheus,DNS:alertmanager,IP:127.0.0.1
+extendedKeyUsage=serverAuth,clientAuth
+EOF
+openssl genrsa -out server.key 2048 2>/dev/null
+openssl req -new -key server.key -out server.csr -config san.cnf
+openssl x509 -req -in server.csr -CA ca.pem -CAkey ca.key -CAcreateserial -out server.pem -days 825 -sha256 -extfile san.cnf -extensions v3 2>/dev/null
+openssl pkcs12 -export -in server.pem -inkey server.key -certfile ca.pem -name server -out server.keystore.p12 -passout pass:'"$PASS"'
+# --- 對照用:兩張不同 DN 的 client 憑證 ---
+for n in c3 restproxy bootstrap legacy-orders; do
+  openssl genrsa -out client-$n.key 2048 2>/dev/null
+  openssl req -new -key client-$n.key -subj "/CN=$n/O=Demo" -out client-$n.csr
+  openssl x509 -req -in client-$n.csr -CA ca.pem -CAkey ca.key -CAcreateserial -out client-$n.pem -days 825 -sha256 2>/dev/null
+  openssl pkcs12 -export -in client-$n.pem -inkey client-$n.key -certfile ca.pem -name $n -out client-$n.keystore.p12 -passout pass:'"$PASS"'
+done
+# --- MDS token 金鑰 ---
+openssl genrsa -out keypair.pem 2048 2>/dev/null
+openssl rsa -in keypair.pem -outform PEM -pubout -out public.pem 2>/dev/null
+chmod 644 *.pem *.p12 *.key
+'
+# truststore(PKCS12),用 cp-server 內的 keytool
+docker run --rm -v "$OUT:/certs" --entrypoint bash confluentinc/cp-server:8.3.2 -c "
+rm -f /certs/truststore.p12
+keytool -importcert -noprompt -alias demo-ca -file /certs/ca.pem -keystore /certs/truststore.p12 -storetype PKCS12 -storepass $PASS >/dev/null
+chmod 644 /certs/truststore.p12
+"
+touch certs/.done
+echo "OK: certs 完成 → demo/certs"

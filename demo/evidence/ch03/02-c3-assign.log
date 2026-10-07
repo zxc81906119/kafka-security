@@ -1,0 +1,6 @@
+# 【C3 操作】gary 在 Control Center 把 orders.* 的讀寫權限指派給「AD 群組」orders-write(見截圖)
+$ (瀏覽器)C3 → Administration → Manage role assignments → Topic → Add role assignment
+  📸 ch03/c3-1-write-form.png — C3:Add role assignment — Group orders-write / DeveloperWrite / orders.
+  📸 ch03/c3-1-write-saved.png — C3:指派完成後的 Topic 範圍列表
+  📸 ch03/c3-2-read-form.png — C3:Add role assignment — Group orders-write / DeveloperRead / orders.
+  📸 ch03/c3-2-read-saved.png — C3:指派完成後的 Topic 範圍列表
