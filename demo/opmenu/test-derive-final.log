@@ -1,0 +1,19 @@
+== 1 精簡設定檔(只填 bootstrap、broker 與輔助服務、controller)
+  PASS  MDS_URL 由 bootstrap 推算
+  PASS  cluster ID = MDS 回報的值
+  PASS  HOSTS = broker + 輔助服務 + controller
+  PASS  HOSTS 含全部主機
+  PASS  副本數降到 broker 數
+  PASS  BROKER_SERVICES 是 conf(不推算)
+== 2 conf 有填的優先(demo 的 opmenu.conf 明確填了 MDS_URL)
+  PASS  MDS_URL 來源是 conf
+  PASS  cluster ID 仍由推算補上
+== 3 少了必填的 BROKER_SERVICES → 登入階段明確報錯
+  PASS  報錯指出要設定 OPMENU_BROKER_SERVICES
+== 4 純本機推算(不連叢集,直接載入 defaults.sh)
+  PASS  憑證檔名跟著 CERT_DIR
+  PASS  個別設定優先於 CERT_DIR
+  PASS  MDS 位址去重並用 MDS_PORT
+  PASS  MDS_URL 有填就不推算
+
+== 結果:PASS 13 / FAIL 0

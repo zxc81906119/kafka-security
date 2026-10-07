@@ -1,0 +1,127 @@
+
+##### 0.2 憑證(暫存資料夾)產出齊全:缺 無 → PASS
+Certificate request self-signature ok
+subject=CN=kafka.demo.local, O=Demo
+Certificate request self-signature ok
+subject=CN=c3, O=Demo
+Certificate request self-signature ok
+subject=CN=restproxy, O=Demo
+Certificate request self-signature ok
+subject=CN=bootstrap, O=Demo
+writing RSA key
+Certificate was added to keystore
+
+ca.key ca.pem ca.srl client-bootstrap.csr client-bootstrap.key client-bootstrap.keystore.p12 client-bootstrap.pem client-c3.csr client-c3.key client-c3.keystore.p12 client-c3.pem client-restproxy.csr client-restproxy.key client-restproxy.keystore.p12 client-restproxy.pem keypair.pem keystore_creds public.pem san.cnf server.csr server.key server.keystore.p12 server.pem sslkey_creds truststore.p12 truststore_creds
+
+##### 0.2 共用憑證 SAN 含 localhost / broker1 / restproxy → PASS
+subject=CN=kafka.demo.local, O=Demo
+X509v3 Subject Alternative Name: 
+    DNS:kafka.demo.local, DNS:localhost, DNS:controller1, DNS:broker1, DNS:broker2, DNS:restproxy, DNS:control-center, DNS:openldap, IP Address:127.0.0.1
+
+
+##### 0.3 啟動 LDAP(模擬 AD)與 KRaft controller → PASS
+LDAP-ready
+ Container ldapadmin Running 
+ Container openldap Running 
+ Container controller1 Running 
+
+
+##### 0.4 授權「bind DN 唯讀查詢帳號」 → PASS
+modifying entry "olcDatabase={1}mdb,cn=config"
+
+SASL/EXTERNAL authentication started
+SASL username: gidNumber=0+uidNumber=0,cn=peercred,cn=external,cn=auth
+SASL SSF: 0
+ldap_modify: Type or value exists (20)
+	additional info: modify/add: olcAccess: value #0 already exists
+
+
+##### 0.5 啟動 brokers(MDS 內建於 broker)並等待 MDS 就緒 → PASS
+MDS-ready
+ Container broker1 Running 
+ Container openldap Running 
+ Container controller1 Running 
+ Container broker2 Running 
+ Container openldap Waiting 
+ Container controller1 Waiting 
+ Container controller1 Waiting 
+ Container openldap Waiting 
+ Container openldap Healthy 
+ Container controller1 Healthy 
+ Container controller1 Healthy 
+ Container openldap Healthy 
+
+
+##### 0.6 用 bootstrap 憑證建立第一批 role binding → PASS
+
+[HTTP 204]
+
+[HTTP 204]
+
+[HTTP 204]
+
+[HTTP 204]
+
+[HTTP 204]
+
+[HTTP 204]
+
+[HTTP 204]
+
+[HTTP 204]
+
+[HTTP 204]
+
+[HTTP 204]
+
+[HTTP 204]
+
+[HTTP 204]
+
+[HTTP 204]
+
+
+##### 0.7 建立服務帳號(SCRAM)與示範 topics → PASS
+Completed updating config for user svc-orders.
+
+
+##### 0.8 啟動 Control Center 與 REST Proxy,並自檢 → PASS
+broker1          Up 19 minutes (healthy)
+control-center   Up 46 minutes (healthy)
+alertmanager     Up About an hour (healthy)
+restproxy        Up 14 minutes (healthy)
+prometheus       Up About an hour (healthy)
+ldapadmin        Up About an hour
+controller1      Up About an hour (healthy)
+openldap         Up 32 minutes (healthy)
+ Container controller1 Running 
+ Container broker2 Running 
+ Container ldapadmin Running 
+ Container openldap Running 
+ Container control-center Running 
+ Container alertmanager Running 
+ Container restproxy Running 
+ Container broker1 Running 
+ Container prometheus Running 
+ Container prometheus Waiting 
+ Container controller1 Waiting 
+ Container openldap Waiting 
+ Container openldap Waiting 
+ Container controller1 Waiting 
+ Container openldap Healthy 
+ Container controller1 Healthy 
+ Container openldap Healthy 
+ Container controller1 Healthy 
+ Container broker1 Waiting 
+ Container broker2 Waiting 
+ Container prometheus Healthy 
+ Container alertmanager Waiting 
+ Container broker1 Waiting 
+ Container broker2 Waiting 
+ Container prometheus Waiting 
+ Container broker1 Healthy 
+ Container broker2 Healthy 
+ Container alertmanager Healthy 
+ Container broker1 Healthy 
+ Container prometheus Healthy 
+ Container broker2 Healthy 
