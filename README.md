@@ -25,6 +25,12 @@ bash scripts/setup-e2e.sh                       # 瀏覽器自動化(各 Lab 的
 
 Lab 18 用 CyberArk 的開源版 Conjur,要多下載約 1.2 GB 映像;第一步 `bash scripts/conjur.sh up` 會啟動它(profile `cyberark`,4 個容器)。Lab 18.20 第一次執行 `scripts/secret-protection.sh summon-setup` 會再從 GitHub(cyberark 官方 release)下載 summon 與 summon-conjur 約 10 MB(校驗 SHA256)。PAM 側(代登入、錄影、輪替主機帳號)本機無法重現,手冊附錄 E 有說明。
 
+## Lab 19、Lab 20
+
+- Lab 19(帳號被偷之後)不用多下載東西,但會暫時改 AD 的鎖定原則(做完自動關回去)、並在 Prometheus 載入一組告警規則。
+- Lab 20(Schema Registry)第一步 `bash scripts/sr-setup.sh` 會啟動 profile `sr` 的 Schema Registry,第一次要多下載約 1.5 GB 映像。欄位級加密(CSFLE)需要企業版加購授權,Lab 20 只驗證到授權為止,手冊有說明。
+- **已知問題**:較久的環境重啟 broker 偶爾會起不來(broker 啟動時向自己做 SCRAM 認證被拒,根因未查明)。Lab 16(OP menu 滾動重啟)與 Lab 18(broker2 重啟)已自動處理:起不來就清空該 broker 的資料目錄重建(`scripts/broker-heal.sh`),資料會從另一台補回來。如果自己手動重啟 broker 遇到,執行 `bash scripts/broker-heal.sh broker1`(或 broker2)。
+
 ## 練習時
 
 - 每個 Lab 的編號就是 `./demo.sh N` 的章節編號;要回到起點執行 `./demo.sh reset`。
