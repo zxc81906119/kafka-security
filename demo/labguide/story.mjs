@@ -120,7 +120,7 @@ export const LAB_STORY = {
     mission: ['證明 broker 連 AD 走 LDAPS,而且信任 CA 才連得上。', '證明 Prometheus、Alertmanager 要 HTTPS 加 Basic,而 broker 的指標推送與 C3 的連線仍正常。', '證明使用者連 C3 走 HTTPS,並理解不信任 CA 時的結果。'],
     recap: ['AD 連線:ldaps:// 加信任庫;只有連 AD 的 JVM 需要信任庫。', '監控:web-config 設 TLS 與 Basic;Prometheus 連 Alertmanager 那一段也要改設定(官方頁沒寫、實測必要)。', 'C3:只開 HTTPS;共用 server 憑證要把所有元件的名稱放進 SAN,並規劃 CA 發放給使用者電腦。', '共用 server 憑證只是補了名稱,用同一把 key、同一個 CA 重簽,不用重發任何 client 憑證。'] },
   18: { scene: ['行裡有 CyberArk。資安問 Gary:「你們的密碼放哪?」Gary 老實說:應用程式的 SCRAM 密碼在設定檔、OP menu 的帳密在跳板機的檔案、broker 連 AD 的密碼在 properties 裡。資安的要求很簡單:「以後這些都不能放在檔案裡。」',
-      'Ming 用 CyberArk 的開源版(Conjur)在環境裡接了一遍:policy 寫清楚哪個機器身分能拿哪個秘密;應用啟動時先用自己的 API key 換 token、取密碼、在記憶體組連線設定;另一個沒被授權的應用拿不到,錯的 API key 連門都進不了。密碼輪替後,應用重新啟動就自己跟上,舊密碼立刻失效。接著他把 OP menu 的帳密、broker 設定檔的密碼也都搬進去:broker 啟動前向 Conjur 取主金鑰,設定檔裡只剩密文。',
+      'Ming 用 CyberArk 的開源版(Conjur)在環境裡接了一遍:policy 寫清楚哪個機器身分能拿哪個秘密;應用啟動時先用自己的 API key 換 token、取密碼、在記憶體組連線設定;另一個沒被授權的應用拿不到,錯的 API key 連門都進不了。密碼輪替後,應用重新啟動就自己跟上,舊密碼立刻失效。接著他把 OP menu 的帳密、broker 設定檔的密碼也都搬進去:broker 啟動前向 Conjur 取主金鑰,設定檔裡只剩密文;他也試了 CyberArk 官方的 summon 工具,正式環境的 systemd 一行就接得上。',
       '做完他也清楚哪些本機做不到:代登入錄影、自動輪替主機帳號、依單借出私鑰,那些是 CyberArk 的 PAM,只能到客戶環境才驗。'],
     mission: ['讓應用以自己的機器身分取密碼,並確認沒被授權的拿不到。', '走一次輪替,確認應用跟上、舊密碼失效。', '把 OP menu 與 broker 設定檔的密碼從檔案搬進 Conjur。'],
     recap: ['CyberArk 不改變身分與授權的設計,它接管的是「密碼與私鑰放哪、誰能拿、怎麼輪替」。', '每個應用一個機器身分,policy 只給它自己的秘密;稽核紀錄的主體就是這個身分。', 'Kafka 的 SCRAM 輪替沒有現成的 CyberArk 平台,靠腳本;誰來觸發(CPM 或排程)是客戶的決定。', '秘密不落地的代價:Conjur 不可用時依賴它的服務起不來,可用性要一併規劃。'] },

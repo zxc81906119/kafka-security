@@ -1,0 +1,13 @@
+# 【broker 啟動 ②】同一件事改用 CyberArk 官方工具 summon + summon-conjur:summon 以主機身分(/etc/conjur.identity)向 Conjur 取 secrets.yml 列的秘密,注入成環境變數後執行啟動程式;PID 1 是 summon、java 是子程序;取不到就不執行。正式環境 systemd 只要 ExecStart 一行,不必 ExecStartPre(ExecStartPre 的環境變數不會傳給 ExecStart)
+$ summon -p summon-conjur -f /conjur/secrets.yml /etc/confluent/docker/run(docker-compose.cyberark-summon.yml)
+[summon] 就緒:config/conjur/bin/summon、config/conjur/bin/summon-conjur;broker 身分 → config/conjur/identity-broker/conjur.identity
+[secret-protection] broker2 已用加密設定重啟(主金鑰由 summon 向 Conjur 取);broker2 的啟動指令:
+/usr/local/bin/summon -p /usr/local/lib/summon/summon-conjur -f /conjur/secrets.yml /etc/confluent/docker/run
+    PID    PPID COMMAND
+      1       0 summon
+     22       1 java
+broker2 的 /etc/kafka/kafka.properties 裡 AD 查詢密碼那一行:
+ldap.java.naming.security.credentials=${securepass:/etc/kafka/secrets/security.properties:server.properties/ldap.java.naming.security.credentials}
+broker2 的環境裡有沒有明文密碼:0 處
+gary 經 broker2 登入 → [HTTP 200]
+判定:summon 注入主金鑰,broker 仍能查 AD

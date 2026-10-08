@@ -98,9 +98,13 @@ step sp-setup "【設定檔】Confluent Secret Protection:AD 查詢帳號的密�
   "confluent secret master-key generate → conjur variable set kafka/broker/master-key;confluent secret file encrypt --config ldap.java.naming.security.credentials" \
   'bash "$DEMO_ROOT/scripts/secret-protection.sh" setup' '主金鑰已存入 Conjur'
 
-step sp-apply "【broker 啟動】broker2 啟動前以自己的機器身分向 Conjur 取主金鑰(正式環境 = systemd ExecStartPre),解開密文後才連 AD;生效設定裡只有佔位符、環境裡沒有明文密碼;人用 AD 帳密登入照常" \
+step sp-apply "【broker 啟動 ①】broker2 啟動前以自己的機器身分向 Conjur 取主金鑰(自己寫的取秘密腳本;正式環境 = systemd 的包裝腳本),解開密文後才連 AD;生效設定裡只有佔位符、環境裡沒有明文密碼;人用 AD 帳密登入照常" \
   "docker compose -f docker-compose.yml -f docker-compose.cyberark.yml up -d broker2;curl -u gary https://broker2:8092/security/1.0/authenticate" \
   'bash "$DEMO_ROOT/scripts/secret-protection.sh" apply 2>&1 | grep secret-protection; bash "$DEMO_ROOT/scripts/secret-protection.sh" show; code=$(bash "$DEMO_ROOT/scripts/dcurl.sh" -o /dev/null -u gary:gary-pw https://broker2:8092/security/1.0/authenticate | tail -1); echo "gary 經 broker2 登入 → $code"; [ "$code" = "[HTTP 200]" ] && echo "判定:設定檔只有密文與佔位符,broker 仍能查 AD" || echo "判定:不符合"' '判定:設定檔只有密文與佔位符,broker 仍能查 AD'
+
+step sp-apply-summon "【broker 啟動 ②】同一件事改用 CyberArk 官方工具 summon + summon-conjur:summon 以主機身分(/etc/conjur.identity)向 Conjur 取 secrets.yml 列的秘密,注入成環境變數後執行啟動程式;PID 1 是 summon、java 是子程序;取不到就不執行。正式環境 systemd 只要 ExecStart 一行,不必 ExecStartPre(ExecStartPre 的環境變數不會傳給 ExecStart)" \
+  "summon -p summon-conjur -f /conjur/secrets.yml /etc/confluent/docker/run(docker-compose.cyberark-summon.yml)" \
+  'bash "$DEMO_ROOT/scripts/secret-protection.sh" summon-setup | tail -1; bash "$DEMO_ROOT/scripts/secret-protection.sh" apply-summon 2>&1 | grep -v "^ Container"; docker exec broker2 ps -eo pid,ppid,comm | head -3; bash "$DEMO_ROOT/scripts/secret-protection.sh" show; code=$(bash "$DEMO_ROOT/scripts/dcurl.sh" -o /dev/null -u gary:gary-pw https://broker2:8092/security/1.0/authenticate | tail -1); echo "gary 經 broker2 登入 → $code"; [ "$code" = "[HTTP 200]" ] && echo "判定:summon 注入主金鑰,broker 仍能查 AD" || echo "判定:不符合"' '判定:summon 注入主金鑰,broker 仍能查 AD'
 
 step sp-revert "【還原】broker2 回到原本設定(其他章節不依賴 Conjur)" \
   "docker compose up -d broker2" \

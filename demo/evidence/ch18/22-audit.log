@@ -1,8 +1,0 @@
-# 【稽核】Conjur 記錄誰取了什麼:被拒的嘗試(rogue-app)清楚可查
-$ docker logs conjur-server | grep 'demo:host:kafka'
-     30 demo:host:kafka/svc-orders fetched demo:variable:kafka/svc-orders/credential
-     18 demo:host:kafka/opmenu fetched demo:variable:kafka/opmenu/alertmanager-auth
-     12 demo:host:kafka/svc-orders fetched demo:variable:kafka/svc-orders/password
-      6 demo:host:kafka/rogue-app tried to fetch demo:variable:kafka/opmenu/alertmanager-auth: Forbidden
-      6 demo:host:kafka/broker fetched demo:variable:kafka/broker/master-key
-      3 demo:host:kafka/rogue-app tried to fetch demo:variable:kafka/svc-orders/password: Forbidden

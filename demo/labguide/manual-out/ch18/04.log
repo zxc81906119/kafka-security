@@ -11,8 +11,7 @@
   "demo:variable:kafka/broker/master-key",
   "demo:variable:kafka/legacy-orders/key",
   "demo:variable:kafka/opmenu/alertmanager-auth",
-  "demo:variable:kafka/svc-orders/credential",
-  "demo:variable:kafka/svc-orders/password"
+  "demo:variable:kafka/svc-orders/credential"
 ]
 [HTTP 404]
  Container conjur Running 
@@ -28,7 +27,7 @@
  Container conjur-cli Waiting 
  Container conjur Waiting 
  Container conjur-db Healthy 
- Container conjur-cli Healthy 
- Container conjur Healthy 
  Container conjur-server Healthy 
+ Container conjur Healthy 
+ Container conjur-cli Healthy 
 Loaded policy 'root'

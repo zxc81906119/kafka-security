@@ -11,8 +11,7 @@
   "demo:variable:kafka/broker/master-key",
   "demo:variable:kafka/legacy-orders/key",
   "demo:variable:kafka/opmenu/alertmanager-auth",
-  "demo:variable:kafka/svc-orders/credential",
-  "demo:variable:kafka/svc-orders/password"
+  "demo:variable:kafka/svc-orders/credential"
 ]
 ① 建立新帳號 svc-orders-v2(密碼隨機,只存進 Conjur)
 ② 複製 svc-orders 的角色給 svc-orders-v2(逐筆檢查)
@@ -21,20 +20,20 @@
   新舊帳號看到同樣的 3 個 topic
 ④ 驗證通過,新帳密才一次寫進 Conjur(kafka/svc-orders/credential,單一變數、原子)
 結果:svc-orders-v2 已建立並綁定相同角色;Conjur 已指向 svc-orders-v2;svc-orders 仍可用(新舊並行中)
- Container conjur-server Running 
- Container conjur Running 
  Container conjur-cli Running 
+ Container conjur-server Running 
  Container conjur-db Running 
+ Container conjur Running 
  Container conjur-db Waiting 
  Container conjur-db Healthy 
  Container conjur-server Waiting 
  Container conjur-server Healthy 
+ Container conjur-server Waiting 
+ Container conjur-db Waiting 
  Container conjur Waiting 
  Container conjur-cli Waiting 
- Container conjur-db Waiting 
- Container conjur-server Waiting 
- Container conjur Healthy 
  Container conjur-server Healthy 
- Container conjur-db Healthy 
  Container conjur-cli Healthy 
+ Container conjur Healthy 
+ Container conjur-db Healthy 
 Loaded policy 'root'

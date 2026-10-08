@@ -11,26 +11,25 @@
   "demo:variable:kafka/broker/master-key",
   "demo:variable:kafka/legacy-orders/key",
   "demo:variable:kafka/opmenu/alertmanager-auth",
-  "demo:variable:kafka/svc-orders/credential",
-  "demo:variable:kafka/svc-orders/password"
+  "demo:variable:kafka/svc-orders/credential"
 ]
    使用帳號 svc-orders-v2;取得密碼(長度 24 字元;不顯示)
 結果:成功寫入 orders.events(以 svc-orders-v2 身分;連線設定只存在 /dev/shm,容器結束即消失)
 2
- Container conjur-cli Running 
- Container conjur Running 
  Container conjur-server Running 
+ Container conjur-cli Running 
  Container conjur-db Running 
+ Container conjur Running 
  Container conjur-db Waiting 
  Container conjur-db Healthy 
  Container conjur-server Waiting 
  Container conjur-server Healthy 
- Container conjur-server Waiting 
- Container conjur-db Waiting 
- Container conjur-cli Waiting 
  Container conjur Waiting 
- Container conjur-cli Healthy 
+ Container conjur-server Waiting 
+ Container conjur-cli Waiting 
+ Container conjur-db Waiting 
  Container conjur-server Healthy 
- Container conjur-db Healthy 
  Container conjur Healthy 
+ Container conjur-db Healthy 
+ Container conjur-cli Healthy 
 Loaded policy 'root'

@@ -13,22 +13,25 @@
   "demo:variable:kafka/opmenu/alertmanager-auth",
   "demo:variable:kafka/svc-orders/credential"
 ]
-✘ 舊帳號 nobody 沒有任何角色,不知道要複製什麼,中止(沒有改任何東西)
-結果:成功寫入 orders.events(以 svc-orders 身分;連線設定只存在 /dev/shm,容器結束即消失)
+     22 demo:host:kafka/svc-orders fetched demo:variable:kafka/svc-orders/credential
+     12 demo:host:kafka/broker fetched demo:variable:kafka/broker/master-key
+      6 demo:host:kafka/opmenu fetched demo:variable:kafka/opmenu/alertmanager-auth
+      2 demo:host:kafka/rogue-app tried to fetch demo:variable:kafka/svc-orders/credential: Forbidden
+      2 demo:host:kafka/rogue-app tried to fetch demo:variable:kafka/opmenu/alertmanager-auth: Forbidden
  Container conjur Running 
- Container conjur-server Running 
  Container conjur-cli Running 
  Container conjur-db Running 
+ Container conjur-server Running 
  Container conjur-db Waiting 
  Container conjur-db Healthy 
  Container conjur-server Waiting 
  Container conjur-server Healthy 
- Container conjur-server Waiting 
- Container conjur-cli Waiting 
  Container conjur-db Waiting 
+ Container conjur-server Waiting 
  Container conjur Waiting 
- Container conjur-server Healthy 
+ Container conjur-cli Waiting 
+ Container conjur Healthy 
  Container conjur-db Healthy 
  Container conjur-cli Healthy 
- Container conjur Healthy 
+ Container conjur-server Healthy 
 Loaded policy 'root'

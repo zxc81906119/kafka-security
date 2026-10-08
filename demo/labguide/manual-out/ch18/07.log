@@ -11,27 +11,26 @@
   "demo:variable:kafka/broker/master-key",
   "demo:variable:kafka/legacy-orders/key",
   "demo:variable:kafka/opmenu/alertmanager-auth",
-  "demo:variable:kafka/svc-orders/credential",
-  "demo:variable:kafka/svc-orders/password"
+  "demo:variable:kafka/svc-orders/credential"
 ]
 Completed updating config for user svc-orders.
 [conjur] 已寫入 kafka/svc-orders/credential(帳號 svc-orders)
 結果:成功寫入 orders.events(以 svc-orders 身分;連線設定只存在 /dev/shm,容器結束即消失)
-ERROR [AdminClient clientId=adminclient-1] Connection to node -1 (broker1/172.20.0.5:9094) failed authentication due to: Authentication failed during authentication due to invalid credentials with SASL mechanism SCRAM-SHA-512
- Container conjur-cli Running 
- Container conjur-db Running 
+ERROR [AdminClient clientId=adminclient-1] Connection to node -1 (broker1/172.20.0.6:9094) failed authentication due to: Authentication failed during authentication due to invalid credentials with SASL mechanism SCRAM-SHA-512
  Container conjur-server Running 
+ Container conjur-db Running 
  Container conjur Running 
+ Container conjur-cli Running 
  Container conjur-db Waiting 
  Container conjur-db Healthy 
  Container conjur-server Waiting 
  Container conjur-server Healthy 
- Container conjur-cli Waiting 
- Container conjur-db Waiting 
- Container conjur-server Waiting 
  Container conjur Waiting 
+ Container conjur-cli Waiting 
+ Container conjur-server Waiting 
+ Container conjur-db Waiting 
  Container conjur-server Healthy 
- Container conjur Healthy 
  Container conjur-db Healthy 
  Container conjur-cli Healthy 
+ Container conjur Healthy 
 Loaded policy 'root'

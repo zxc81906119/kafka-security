@@ -148,7 +148,7 @@ CJ=https://conjur
 cjtoken() { hc -X POST --data "$(cat config/conjur/keys/$1.key)" $CJ/authn/demo/host%2Fkafka%2F$1/authenticate | grep -v '^\[HTTP' | base64 -w0; }   # 以 host 的 API key 換 token(8 分鐘有效)
 docker exec -i conjur-cli conjur list -k host
 docker exec -i conjur-cli conjur list -k variable`],
-        ev: 'policy', re: /kafka\/svc-orders\/password/, expect: 'host:broker、legacy-orders、opmenu、rogue-app、svc-orders;variable:四個秘密。', tip: 'macOS 的 base64 沒有 -w0,改用 base64 | tr -d "\\n"。' },
+        ev: 'policy', re: /kafka\/svc-orders\/credential/, expect: 'host:broker、legacy-orders、opmenu、rogue-app、svc-orders;variable:四個秘密(svc-orders 的是 credential)。', tip: 'macOS 的 base64 沒有 -w0,改用 base64 | tr -d "\\n"。' },
       { t: '18.2 管理員把 svc-orders 的 SCRAM 密碼存進 Conjur', why: '正式環境由 CyberArk 管理員在 PVWA 或 CLI 做,應用團隊不碰密碼本身。',
         manual: ['bash scripts/conjur.sh set-cred svc-orders svc-orders orders-secret-v1'], ev: 'admin-set', re: /已寫入 kafka\/svc-orders\/credential/, expect: '已寫入 kafka/svc-orders/credential(帳號 svc-orders)。', tip: '帳號與密碼放在同一個變數(JSON {"u":帳號,"p":密碼}):寫入是單一操作、應用一次取得,輪替時不會有「帳號換了、密碼還沒換」的空檔。若分成兩個變數,應用剛好在空檔裡讀就會拿到不配對的帳密。' },
       { t: '18.3 應用以自己的機器身分取密碼 → 200', why: '兩步:API key 換 token(POST /authn/…/authenticate),再用 token 取秘密(GET /secrets/…)。密碼只回到呼叫者的記憶體;這裡用 -o /dev/null 不把它印出來。',
@@ -209,13 +209,20 @@ cd ..`],
         ev: 'opmenu', re: /維護模式已結束[\s\S]*失敗/, expect: '維護模式已開始 → 維護模式已結束 → 用 rogue-app 的身分:建立 silence 失敗:Unauthorized。' },
       { t: '18.18 設定檔密碼不落地 ①:用 Confluent Secret Protection 加密、主金鑰存進 Conjur', why: '官方功能:設定檔裡的密碼換成加密佔位符,密文放在 security.properties,解密要主金鑰(環境變數 CONFLUENT_SECURITY_MASTER_KEY)。這裡主金鑰直接存進 Conjur,不寫任何檔案。',
         manual: ['bash scripts/secret-protection.sh setup', 'cat certs/security.properties | cut -c1-110'], ev: 'sp-setup', re: /主金鑰已存入 Conjur/, expect: '主金鑰已存入 Conjur;security.properties 裡 ldap.java.naming.security.credentials 是 ENC[…]。' },
-      { t: '18.19 設定檔密碼不落地 ②:broker2 啟動前向 Conjur 取主金鑰,解開密文後才連 AD', why: 'docker-compose.cyberark.yml 只覆蓋 broker2:密碼改成佔位符、啟動指令先執行 fetch-secret.py(以 host/kafka/broker 的身分取主金鑰放進環境變數)再啟動。正式環境就是 systemd 的 ExecStartPre。驗證:生效設定裡只有佔位符、環境裡沒有明文、人仍能經 broker2 登入(表示 AD 查詢密碼解對了)。',
+      { t: '18.19 設定檔密碼不落地 ②:broker2 啟動前向 Conjur 取主金鑰,解開密文後才連 AD', why: 'docker-compose.cyberark.yml 只覆蓋 broker2:密碼改成佔位符、啟動指令先執行 fetch-secret.py(以 host/kafka/broker 的身分取主金鑰放進環境變數)再啟動。正式環境是 systemd 的包裝腳本(注意:ExecStartPre 設的環境變數不會傳給 ExecStart)。驗證:生效設定裡只有佔位符、環境裡沒有明文、人仍能經 broker2 登入(表示 AD 查詢密碼解對了)。',
         manual: [R`bash scripts/secret-protection.sh apply
 bash scripts/secret-protection.sh show
 hc -o /dev/null -u gary:gary-pw https://broker2:8092/security/1.0/authenticate`],
         ev: 'sp-apply', re: /securepass[\s\S]*HTTP 200/, expect: 'master key fetched from Conjur;設定裡是 ${securepass:…};環境裡 0 處明文;[HTTP 200]。', warn: '取不到主金鑰 broker 就不會啟動(這是刻意的);所以 Conjur 的可用性要跟 broker 一樣高,正式環境要有 Conjur 的高可用或在主機上留備援方案。' },
-      { t: '18.20 還原 broker2(其他 Lab 不依賴 Conjur)', manual: ['bash scripts/secret-protection.sh revert'], ev: 'sp-revert', re: /已回到原本設定/, expect: 'broker2 已回到原本設定。' },
-      { t: '18.21 稽核:Conjur 記錄誰取了什麼', why: '每一次取秘密與被拒都有紀錄,主體是機器身分;正式環境把這些送進 SIEM。',
+      { t: '18.20 設定檔密碼不落地 ③:同一件事改用 CyberArk 官方工具 summon', why: 'summon + summon-conjur 是 CyberArk 的開源工具:summon 以主機身分(/etc/conjur.conf + /etc/conjur.identity)向 Conjur 取 secrets.yml 列的秘密,注入成子程序的環境變數後執行啟動程式;取不到就不執行。不用自己寫取秘密的腳本,正式環境的 systemd 只要一行:ExecStart=/usr/local/bin/summon -p summon-conjur -f /etc/kafka/secrets.yml /usr/bin/kafka-server-start /etc/kafka/server.properties。驗證:程序樹 PID 1 是 summon、java 是它的子程序;其餘與上一步相同。',
+        manual: [R`bash scripts/secret-protection.sh summon-setup
+bash scripts/secret-protection.sh apply-summon
+docker exec broker2 ps -eo pid,ppid,comm | head -3
+bash scripts/secret-protection.sh show
+hc -o /dev/null -u gary:gary-pw https://broker2:8092/security/1.0/authenticate`],
+        ev: 'sp-apply-summon', re: /summon[\s\S]*java[\s\S]*HTTP 200/, expect: '啟動指令是 summon …;ps 裡 PID 1 = summon、java 的 PPID = 1;設定裡是 ${securepass:…};環境裡 0 處明文;[HTTP 200]。', warn: '第一次執行 summon-setup 會從 GitHub(cyberark 官方 release)下載 summon 與 summon-conjur 共約 10 MB,並比對官方 SHA256SUMS;放在 config/conjur/bin/,不進版本庫。' },
+      { t: '18.21 還原 broker2(其他 Lab 不依賴 Conjur)', manual: ['bash scripts/secret-protection.sh revert'], ev: 'sp-revert', re: /已回到原本設定/, expect: 'broker2 已回到原本設定。' },
+      { t: '18.22 稽核:Conjur 記錄誰取了什麼', why: '每一次取秘密與被拒都有紀錄,主體是機器身分;正式環境把這些送進 SIEM。',
         manual: [R`docker logs conjur-server 2>&1 | grep -E "demo:host:kafka/[a-z-]+ (tried to fetch|fetched)" | sed -E 's/^.*(demo:host:kafka)/\1/' | sort | uniq -c | sort -rn | head`],
         ev: 'audit', re: /rogue-app tried to fetch/, expect: 'svc-orders fetched …password;opmenu fetched …alertmanager-auth;broker fetched …master-key;rogue-app tried to fetch …: Forbidden。' },
     ],

@@ -11,4 +11,3 @@ $ conjur list -k host; conjur list -k variable   # 來自 config/conjur/policy/k
   demo:variable:kafka/legacy-orders/key
   demo:variable:kafka/opmenu/alertmanager-auth
   demo:variable:kafka/svc-orders/credential
-  demo:variable:kafka/svc-orders/password

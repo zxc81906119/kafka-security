@@ -391,7 +391,7 @@ add(...table([
   ['demo/scripts/up.sh、reset.sh、bootstrap-rbac.sh', '一鍵建置、重置、第一批授權'],
   ['demo/scripts/k.sh、rp.sh、mds.sh、ldap-group.sh、create-service-account.sh、as-user.sh', '包好的單項指令(對應手動的 kc、hc、ldapmodify…)'],
   ['demo/scenarios/ch01…ch18-*.sh', '各 Lab 的整章腳本(含自動驗證);ch15 人員異動、ch16 OP menu、ch17 傳輸加密補強、ch18 CyberArk 整合'],
-  ['demo/config/conjur/、scripts/conjur.sh、scripts/app-with-conjur.sh、scripts/secret-protection.sh、docker-compose.cyberark.yml', 'Lab 18:Conjur 的 policy、TLS 入口、取秘密腳本、應用啟動示範、Secret Protection 與 broker2 覆蓋設定'],
+  ['demo/config/conjur/、scripts/conjur.sh、scripts/app-with-conjur.sh、scripts/secret-protection.sh、docker-compose.cyberark.yml、docker-compose.cyberark-summon.yml', 'Lab 18:Conjur 的 policy、TLS 入口、取秘密腳本、應用啟動示範、Secret Protection 與 broker2 覆蓋設定(自寫腳本版與 summon 版)'],
   ['demo/opmenu/', 'OP menu 程式(README.md 說明項目、設定與限制;test-*.sh 回歸測試)'],
   ['demo/spike/lb-nginx、rp-mds-failover', '負載平衡器與多台 MDS 的實驗(FINDINGS.md)'],
   ['demo/e2e/*.mjs', 'Playwright:C3 / LDAP 介面自動化與截圖;terminal 與 newman 渲染'],
@@ -438,6 +438,7 @@ add(...table([
   ['輪替腳本複製角色失敗時若繼續往下做,應用會全部拿到沒權限的帳號', '腳本逐筆檢查、驗證新帳號連得上且看到同樣的 topic,才寫 Conjur;失敗回滾新帳號'],
   ['Conjur 對沒被授權的身分回 404,不是 403', '不透露秘密是否存在;錯的 API key 在認證就被擋(401)'],
   ['設定檔密碼加密後,取不到主金鑰 broker 就不啟動', '刻意的;所以 Conjur 的可用性要和 broker 同級'],
+  ['CyberArk 官方 summon + summon-conjur 對開源版 Conjur 可用:主金鑰只在 java 程序的環境(容器環境、/tmp 都沒有),錯 API key 回 401、啟動程式不執行', '正式環境 systemd 只要 ExecStart=summon -p summon-conjur -f secrets.yml kafka-server-start … 一行;不要用 ExecStartPre 取秘密(它設的環境變數不會傳給 ExecStart)'],
 ], [4600, 4426], { size: 17 }));
 add(H2('沒有示範的限制(要在客戶環境處理)'));
 add(...table([
