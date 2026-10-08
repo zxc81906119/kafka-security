@@ -109,7 +109,7 @@ opmenu.conf 只需要填「無法推算」的值。優先順序:**conf 有填 > 
 |---|---|---|
 | **變更時窗** | 需 ticket 的項目只能在時窗內執行;91 緊急模式與唯讀項目不受限。格式 `Mon-Fri 22:00-06:00;Sat,Sun 00:00-23:59`,跨午夜算起始那天 | `OPMENU_CHANGE_WINDOW`(空 = 不限制)、`OPMENU_WINDOW_EXEMPT`(91) |
 | **並行鎖** | 需 ticket 的項目同一時間只允許一個人執行,別人會看到誰在做什麼;持有者的行程不在了就視為過期 | `OPMENU_LOCK_DIR`、`OPMENU_LOCK_WAIT`(0)。**只在同一台跳板機有效**;目錄要讓所有操作員可寫、不能有 sticky bit |
-| **25 / 26 維護模式** | 對指定 node 建立 / 提前結束 Alertmanager silence(label 用 `OPMENU_MAINT_LABEL`),最長 `OPMENU_MAINT_MAX_MIN` 分鐘;只能結束 createdBy 是 opmenu 的 | 設了 `OPMENU_ALERTMANAGER_URL` 才出現;支援 HTTPS 與 Basic 認證:設 `OPMENU_ALERTMANAGER_AUTH_FILE`(內容 `帳號:密碼`,權限 0640 或更嚴;建議用維護模式專用帳號,不與 C3 共用;帳密以 `curl -K -` 從 stdin 給,不出現在行程清單)。Basic 沒有細部授權,有這組帳密就能對 Alertmanager 寫入 |
+| **25 / 26 維護模式** | 對指定 node 建立 / 提前結束 Alertmanager silence(label 用 `OPMENU_MAINT_LABEL`),最長 `OPMENU_MAINT_MAX_MIN` 分鐘;只能結束 createdBy 是 opmenu 的 | 設了 `OPMENU_ALERTMANAGER_URL` 才出現;支援 HTTPS 與 Basic 認證:帳密來源二選一——`OPMENU_ALERTMANAGER_AUTH_CMD`(執行時用指令取得,stdout 印 `帳號:密碼`,例如向 CyberArk / Conjur 取:`bash scripts/conjur.sh get-as opmenu opmenu/alertmanager-auth`,帳密不落地;第 18 章)或 `OPMENU_ALERTMANAGER_AUTH_FILE`(檔案,權限 0640 或更嚴)。建議用維護模式專用帳號,不與 C3 共用;帳密以 `curl -K -` 從 stdin 給,不出現在行程清單。Basic 沒有細部授權,有這組帳密就能對 Alertmanager 寫入 |
 | **27 滾動重啟** | 依 `OPMENU_BROKER_SERVICES` 順序一台一台重啟;開始前與每台重啟後都要「所有 broker 在線、under-replicated 與 offline 為 0」才繼續,逾時或失敗就停止。不含 controller | `OPMENU_ROLLING_TIMEOUT`(600)。只有 1 台 broker 時拒絕 |
 | **11 身分鏈健康(併入 cluster 健康檢查)** | MDS 逐台狀態與延遲、token 剩餘時間、broker 在線數、controller quorum(要 ClusterAdmin) | — |
 | **10 leader / partition 分布** | 每台 broker 的 leader 數、replica 數、非 preferred leader 數與偏離平均的百分比 | — |

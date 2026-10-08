@@ -35,3 +35,12 @@ demo/spike/up.log
 ~$*.pptx
 .DS_Store
 Thumbs.db
+
+# --- Conjur(模擬 CyberArk)的本機金鑰與 API key ---
+demo/config/conjur/conjur.env
+demo/config/conjur/data_key
+demo/config/conjur/admin.key
+demo/config/conjur/keys/
+
+# --- Conjur 輪替隔離紀錄 ---
+demo/config/conjur/quarantine-*

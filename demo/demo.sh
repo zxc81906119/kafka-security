@@ -22,6 +22,7 @@ declare -A CH=(
   [13]="ch13-c3-inventory.sh|(進階)Control Center 身分盤點:人與機器各走哪條路"
   [14]="ch14-admin-rest.sh|(進階)broker 內建 Admin REST 的保護:匿名擋下、依使用者授權"
   [17]="ch17-transport-hardening.sh|(進階)傳輸加密補強:AD 走 LDAPS、監控 HTTPS + Basic、C3 HTTPS"
+  [18]="ch18-cyberark.sh|(進階)與行內 CyberArk 整合:應用程式取密碼、輪替、OP menu 取帳密、設定檔密碼不落地(Conjur)"
 )
 run_ch() {
   local n="$1"; local f="${CH[$n]%%|*}"
@@ -33,14 +34,14 @@ run_ch() {
 }
 case "${1:-menu}" in
   reset) ./scripts/reset.sh ;;
-  all) for n in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 17; do run_ch "$n"; done ;;
-  [0-9]|1[0-7]) run_ch "$1" ;;
+  all) for n in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 17 18; do run_ch "$n"; done ;;
+  [0-9]|1[0-8]) run_ch "$1" ;;
   *)
     while true; do
       echo; echo "═══ Confluent 安全方案 Demo ═══"
-      for n in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 17; do printf "  %2s) %s\n" "$n" "${CH[$n]#*|}"; done
+      for n in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 17 18; do printf "  %2s) %s\n" "$n" "${CH[$n]#*|}"; done
       echo "   r) 重置   q) 離開"
       read -r -p "選擇章節: " c
-      case "$c" in q) break ;; r) ./scripts/reset.sh ;; [0-9]|1[0-7]) run_ch "$c" ;; esac
+      case "$c" in q) break ;; r) ./scripts/reset.sh ;; [0-9]|1[0-8]) run_ch "$c" ;; esac
     done ;;
 esac

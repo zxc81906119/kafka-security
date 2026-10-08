@@ -79,6 +79,7 @@ d OPMENU_LOCK_WAIT       0                                              # 拿不
 d OPMENU_CHANGE_WINDOW   ''                                             # 變更時窗,空 = 不限制。格式 "Mon-Fri 22:00-06:00;Sat,Sun 00:00-23:59"(跨午夜的算起始那天);分號分隔多段
 d OPMENU_WINDOW_EXEMPT   '91'                                           # 不受時窗限制的項目(緊急模式)
 d OPMENU_ALERTMANAGER_URL ''                                            # Alertmanager 位址(例 https://am.bank.local:9093);空 = 不提供維護模式項目 25、26
+d OPMENU_ALERTMANAGER_AUTH_CMD ''                                       # Alertmanager 帳密改由指令取得(stdout 印 帳號:密碼),例如向 CyberArk 取;設了就優先於 AUTH_FILE,帳密不落地
 d OPMENU_ALERTMANAGER_AUTH_FILE ''                                      # Alertmanager 啟用 Basic 認證時:放 帳號:密碼 的檔案(權限 0640 或更嚴;建議用維護模式專用帳號,不與 C3 共用);空 = 不帶帳密
 d OPMENU_MAINT_LABEL     instance                                       # 維護模式用哪個 alert label 對應節點(Prometheus 預設 instance)
 d OPMENU_MAINT_MAX_MIN   240                                            # 維護模式最長幾分鐘

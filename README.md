@@ -19,7 +19,11 @@ bash scripts/up.sh --with-restproxy --with-c3   # 第一次會下載映像(約 7
 bash scripts/setup-e2e.sh                       # 瀏覽器自動化(各 Lab 的截圖步驟用)
 ```
 
-需求:Docker Desktop(記憶體 10 GB 以上)、Git Bash、Node.js 24。憑證(`demo/certs/`)不在版本庫,第一次執行 `up.sh` 會自動產生。
+需求:Docker Desktop(記憶體 10 GB 以上)、Git Bash、Node.js 24。憑證(`demo/certs/`)與 CyberArk(Conjur)的金鑰不在版本庫,第一次執行時會自動產生。
+
+## Lab 18(CyberArk 整合)
+
+Lab 18 用 CyberArk 的開源版 Conjur,要多下載約 1.2 GB 映像;第一步 `bash scripts/conjur.sh up` 會啟動它(profile `cyberark`,4 個容器)。PAM 側(代登入、錄影、輪替主機帳號)本機無法重現,手冊附錄 E 有說明。
 
 ## 練習時
 

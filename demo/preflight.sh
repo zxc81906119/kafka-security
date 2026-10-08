@@ -27,7 +27,7 @@ if [ "$1" = "--full" ]; then
   echo; echo "══ 全章節實跑(結果寫入 evidence/)══"
   ./scripts/reset.sh >/dev/null 2>&1
   fails=0
-  for s in scenarios/ch0[12345679]-*.sh scenarios/ch08-*.sh scenarios/ch10-*.sh scenarios/ch11-*.sh scenarios/ch12-*.sh scenarios/ch13-*.sh scenarios/ch14-*.sh scenarios/ch17-*.sh; do
+  for s in scenarios/ch0[12345679]-*.sh scenarios/ch08-*.sh scenarios/ch10-*.sh scenarios/ch11-*.sh scenarios/ch12-*.sh scenarios/ch13-*.sh scenarios/ch14-*.sh scenarios/ch17-*.sh scenarios/ch18-*.sh; do
     r=$(EV_SHOW=0 ./"$s" 2>&1 | grep -E "完成\(失敗" | sed 's/\x1b\[[0-9;]*m//g'); echo "  $(basename $s): $r"
     echo "$r" | grep -q "失敗 0 項" || fails=$((fails+1))
   done
