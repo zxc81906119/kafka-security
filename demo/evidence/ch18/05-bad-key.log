@@ -1,0 +1,3 @@
+# 【對照】錯誤的 API key → 認證就被擋(401)
+$ POST .../authenticate(錯的 API key)
+authenticate(錯誤 API key)→ [HTTP 401]

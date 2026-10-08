@@ -141,7 +141,7 @@ add(
     ['目錄服務', 'OpenLDAP(以 AD 屬性模擬;非真 AD,細節見「如何使用本手冊」的限制說明)'],
     ['環境', 'Docker Compose(Windows 11 + Git Bash 驗證;Linux/macOS 指令相同)'],
     ['證據', '所有「實際輸出」與截圖均來自本環境實跑(專案 demo/evidence/)'],
-    ['與舊版手冊', '本版以故事串起來,並新增 Lab 15(人員異動)、Lab 16(OP menu)與 Lab 17(傳輸加密補強);舊版 Confluent-Security-Lab-Guide.docx 保留'],
+    ['與舊版手冊', '本版以故事串起來,並新增 Lab 15(人員異動)、Lab 16(OP menu)、Lab 17(傳輸加密補強)與 Lab 18(CyberArk 整合);舊版 Confluent-Security-Lab-Guide.docx 保留'],
   ], [2200, 6826]),
   new Paragraph({ children: [new PageBreak()] }),
 );
@@ -187,6 +187,7 @@ add(...table([
   ['osixia/openldap:1.5.0、osixia/phpldapadmin:0.9.0', '0.4 GB + 0.4 GB', '模擬 AD 與管理介面'],
   ['curlimages/curl、alpine/openssl', '50 MB', 'hc 函式的 curl、產生憑證'],
   ['postman/newman:alpine', '0.3 GB', 'Lab 5 的批次測試(第一次跑 Lab 5 時才下載)'],
+  ['cyberark/conjur、cyberark/conjur-cli:9、postgres:15、nginx:stable、confluentinc/confluent-cli', '約 1.2 GB', 'Lab 18(CyberArk 整合;第一次跑 Lab 18 時才下載)'],
 ], [4200, 1500, 3326], { size: 17 }));
 add(H2('課前常見問題'));
 add(...table([
@@ -389,7 +390,8 @@ add(...table([
   ['demo/docker-compose.yml', '全部容器定義(broker 使用 x-ldap-env;broker/controller 共用 x-common-ssl)'],
   ['demo/scripts/up.sh、reset.sh、bootstrap-rbac.sh', '一鍵建置、重置、第一批授權'],
   ['demo/scripts/k.sh、rp.sh、mds.sh、ldap-group.sh、create-service-account.sh、as-user.sh', '包好的單項指令(對應手動的 kc、hc、ldapmodify…)'],
-  ['demo/scenarios/ch01…ch17-*.sh', '各 Lab 的整章腳本(含自動驗證);ch15 人員異動、ch16 OP menu、ch17 傳輸加密補強'],
+  ['demo/scenarios/ch01…ch18-*.sh', '各 Lab 的整章腳本(含自動驗證);ch15 人員異動、ch16 OP menu、ch17 傳輸加密補強、ch18 CyberArk 整合'],
+  ['demo/config/conjur/、scripts/conjur.sh、scripts/app-with-conjur.sh、scripts/secret-protection.sh、docker-compose.cyberark.yml', 'Lab 18:Conjur 的 policy、TLS 入口、取秘密腳本、應用啟動示範、Secret Protection 與 broker2 覆蓋設定'],
   ['demo/opmenu/', 'OP menu 程式(README.md 說明項目、設定與限制;test-*.sh 回歸測試)'],
   ['demo/spike/lb-nginx、rp-mds-failover', '負載平衡器與多台 MDS 的實驗(FINDINGS.md)'],
   ['demo/e2e/*.mjs', 'Playwright:C3 / LDAP 介面自動化與截圖;terminal 與 newman 渲染'],
@@ -425,6 +427,33 @@ for (const [n, d] of [['plain-yujie.properties', '人(AD 帳密,SASL/PLAIN + LDA
 }
 
 SKIP = false;
+// 附錄 E:Lab 18 沒有示範、或本機無法驗證的部分(完整版與精簡版都放)
+add(H1('附錄 E  CyberArk 整合:實測發現、沒示範的限制與要確認的事'));
+add(H2('Lab 18 實測發現(都有實跑證據)'));
+add(...table([
+  ['發現', '意義'],
+  ['只刪 SCRAM 憑證,已連著的舊連線不受影響(14 筆全寫完);解除角色後,同一條連線的每個請求都被授權擋下', '輪替一定要「先隔離(解除角色)、看 audit、才刪憑證」;SCRAM 只在建立連線時驗證(connections.max.reauth.ms 預設 0)'],
+  ['audit 不記錄 orders.* 讀取成功', '只看 audit 的「允許」會漏掉只讀的 consumer;隔離後還在用的人會變成被拒(DENIED),一定記錄'],
+  ['帳號與密碼放兩個 Conjur 變數,輪替時有空檔', '放同一個變數(JSON {"u","p"}),寫入與讀取都是單一操作'],
+  ['輪替腳本複製角色失敗時若繼續往下做,應用會全部拿到沒權限的帳號', '腳本逐筆檢查、驗證新帳號連得上且看到同樣的 topic,才寫 Conjur;失敗回滾新帳號'],
+  ['Conjur 對沒被授權的身分回 404,不是 403', '不透露秘密是否存在;錯的 API key 在認證就被擋(401)'],
+  ['設定檔密碼加密後,取不到主金鑰 broker 就不啟動', '刻意的;所以 Conjur 的可用性要和 broker 同級'],
+], [4600, 4426], { size: 17 }));
+add(H2('沒有示範的限制(要在客戶環境處理)'));
+add(...table([
+  ['項目', '說明'],
+  ['長時間執行的應用', 'Kafka client 的 sasl.jaas.config 在建立 client 時讀一次。要不重啟就換帳密,應用要在認證或授權失敗時重新向 Conjur 取並重建 client;demo 的示範是重啟才換'],
+  ['Conjur 的可用性', '取不到帳密,應用與 broker 起不來。需要高可用、重試,以及短暫的加密快取(記憶體)這類取捨'],
+  ['根的秘密(secret zero)', '機器的 API key 放在主機檔案,被偷就等於那個身分。商業版 CCP 用 AppID + 主機 IP 或憑證認證;API key 本身的輪替也要規劃;demo 沒有示範'],
+  ['API token 只有 8 分鐘', '啟動時取一次沒問題;執行中要再取就要重新認證'],
+  ['換帳號名稱的後續影響', '監控、告警、配額、audit 查詢都以帳號名稱為準;svc-orders → svc-orders-v2 會讓它們失效。命名要預先設計(例如 a / b 輪流)'],
+  ['角色複製只涵蓋「綁在 User 上、有資源範圍」的角色', '叢集層級角色、KRaft ACL、配額不會複製;腳本會驗證複製後的角色與舊帳號一致,不一致就中止'],
+  ['demo 與正式環境的差異', 'demo 以容器的 stdin 傳帳密;正式環境的應用在自己的程序內取用。demo 的 API key 在檔案裡,正式環境對應 CCP 的 AppID 認證'],
+  ['商業版 CCP 對應', 'CCP 一筆帳號物件就是「帳號 + 密碼」,概念與單一 credential 變數一致,但回傳格式與認證方式不同,正式環境要改寫取密碼那一段'],
+  ['Conjur 本身的維運', '資料金鑰、admin key、資料庫備份、日誌保留期限'],
+], [2800, 6226], { size: 17 }));
+add(H2('PAM 側(PSM、CPM、PVWA):本機無法驗證'));
+add(P('代登入與錄影、主機帳號自動輪替、依單借出私鑰,需在客戶環境 PoC。要先確認:跳板機與各主機是否加入 AD;人連主機是否一律經 PSM;主機 22 埠允許哪些來源;CPM 輪替 ssh key 時 OP menu 正在連線的作業怎麼處理。'));
 // ---------- 文件 ----------
 const doc = new Document({
   creator: 'Claude', title: 'Confluent Platform 安全方案:Ming 的前三週(故事版 Lab 手冊)', description: 'AD 只放 user/group 的 Confluent 安全方案實作手冊,以新進維運工程師的故事串起所有 Lab',

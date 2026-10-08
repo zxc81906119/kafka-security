@@ -1,6 +1,6 @@
 # ming(唯讀)可以讀取 orders.events
 $ kafka-console-consumer --command-config ming.properties --topic orders.events --from-beginning
-hello-from-ming
-still-ok
-{"order":"A-3001","by":"yujie"}
+hello-from-conjur
+after-rotate
+hello-from-conjur
 Processed a total of 3 messages

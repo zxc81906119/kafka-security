@@ -1,0 +1,14 @@
+# 【policy】Conjur 裡定義了誰(機器身分)能拿什麼(秘密):svc-orders 只能拿自己的密碼;OP menu 拿 Alertmanager 帳密;broker 拿主金鑰
+$ conjur list -k host; conjur list -k variable   # 來自 config/conjur/policy/kafka.yml
+-- host(機器身分)
+  demo:host:kafka/broker
+  demo:host:kafka/legacy-orders
+  demo:host:kafka/opmenu
+  demo:host:kafka/rogue-app
+  demo:host:kafka/svc-orders
+-- variable(秘密)
+  demo:variable:kafka/broker/master-key
+  demo:variable:kafka/legacy-orders/key
+  demo:variable:kafka/opmenu/alertmanager-auth
+  demo:variable:kafka/svc-orders/credential
+  demo:variable:kafka/svc-orders/password

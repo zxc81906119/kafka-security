@@ -1,6 +1,6 @@
 # 【不在 AD】用 AD 的方式(LDAP)驗證 svc-orders → 失敗;服務身分與人完全分開
 $ kafka-topics --command-config plain-svc-orders.properties --list     # SASL/PLAIN 走 AD
-ERROR [AdminClient clientId=adminclient-1] Connection to node -1 (broker1/172.20.0.6:9094) failed authentication due to: Authentication failed: Invalid username or password
+ERROR [AdminClient clientId=adminclient-1] Connection to node -1 (broker1/172.20.0.5:9094) failed authentication due to: Authentication failed: Invalid username or password
 org.apache.kafka.common.errors.SaslAuthenticationException: Authentication failed: Invalid username or password
 Error while executing topic command : Authentication failed: Invalid username or password
 ERROR org.apache.kafka.common.errors.SaslAuthenticationException: Authentication failed: Invalid username or password

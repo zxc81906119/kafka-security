@@ -1,0 +1,9 @@
+# 【並行輪替 ①】建新帳號 svc-orders-v2(密碼隨機)→ 複製角色(逐筆檢查)→ 驗證新帳號真的連得上、看到和舊帳號同樣的 topic → 才把新帳密一次寫進 Conjur;任何一步失敗就回滾新帳號、Conjur 不動;舊帳號仍可用,沒有中斷
+$ scripts/rotate-with-conjur.sh start svc-orders svc-orders-v2   # 正式環境:CPM 自訂平台或排程呼叫
+① 建立新帳號 svc-orders-v2(密碼隨機,只存進 Conjur)
+② 複製 svc-orders 的角色給 svc-orders-v2(逐筆檢查)
+  綁定 DeveloperWrite → User:svc-orders-v2 [HTTP 204]
+③ 驗證新帳號:真的連得上,而且看得到和舊帳號同樣的 topic
+  新舊帳號看到同樣的 3 個 topic
+④ 驗證通過,新帳密才一次寫進 Conjur(kafka/svc-orders/credential,單一變數、原子)
+結果:svc-orders-v2 已建立並綁定相同角色;Conjur 已指向 svc-orders-v2;svc-orders 仍可用(新舊並行中)

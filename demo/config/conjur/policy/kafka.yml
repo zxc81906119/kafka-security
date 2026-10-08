@@ -1,0 +1,32 @@
+# Conjur policy:Kafka 平台用到的秘密與「誰能拿」。正式環境由 CyberArk 管理員維護;這裡示範最小權限。
+# host = 機器身分(應用程式、OP menu、broker);variable = 秘密;permit = 誰能讀
+- !policy
+  id: kafka
+  body:
+    - !host svc-orders          # 訂單系統(應用程式)
+    - !host legacy-orders       # 只能用 HTTP 的系統
+    - !host rogue-app           # 對照:有身分但沒被授權的應用
+    - !host opmenu              # 跳板機上的維運選單
+    - !host broker              # broker 主機:啟動時取設定檔加密的主金鑰
+
+    - !variable svc-orders/credential        # 現在該用的 SCRAM 帳號與密碼,放在同一個變數(JSON:{"u":帳號,"p":密碼});輪替一次寫入、應用一次取得,不會取到不配對的帳密
+    - !variable legacy-orders/key            # client 憑證私鑰
+    - !variable opmenu/alertmanager-auth     # 維護模式用的 Alertmanager 帳密
+    - !variable broker/master-key            # Confluent Secret Protection 主金鑰
+
+    - !permit
+      role: !host svc-orders
+      privileges: [ read, execute ]
+      resource: !variable svc-orders/credential
+    - !permit
+      role: !host legacy-orders
+      privileges: [ read, execute ]
+      resource: !variable legacy-orders/key
+    - !permit
+      role: !host opmenu
+      privileges: [ read, execute ]
+      resource: !variable opmenu/alertmanager-auth
+    - !permit
+      role: !host broker
+      privileges: [ read, execute ]
+      resource: !variable broker/master-key

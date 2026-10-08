@@ -1,0 +1,3 @@
+# 【對照】另一個應用(rogue-app)有身分但沒被授權 → 拿不到(Conjur 回 404,不透露秘密是否存在)
+$ 同上,但以 host/kafka/rogue-app 的 API key
+authenticate → [HTTP 200];取 svc-orders/credential → [HTTP 404]

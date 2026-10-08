@@ -1,0 +1,5 @@
+# 【設定檔】Confluent Secret Protection:AD 查詢帳號的密碼在設定檔裡改成加密佔位符;主金鑰存進 Conjur,不在任何檔案
+$ confluent secret master-key generate → conjur variable set kafka/broker/master-key;confluent secret file encrypt --config ldap.java.naming.security.credentials
+[secret-protection] 主金鑰已存入 Conjur(kafka/broker/master-key),不在任何檔案裡
+[secret-protection] certs/security.properties(加密後的密碼):
+server.properties/ldap.java.naming.security.credentials = ENC[AES/GCM/NoPadding,data:f6c/zWmu9YIWO8vOx30NnoZdq

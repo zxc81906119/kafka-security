@@ -1,0 +1,37 @@
+[conjur] policy 已載入;host:svc-orders legacy-orders rogue-app opmenu broker
+[conjur] 完成:https://conjur(容器網路內);policy 已載入,host API key 在 config/conjur/keys/
+[
+  "demo:host:kafka/broker",
+  "demo:host:kafka/legacy-orders",
+  "demo:host:kafka/opmenu",
+  "demo:host:kafka/rogue-app",
+  "demo:host:kafka/svc-orders"
+]
+[
+  "demo:variable:kafka/broker/master-key",
+  "demo:variable:kafka/legacy-orders/key",
+  "demo:variable:kafka/opmenu/alertmanager-auth",
+  "demo:variable:kafka/svc-orders/credential",
+  "demo:variable:kafka/svc-orders/password"
+]
+Completed updating config for user svc-orders.
+[conjur] 已寫入 kafka/svc-orders/credential(帳號 svc-orders)
+結果:成功寫入 orders.events(以 svc-orders 身分;連線設定只存在 /dev/shm,容器結束即消失)
+ERROR [AdminClient clientId=adminclient-1] Connection to node -1 (broker1/172.20.0.5:9094) failed authentication due to: Authentication failed during authentication due to invalid credentials with SASL mechanism SCRAM-SHA-512
+ Container conjur-cli Running 
+ Container conjur-db Running 
+ Container conjur-server Running 
+ Container conjur Running 
+ Container conjur-db Waiting 
+ Container conjur-db Healthy 
+ Container conjur-server Waiting 
+ Container conjur-server Healthy 
+ Container conjur-cli Waiting 
+ Container conjur-db Waiting 
+ Container conjur-server Waiting 
+ Container conjur Waiting 
+ Container conjur-server Healthy 
+ Container conjur Healthy 
+ Container conjur-db Healthy 
+ Container conjur-cli Healthy 
+Loaded policy 'root'

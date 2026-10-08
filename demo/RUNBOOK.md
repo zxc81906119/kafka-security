@@ -155,6 +155,22 @@ gary 在 C3 指派 `orders-read` → DeveloperRead;LDAP 介面把 ming 從 devel
 **注意與未驗證**:① Windows 的 curl(schannel)連 HTTPS 要加 `--ssl-no-revoke`,否則因無法檢查憑證撤銷而連不上(不是憑證問題);瀏覽器要信任 demo CA,自動化腳本略過驗證。② 健康檢查用 TCP 探測,Prometheus 日誌會有 `TLS handshake error … EOF`,屬探測連線,可忽略。③ C3 的 INFO 日誌會印出 Authorization 標頭(Base64),日誌檔要保護。④ 真實 AD 的 LDAPS 憑證鏈(含中繼 CA)、Alertmanager mTLS、F5 終止 C3 的 TLS,皆未驗證。
 
 ---
+---
+## 第 18 章(進階)與行內 CyberArk 整合:應用程式取密碼、輪替、OP menu 取帳密、設定檔密碼不落地(`./demo.sh 18`)
+**範圍**:CyberArk 分兩塊。**秘密管理**(商業版 CCP / Conjur)這條路用 CyberArk 的開源版 **Conjur OSS** 實做(API 與商業版一致);**PAM**(PSM 代登入與錄影、CPM 輪替主機帳號、PVWA 依單借出)無法在本機重現,只在簡報與 DESIGN-BASIS 說明,要在客戶環境 PoC。
+**元件**(profile `cyberark`;`scripts/conjur.sh up` 一鍵):`conjur-db`(postgres)、`conjur-server`、`conjur`(nginx TLS 入口,共用 server 憑證,SAN 含 conjur)、`conjur-cli`(管理用)。policy 在 `config/conjur/policy/kafka.yml`:host(機器身分)svc-orders、legacy-orders、rogue-app、opmenu、broker;variable(秘密)各自的密碼、帳密、主金鑰;permit 只給自己的。API key 與資料金鑰在 `config/conjur/`(忽略檔),admin API key 在 `admin.key`。
+| 步驟 | 證明 | 指令 |
+|---|---|---|
+| 應用取密碼 | host API key → token(8 分鐘)→ 取秘密 200;沒被授權 404;錯 key 401 | `scripts/conjur.sh probe-as svc-orders svc-orders/credential`、`probe-as rogue-app …`、`probe-bad svc-orders` |
+| 應用啟動 | 取密碼後在容器 tmpfs 組 SCRAM 設定寫入 orders.events;主機與映像無密碼檔 | `scripts/app-with-conjur.sh svc-orders svc-orders orders.events msg` |
+| 輪替(改密碼) | kafka-configs 改密碼 + `conjur.sh set`;應用重啟跟上、舊設定檔 Authentication failed(有短暫中斷) | ch18 步驟 7、8(會還原) |
+| 輪替(新舊並行,零中斷) | `scripts/rotate-with-conjur.sh start svc-orders svc-orders-v2`:建 v2(密碼隨機只存 Conjur)→ 複製舊帳號全部角色並逐筆檢查 → **驗證新帳號連得上且看到同樣的 topic(失敗就回滾新帳號,Conjur 不動)** → Conjur 的 `svc-orders/credential`(JSON `{"u":帳號,"p":密碼}`,帳號與密碼放同一個變數:寫入與讀取都是單一操作,不會取到不配對的帳密)一次改指 v2;應用逐批重啟自動改用 v2(`app-with-conjur.sh` 連帳號都從 Conjur 取);**不直接刪舊帳號**:`quarantine` 先解除角色(存檔、可 `rollback`)→ `check` 只看隔離之後的 audit(DENIED = 還有人在用)→ 沒人用才 `finish` 刪 SCRAM;`restore` 還原 demo。正式環境由 CPM 自訂平台或排程呼叫 | ch18 步驟 9 到 15 |
+| 舊連線實驗 | 長連線 producer 寫到一半:**只刪 SCRAM 憑證 → 14 筆全寫完(擋不住已連著的連線)**;先解除角色 → 只寫進約 6 筆,之後每個請求授權失敗、認證失敗 0 次 | `scripts/old-connection-test.sh both / scram-only`;ch18 步驟 16、17 |
+| OP menu | `OPMENU_ALERTMANAGER_AUTH_CMD`(優先於 AUTH_FILE)執行時取帳密;rogue-app 身分取不到 → 開不了維護模式 | ch18 步驟 9 |
+| 設定檔密碼不落地 | Confluent Secret Protection:`confluent secret` 加密 AD 查詢密碼 → `certs/security.properties`;主金鑰存 Conjur;broker2 以 `docker-compose.cyberark.yml` 覆蓋,啟動前 `config/conjur/fetch-secret.py` 取主金鑰進環境變數(= systemd ExecStartPre);生效設定只有佔位符、環境無明文、gary 經 broker2 登入 200 | `scripts/secret-protection.sh setup / apply / show / revert` |
+| 稽核 | Conjur 日誌:`demo:host:kafka/rogue-app tried to fetch …: Forbidden`、`… fetched …` | ch18 步驟 13 |
+**實測結果(ch18)**:13 項全過。**注意**:取不到主金鑰 broker 就不啟動(刻意),Conjur 的可用性要與 broker 同級;Kafka 的 SCRAM 輪替沒有現成 CyberArk 平台,靠腳本,由 CPM 自訂平台或排程觸發;CLI 是 `conjur init oss`(v9),docker exec 要 `MSYS_NO_PATHCONV=1`。**未驗證**:商業版 CCP 的 AppID 認證、Conjur 高可用、PAM 側全部。
+
 ## 對應到客戶 RHEL 9 VM 的位置與步驟(手動部署)
 | demo | RHEL 9 VM |
 |---|---|

@@ -64,4 +64,5 @@ be_cluster_id() { _mds_curl /v1/metadata/id "" | grep -o "\"id\":\"[^\"]*\"" | h
 # 一般 HTTP 呼叫(Alertmanager、探測 MDS 狀態);參數同 curl
 be_http() { _curl "$@"; }
 # Alertmanager 呼叫:設了 OPMENU_ALERTMANAGER_AUTH_FILE 就帶 Basic 帳密(帳密用 -K - 從 stdin 給 curl,不出現在行程清單)
-be_am() { if [ -n "${OPMENU_ALERTMANAGER_AUTH_FILE:-}" ]; then printf 'user = "%s"\n' "$(_curl_q "$(cat "$OPMENU_ALERTMANAGER_AUTH_FILE")")" | _curl -K - "$@"; else _curl "$@"; fi; }
+_am_auth() { if [ -n "${OPMENU_ALERTMANAGER_AUTH_CMD:-}" ]; then bash -c "$OPMENU_ALERTMANAGER_AUTH_CMD"; elif [ -n "${OPMENU_ALERTMANAGER_AUTH_FILE:-}" ]; then cat "$OPMENU_ALERTMANAGER_AUTH_FILE"; fi; }   # 帳密來源:指令(例如向 CyberArk 取)優先,其次檔案
+be_am() { local a; a=$(_am_auth); if [ -n "$a" ]; then printf 'user = "%s"\n' "$(_curl_q "$a")" | _curl -K - "$@"; else _curl "$@"; fi; }

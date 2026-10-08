@@ -1,0 +1,4 @@
+# 【還原】把密碼改回原值(Kafka 與 Conjur 都改),讓其他章節不受影響
+$ kafka-configs --alter ...(原密碼);conjur variable set ...(原密碼)
+Completed updating config for user svc-orders.
+[conjur] 已寫入 kafka/svc-orders/credential(帳號 svc-orders)

@@ -1,0 +1,8 @@
+# 【若有人還在用舊帳號】隔離後他的請求被拒,audit 看得到(DENIED)→ check 判定「還有人在用」→ rollback 把角色綁回去 → 他恢復正常。這就是不直接刪帳號的原因
+$ quarantine → (有人用舊帳號)→ check → rollback
+隔離後還在用舊帳號的應用:結果:被拒絕
+舊帳號 svc-orders 隔離( UTC)之後的 audit:允許 0 筆、被拒 1 筆
+判定:還有人在用 svc-orders(被拒表示有人在隔離後還在嘗試)→ 先 rollback,找出是誰
+結果:svc-orders 的角色已回復
+回復後:結果:成功寫入 orders.events(以 svc-orders 身分;連線設定只存在 /dev/shm,容器結束即消失)
+判定:隔離期有人還在用 → 被抓到 → rollback 後恢復正常

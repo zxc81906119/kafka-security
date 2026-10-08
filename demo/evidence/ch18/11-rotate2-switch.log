@@ -1,0 +1,6 @@
+# 【並行輪替 ②】應用逐批重啟:設定完全不用改,啟動時從 Conjur 一次拿到新帳密;還沒重啟的應用照常用舊帳號
+$ scripts/app-with-conjur.sh svc-orders orders.events after-parallel-rotate
+   使用帳號 svc-orders-v2;取得密碼(長度 24 字元;不顯示)
+結果:成功寫入 orders.events(以 svc-orders-v2 身分;連線設定只存在 /dev/shm,容器結束即消失)
+-- 還沒重啟的應用(舊帳號 svc-orders 的設定檔):
+  仍可列出 orders topic:2

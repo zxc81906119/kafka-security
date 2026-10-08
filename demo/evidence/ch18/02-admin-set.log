@@ -1,0 +1,3 @@
+# 【管理員】把 svc-orders 的 SCRAM 密碼存進 Conjur(正式環境由 CyberArk 管理員在 PVWA 或 CLI 做)
+$ conjur variable set -i kafka/svc-orders/credential -v '{"u":"svc-orders","p":"****"}'   # 帳號與密碼放同一個變數,輪替時一次換、一次取
+[conjur] 已寫入 kafka/svc-orders/credential(帳號 svc-orders)

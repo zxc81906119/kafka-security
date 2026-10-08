@@ -1,0 +1,21 @@
+# 第 18 章:Confluent Secret Protection + CyberArk(Conjur)。只覆蓋 broker2:
+#   設定檔裡的 AD 查詢帳號密碼改成加密佔位符;主金鑰不落地,broker 啟動前以 host 身分向 Conjur 取(正式環境 = systemd ExecStartPre)。
+# 用法: docker compose -f docker-compose.yml -f docker-compose.cyberark.yml --profile cyberark up -d broker2   (或 scripts/secret-protection.sh apply)
+services:
+  broker2:
+    volumes:
+      - ./config/conjur/fetch-secret.py:/conjur/fetch-secret.py:ro
+      - ./config/conjur/keys/broker.key:/conjur/broker.key:ro          # 這台主機的機器身分(API key);正式環境由部署流程放到主機、權限 0600
+    environment:
+      # 密碼 → 佔位符:啟動時由 config provider 用主金鑰解開 /etc/kafka/secrets/security.properties 裡的密文($$ 是給 compose 的跳脫)
+      KAFKA_LDAP_JAVA_NAMING_SECURITY_CREDENTIALS: "$${securepass:/etc/kafka/secrets/security.properties:server.properties/ldap.java.naming.security.credentials}"
+      KAFKA_CONFIG_PROVIDERS: securepass
+      KAFKA_CONFIG_PROVIDERS_SECUREPASS_CLASS: io.confluent.kafka.security.config.provider.SecurePassConfigProvider
+      CONJUR_URL: https://conjur
+      CONJUR_ACCOUNT: demo
+      CONJUR_HOST: kafka/broker
+      CONJUR_VARIABLE: kafka/broker/master-key
+      CONJUR_API_KEY_FILE: /conjur/broker.key
+      CONJUR_CA: /etc/kafka/secrets/ca.pem
+    # 啟動前取主金鑰放進環境變數,再執行原本的啟動程式;取不到就不啟動
+    command: ["bash", "-c", "export CONFLUENT_SECURITY_MASTER_KEY=$$(python3 /conjur/fetch-secret.py) && [ -n \"$$CONFLUENT_SECURITY_MASTER_KEY\" ] && echo '[secret-protection] master key fetched from Conjur (not stored on disk)' && exec /etc/confluent/docker/run"]

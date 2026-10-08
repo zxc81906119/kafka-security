@@ -1,6 +1,6 @@
 # 【44 匯出權限清單】依 role 列出所有 principal 與資源範圍(CSV),交給定期權限覆核
 $ ./opmenu.sh --run 44;head 權限清單.csv
-已匯出 9 筆權限:/c/Users/user/IdeaProjects/untitled6/demo/opmenu/log/permission-review-20261007-182723-gary.csv
+已匯出 9 筆權限:/c/Users/user/IdeaProjects/untitled6/demo/opmenu/log/permission-review-20261008-183742-gary.csv
 role,principal,resource_type,resource_name,pattern_type
 "SystemAdmin","Group:breakglass","Cluster","",""
 "SystemAdmin","User:c3","Cluster","",""

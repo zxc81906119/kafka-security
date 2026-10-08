@@ -1,3 +1,5 @@
 # 【授權前】yujie 屬於 AD 群組 orders-write,但還沒有任何 role → 寫入被拒
 $ echo hello | kafka-console-producer --bootstrap-server broker1:9094 --command-config yujie.properties --topic orders.events
-
+WARN [Producer clientId=console-producer] The metadata response from the cluster reported a recoverable issue with correlation id 1 : {orders.events=TOPIC_AUTHORIZATION_FAILED}
+ERROR [Producer clientId=console-producer] Topic authorization failed for topics [orders.events]
+org.apache.kafka.common.errors.TopicAuthorizationException: Not authorized to access topics: [orders.events]

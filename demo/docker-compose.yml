@@ -474,3 +474,71 @@ services:
       CONTROL_CENTER_ALERTMANAGER_BASIC_AUTH_USER_INFO: c3:am-pw
       CONTROL_CENTER_ALERTMANAGER_CONFIG_FILE: /mnt/config/alertmanager-generated.yml
       CUB_CLASSPATH: '/usr/share/java/confluent-control-center/*:/usr/share/java/rest-utils/*:/usr/share/java/confluent-common/*:/usr/share/java/confluent-security/kafka-rest/*:/usr/share/java/kafka-rest/:/usr/share/java/cp-base-new/*'
+
+  # ---------------- CyberArk Conjur OSS(模擬行內 CyberArk 的「應用程式取密碼」;profile cyberark) ----------------
+  # 用法:bash scripts/conjur.sh up   # 產生 data key、啟動、建立帳戶、載入 policy(config/conjur/policy/kafka.yml)
+  conjur-db:
+    image: postgres:15
+    container_name: conjur-db
+    hostname: conjur-db
+    profiles: ["cyberark"]
+    environment:
+      POSTGRES_HOST_AUTH_METHOD: password
+      POSTGRES_PASSWORD: conjur-db-pw        # demo 測試值
+    mem_limit: 256m
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  conjur-server:
+    image: cyberark/conjur:latest
+    container_name: conjur-server
+    hostname: conjur-server
+    profiles: ["cyberark"]
+    command: server
+    depends_on:
+      conjur-db: { condition: service_healthy }
+    env_file:
+      - config/conjur/conjur.env             # CONJUR_DATA_KEY(由 scripts/conjur.sh up 產生;不進版本庫)
+    environment:
+      DATABASE_URL: postgres://postgres:conjur-db-pw@conjur-db/postgres
+      CONJUR_AUTHENTICATORS: authn
+      CONJUR_TELEMETRY_ENABLED: "false"
+    mem_limit: 768m
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost/ >/dev/null || curl -s http://localhost/ | grep -qi conjur"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 30s
+
+  conjur:                                    # TLS 入口:共用 server 憑證(SAN 含 conjur),應用程式與 OP menu 都連 https://conjur
+    image: nginx:stable
+    container_name: conjur
+    hostname: conjur
+    profiles: ["cyberark"]
+    depends_on:
+      conjur-server: { condition: service_healthy }
+    volumes:
+      - ./config/conjur/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./certs:/etc/tls:ro
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sk https://localhost/ -o /dev/null || true"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+
+  conjur-cli:                                # 管理用(載入 policy、設定秘密);正式環境是 CyberArk 管理員在 PVWA / CLI 做
+    image: cyberark/conjur-cli:9
+    container_name: conjur-cli
+    hostname: conjur-cli
+    profiles: ["cyberark"]
+    entrypoint: sleep
+    command: infinity
+    depends_on:
+      conjur: { condition: service_started }
+    volumes:
+      - ./config/conjur/policy:/policy:ro
+      - ./certs/ca.pem:/etc/ssl/certs/demo-ca.pem:ro

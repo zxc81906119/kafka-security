@@ -1,0 +1,36 @@
+[conjur] policy 已載入;host:svc-orders legacy-orders rogue-app opmenu broker
+[conjur] 完成:https://conjur(容器網路內);policy 已載入,host API key 在 config/conjur/keys/
+[
+  "demo:host:kafka/broker",
+  "demo:host:kafka/legacy-orders",
+  "demo:host:kafka/opmenu",
+  "demo:host:kafka/rogue-app",
+  "demo:host:kafka/svc-orders"
+]
+[
+  "demo:variable:kafka/broker/master-key",
+  "demo:variable:kafka/legacy-orders/key",
+  "demo:variable:kafka/opmenu/alertmanager-auth",
+  "demo:variable:kafka/svc-orders/credential",
+  "demo:variable:kafka/svc-orders/password"
+]
+維護模式已開始:broker1,到 2026-10-08T11:08:24Z(UTC);silence id=4fbf4408-74dd-441b-9b3d-17d73877a2a9(用項目 26 提前結束)
+維護模式已結束:4fbf4408-74dd-441b-9b3d-17d73877a2a9
+建立 silence 失敗:Unauthorized
+ Container conjur-cli Running 
+ Container conjur Running 
+ Container conjur-db Running 
+ Container conjur-server Running 
+ Container conjur-db Waiting 
+ Container conjur-db Healthy 
+ Container conjur-server Waiting 
+ Container conjur-server Healthy 
+ Container conjur-server Waiting 
+ Container conjur-cli Waiting 
+ Container conjur Waiting 
+ Container conjur-db Waiting 
+ Container conjur-server Healthy 
+ Container conjur Healthy 
+ Container conjur-db Healthy 
+ Container conjur-cli Healthy 
+Loaded policy 'root'

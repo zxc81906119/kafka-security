@@ -3,4 +3,4 @@ $ (瀏覽器)phpLDAPadmin:ops 加入 yujie
   📸 ch11/ldap-grant-yujie-ops-before.png — LDAP(模擬 AD)群組 ops:加入 yujie 之前
   📸 ch11/ldap-grant-yujie-ops-form.png — LDAP 管理介面:新增 member 值(yujie)
   📸 ch11/ldap-grant-yujie-ops-after.png — LDAP(模擬 AD)群組 ops:加入 yujie 之後
-[21:41:58] AD 群組異動完成
+[18:25:09] AD 群組異動完成

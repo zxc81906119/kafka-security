@@ -9,7 +9,7 @@ const here = path.dirname(fileURLToPath(import.meta.url));
 // 元件晶片(與「Demo 部署元件」圖對應)
 const COMP = {
   browser: '瀏覽器', postman: 'Postman', cli: 'Kafka CLI / curl(kc、hc)', opmenu: 'OP menu', certs: '憑證',
-  ad: '模擬 AD(openldap)', ldapadmin: 'phpLDAPadmin', controller: 'controller', broker: 'broker + MDS', rp: 'REST Proxy', c3: 'Control Center', prom: 'Prometheus', am: 'Alertmanager', legacy: 'legacy app',
+  ad: '模擬 AD(openldap)', ldapadmin: 'phpLDAPadmin', controller: 'controller', broker: 'broker + MDS', rp: 'REST Proxy', c3: 'Control Center', prom: 'Prometheus', am: 'Alertmanager', legacy: 'legacy app', conjur: 'CyberArk(Conjur)',
 };
 // 每個 Lab:prove 一句話;use 用到的元件;flows [誰 / 做什麼, 經過哪裡, 結果]
 export const MAPS = [
@@ -49,6 +49,8 @@ export const MAPS = [
     flows: [['gary 登入選單', '健康檢查、生效設定、匯出權限、audit 查詢、滾動重啟', '✔'], ['維護模式', 'Alertmanager silence(HTTPS + Basic)', '✔ 開始 / 結束'], ['ming 用同一個選單匯出權限', 'MDS', '✘ 403(選單不判斷權限,Kafka 判斷)'], ['時窗外 / 別人持有鎖', '變更類項目', '✘ 被擋']] },
   { n: 17, prove: '線上傳輸都加密:AD 走 LDAPS、監控 HTTPS + Basic、Control Center HTTPS', use: ['broker', 'ad', 'prom', 'am', 'c3', 'browser', 'cli'],
     flows: [['broker → AD', 'LDAPS 636(信任 CA 才連得上)', '✔;389 上沒有 broker 的連線'], ['Prometheus / Alertmanager', '無帳密 / 錯密碼 / 明文 HTTP', '✘ 401 / 401 / 400;帶帳密 ✔ 200'], ['使用者 → C3 9022', '憑證驗證', '✔;不信任 CA → curl 錯誤 60']] },
+  { n: 18, prove: '秘密不落地:應用、OP menu、broker 都以機器身分向 CyberArk(Conjur)取密碼;沒被授權的拿不到;輪替後應用自己跟上', use: ['conjur', 'cli', 'broker', 'opmenu', 'am', 'ad'],
+    flows: [['svc-orders(API key → token)', 'Conjur 取 SCRAM 密碼 → 記憶體組設定 → 寫入 orders.events', '✔ 200;寫入成功'], ['rogue-app / 錯誤 API key', 'Conjur', '✘ 404 / 401'], ['輪替:改密碼,或新舊並行(建 v2 → 隔離舊帳號 → 看 audit → 才刪)', '應用重啟自動跟上 / 舊帳號', '✔ 零中斷 / ✘ 解除角色後被拒'], ['實驗:停用舊帳號時已連著的舊連線', '只刪 SCRAM 憑證 / 先解除角色', '✔ 只刪憑證擋不住 / ✘ 解除角色才切斷'], ['OP menu、broker2', '帳密與主金鑰執行時向 Conjur 取', '✔ 維護模式開關;設定檔只剩密文仍能查 AD']] },
 ];
 
 const esc = s => s.replace(/&/g, '&amp;').replace(/</g, '&lt;');

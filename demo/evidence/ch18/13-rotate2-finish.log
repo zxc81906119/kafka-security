@@ -1,0 +1,5 @@
+# 【並行輪替 ④】確認沒人用才停用(刪 SCRAM 憑證);舊設定檔認證失敗,新帳號照常
+$ scripts/rotate-with-conjur.sh finish svc-orders
+結果:舊帳號 svc-orders 已停用
+舊帳號:認證失敗;新帳號:結果:成功寫入 orders.events(以 svc-orders-v2 身分;連線設定只存在 /dev/shm,容器結束即消失)
+判定:零中斷輪替完成,舊帳號已失效

@@ -11,10 +11,10 @@ PASS=changeit
 
 if [ -f certs/.done ]; then
   # 已有 CA:共用 server 憑證的 SAN 若缺 prometheus / alertmanager(監控 TLS 用),用同一把 key、同一個 CA 重簽(不換身分、不用重發 client 憑證)
-  if ! grep -q "DNS:alertmanager" certs/san.cnf 2>/dev/null; then
-    sed -i "s/DNS:openldap,IP:127.0.0.1/DNS:openldap,DNS:prometheus,DNS:alertmanager,IP:127.0.0.1/" certs/san.cnf
+  if ! grep -q "DNS:conjur" certs/san.cnf 2>/dev/null; then
+    sed -i "s/DNS:openldap,IP:127.0.0.1/DNS:openldap,DNS:prometheus,DNS:alertmanager,DNS:conjur,IP:127.0.0.1/" certs/san.cnf
     docker run --rm -v "$OUT:/certs" --entrypoint sh alpine/openssl -c "cd /certs; openssl x509 -req -in server.csr -CA ca.pem -CAkey ca.key -CAcreateserial -out server.pem -days 825 -sha256 -extfile san.cnf -extensions v3 2>/dev/null; openssl pkcs12 -export -in server.pem -inkey server.key -certfile ca.pem -name server -out server.keystore.p12 -passout pass:$PASS; chmod 644 server.*"
-    echo "server 憑證 SAN 已補 prometheus / alertmanager(同 key、同 CA)"
+    echo "server 憑證 SAN 已補 prometheus / alertmanager / conjur(同 key、同 CA)"
   fi
   # 已有 CA:僅補產缺少的 client 憑證
   for n in c3 restproxy bootstrap legacy-orders; do
@@ -43,7 +43,7 @@ prompt=no
 CN=kafka.demo.local
 O=Demo
 [v3]
-subjectAltName=DNS:kafka.demo.local,DNS:localhost,DNS:controller1,DNS:broker1,DNS:broker2,DNS:restproxy,DNS:control-center,DNS:openldap,DNS:prometheus,DNS:alertmanager,IP:127.0.0.1
+subjectAltName=DNS:kafka.demo.local,DNS:localhost,DNS:controller1,DNS:broker1,DNS:broker2,DNS:restproxy,DNS:control-center,DNS:openldap,DNS:prometheus,DNS:alertmanager,DNS:conjur,IP:127.0.0.1
 extendedKeyUsage=serverAuth,clientAuth
 EOF
 openssl genrsa -out server.key 2048 2>/dev/null

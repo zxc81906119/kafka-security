@@ -1,0 +1,7 @@
+# 【輪替】改 Kafka 的 SCRAM 密碼 → 更新 Conjur 的秘密 → 應用重新啟動就拿到新密碼;還拿舊密碼的設定檔立刻失效(正式環境由 CPM 自訂平台或排程觸發同一支腳本)
+$ kafka-configs --alter --add-config 'SCRAM-SHA-512=[password=新密碼]' --entity-type users --entity-name svc-orders; conjur variable set ...; 應用重啟
+Completed updating config for user svc-orders.
+[conjur] 已寫入 kafka/svc-orders/credential(帳號 svc-orders)
+應用重啟:結果:成功寫入 orders.events(以 svc-orders 身分;連線設定只存在 /dev/shm,容器結束即消失)
+舊密碼的設定檔:認證失敗
+判定:輪替後新密碼可用、舊密碼失效

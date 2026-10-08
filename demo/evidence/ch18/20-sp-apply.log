@@ -1,0 +1,9 @@
+# 【broker 啟動】broker2 啟動前以自己的機器身分向 Conjur 取主金鑰(正式環境 = systemd ExecStartPre),解開密文後才連 AD;生效設定裡只有佔位符、環境裡沒有明文密碼;人用 AD 帳密登入照常
+$ docker compose -f docker-compose.yml -f docker-compose.cyberark.yml up -d broker2;curl -u gary https://broker2:8092/security/1.0/authenticate
+[secret-protection] broker2 已用加密設定重啟;啟動紀錄:
+[secret-protection] master key fetched from Conjur (not stored on disk)
+broker2 的 /etc/kafka/kafka.properties 裡 AD 查詢密碼那一行:
+ldap.java.naming.security.credentials=${securepass:/etc/kafka/secrets/security.properties:server.properties/ldap.java.naming.security.credentials}
+broker2 的環境裡有沒有明文密碼:0 處
+gary 經 broker2 登入 → [HTTP 200]
+判定:設定檔只有密文與佔位符,broker 仍能查 AD

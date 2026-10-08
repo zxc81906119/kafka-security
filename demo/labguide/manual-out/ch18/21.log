@@ -1,0 +1,40 @@
+[conjur] policy 已載入;host:svc-orders legacy-orders rogue-app opmenu broker
+[conjur] 完成:https://conjur(容器網路內);policy 已載入,host API key 在 config/conjur/keys/
+[
+  "demo:host:kafka/broker",
+  "demo:host:kafka/legacy-orders",
+  "demo:host:kafka/opmenu",
+  "demo:host:kafka/rogue-app",
+  "demo:host:kafka/svc-orders"
+]
+[
+  "demo:variable:kafka/broker/master-key",
+  "demo:variable:kafka/legacy-orders/key",
+  "demo:variable:kafka/opmenu/alertmanager-auth",
+  "demo:variable:kafka/svc-orders/credential",
+  "demo:variable:kafka/svc-orders/password"
+]
+     41 demo:host:kafka/svc-orders fetched demo:variable:kafka/svc-orders/credential
+     21 demo:host:kafka/opmenu fetched demo:variable:kafka/opmenu/alertmanager-auth
+     12 demo:host:kafka/svc-orders fetched demo:variable:kafka/svc-orders/password
+      7 demo:host:kafka/rogue-app tried to fetch demo:variable:kafka/opmenu/alertmanager-auth: Forbidden
+      7 demo:host:kafka/broker fetched demo:variable:kafka/broker/master-key
+      4 demo:host:kafka/rogue-app tried to fetch demo:variable:kafka/svc-orders/credential: Forbidden
+      3 demo:host:kafka/rogue-app tried to fetch demo:variable:kafka/svc-orders/password: Forbidden
+ Container conjur Running 
+ Container conjur-db Running 
+ Container conjur-server Running 
+ Container conjur-cli Running 
+ Container conjur-db Waiting 
+ Container conjur-db Healthy 
+ Container conjur-server Waiting 
+ Container conjur-server Healthy 
+ Container conjur-cli Waiting 
+ Container conjur Waiting 
+ Container conjur-db Waiting 
+ Container conjur-server Waiting 
+ Container conjur-server Healthy 
+ Container conjur-cli Healthy 
+ Container conjur-db Healthy 
+ Container conjur Healthy 
+Loaded policy 'root'

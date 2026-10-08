@@ -46,8 +46,8 @@ export const ACTS = [
     scene: ['一週結束,主管要週報:這一週誰被拒絕、誰被允許、誰動過授權。Ming 不想憑記憶寫,他要從 audit log 把事實撈出來。'] },
   { id: 'week2', title: '第二週:現實的麻煩', when: '第二週', labs: [11, 12, 13, 14],
     scene: ['基本功過關了,但現實不會照教科書走:半夜要有人能建 topic、舊系統不會說 Kafka 的語言、稽核要盤點每條連線、還有一個你不知道的 REST 入口。'] },
-  { id: 'week3', title: '第三週:異動、日常維運與傳輸加密', when: '第三週', labs: [15, 16, 17],
-    scene: ['人會調動、會離職;而日常維運不能每次都靠指令記憶。第三週,Ming 處理人員異動,並第一次用平台組自己做的維運選單(OP menu)值班。最後一件事,是把「線上傳輸」補完整:連 AD 的線路、監控元件、使用者連 C3 的入口。'] },
+  { id: 'week3', title: '第三週:異動、日常維運、傳輸加密與 CyberArk', when: '第三週', labs: [15, 16, 17, 18],
+    scene: ['人會調動、會離職;而日常維運不能每次都靠指令記憶。第三週,Ming 處理人員異動,並第一次用平台組自己做的維運選單(OP menu)值班。接著把「線上傳輸」補完整:連 AD 的線路、監控元件、使用者連 C3 的入口。最後,資安要求所有密碼不能再放在檔案裡——行裡的 CyberArk 登場。'] },
 ];
 
 // 每個 Lab 的故事:scene 情境、mission 任務、recap 小結(學到的事 + 對應的規矩)
@@ -119,6 +119,11 @@ export const LAB_STORY = {
       'Ming 先看 AD 那一段:openldap 日誌顯示 broker 的連線全部落在 636(LDAPS),389 沒有 broker;換一個不信任 demo CA 的用戶端,連線就失敗,這才解釋了為什麼 broker 需要信任庫。接著是監控:Prometheus 與 Alertmanager 不帶帳密一律 401,明文 HTTP 也被拒;broker 推指標與 C3 的連線仍然正常,證明帳密與信任庫都設對了。最後是 C3:憑證驗證通過,不信任簽發 CA 時被擋,他也記下:正式環境要把內部 CA 發給每一台使用者電腦。'],
     mission: ['證明 broker 連 AD 走 LDAPS,而且信任 CA 才連得上。', '證明 Prometheus、Alertmanager 要 HTTPS 加 Basic,而 broker 的指標推送與 C3 的連線仍正常。', '證明使用者連 C3 走 HTTPS,並理解不信任 CA 時的結果。'],
     recap: ['AD 連線:ldaps:// 加信任庫;只有連 AD 的 JVM 需要信任庫。', '監控:web-config 設 TLS 與 Basic;Prometheus 連 Alertmanager 那一段也要改設定(官方頁沒寫、實測必要)。', 'C3:只開 HTTPS;共用 server 憑證要把所有元件的名稱放進 SAN,並規劃 CA 發放給使用者電腦。', '共用 server 憑證只是補了名稱,用同一把 key、同一個 CA 重簽,不用重發任何 client 憑證。'] },
+  18: { scene: ['行裡有 CyberArk。資安問 Gary:「你們的密碼放哪?」Gary 老實說:應用程式的 SCRAM 密碼在設定檔、OP menu 的帳密在跳板機的檔案、broker 連 AD 的密碼在 properties 裡。資安的要求很簡單:「以後這些都不能放在檔案裡。」',
+      'Ming 用 CyberArk 的開源版(Conjur)在環境裡接了一遍:policy 寫清楚哪個機器身分能拿哪個秘密;應用啟動時先用自己的 API key 換 token、取密碼、在記憶體組連線設定;另一個沒被授權的應用拿不到,錯的 API key 連門都進不了。密碼輪替後,應用重新啟動就自己跟上,舊密碼立刻失效。接著他把 OP menu 的帳密、broker 設定檔的密碼也都搬進去:broker 啟動前向 Conjur 取主金鑰,設定檔裡只剩密文。',
+      '做完他也清楚哪些本機做不到:代登入錄影、自動輪替主機帳號、依單借出私鑰,那些是 CyberArk 的 PAM,只能到客戶環境才驗。'],
+    mission: ['讓應用以自己的機器身分取密碼,並確認沒被授權的拿不到。', '走一次輪替,確認應用跟上、舊密碼失效。', '把 OP menu 與 broker 設定檔的密碼從檔案搬進 Conjur。'],
+    recap: ['CyberArk 不改變身分與授權的設計,它接管的是「密碼與私鑰放哪、誰能拿、怎麼輪替」。', '每個應用一個機器身分,policy 只給它自己的秘密;稽核紀錄的主體就是這個身分。', 'Kafka 的 SCRAM 輪替沒有現成的 CyberArk 平台,靠腳本;誰來觸發(CPM 或排程)是客戶的決定。', '秘密不落地的代價:Conjur 不可用時依賴它的服務起不來,可用性要一併規劃。'] },
 };
 
 export const EPILOGUE = {
@@ -132,5 +137,6 @@ export const EPILOGUE = {
     ['負載平衡器', '客戶使用 F5:legacy app 前面的 LB 必須是 L4 透傳;sticky session 與 F5 的 TLS session 行為待客戶確認。'],
     ['憑證設計', '以客戶前提為準:共用一張 server 憑證,只做傳輸加密;身分另外處理(平台元件與 legacy app 各用 client 憑證)。Kafka 專家建議每台一張,僅供參考,不採用。'],
     ['變更核准', 'OP menu 的 ticket 檢查是可開關、可抽換的,等客戶決定核准方式。'],
+    ['CyberArk 的 PAM 側', '秘密管理那條路已用 Conjur 驗過(Lab 18);代登入與錄影(PSM)、主機帳號自動輪替(CPM)、依單借出(PVWA)要在客戶環境 PoC;跳板機與主機是否加入 AD、人連主機是否一律經 PSM,待客戶回答。'],
   ],
 };

@@ -1,3 +1,3 @@
 # 【機器 ①】C3 自己的服務身分:用 client 憑證(CN=c3)向 MDS 換 token,sub = c3(C3 背景串流、內部 topic 都用這個)
 $ GET /security/1.0/authenticate  (憑證 CN=c3)  → token claims
-{"jti":"Ussrwj9LjXEsSvs445eo0g","iss":"Confluent","sub":"c3","exp":1791372312,"iat":1791368712,"nbf":1791368652,"azp":"c3","auth_time":1791368712}
+{"jti":"f3owL0LYRZxlFOH8b-90iA","iss":"Confluent","sub":"c3","exp":1791459155,"iat":1791455555,"nbf":1791455495,"azp":"c3","auth_time":1791455555}

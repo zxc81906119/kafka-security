@@ -1,4 +1,4 @@
 # 【AD 收回】把 yujie 移出 orders-write(只在 AD 操作,Kafka 與 token 都沒動)
 $ ldapmodify: cn=orders-write 刪除 member CN=YUJIE
-[LDAP] remove yujie -> orders-write  (21:46:33)
+[LDAP] remove yujie -> orders-write  (18:36:39)
 已移出群組並等待群組快取刷新

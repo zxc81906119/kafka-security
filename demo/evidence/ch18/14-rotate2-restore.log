@@ -1,0 +1,3 @@
+# 【還原】svc-orders(原密碼與原角色)回來、Conjur 指回它、移除 svc-orders-v2
+$ scripts/rotate-with-conjur.sh restore
+結果:svc-orders 已還原;svc-orders-v2 已移除

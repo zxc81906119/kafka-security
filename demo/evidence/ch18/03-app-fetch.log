@@ -1,0 +1,4 @@
+# 【應用】svc-orders 以自己的機器身分(API key)向 Conjur 換 token,再取密碼 → 200;密碼只回到呼叫者的記憶體
+$ POST /authn/demo/host%2Fkafka%2Fsvc-orders/authenticate → token;GET /secrets/demo/variable/kafka%2Fsvc-orders%2Fpassword
+authenticate → [HTTP 200];取 svc-orders/credential → [HTTP 200]
+(取得秘密,長度 41 字元;內容不顯示)

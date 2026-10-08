@@ -1,0 +1,3 @@
+# 【還原】broker2 回到原本設定(其他章節不依賴 Conjur)
+$ docker compose up -d broker2
+[secret-protection] broker2 已回到原本設定

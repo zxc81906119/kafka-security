@@ -1,5 +1,5 @@
 // 故事版手冊新增的兩個 Lab(沿用 labs.mjs 的欄位格式)。
-// Lab 15:人員異動(scenarios/ch15-offboarding.sh);Lab 16:OP menu(scenarios/ch16-opmenu.sh);Lab 17:傳輸加密補強(scenarios/ch17-transport-hardening.sh)。
+// Lab 15:人員異動(scenarios/ch15-offboarding.sh);Lab 16:OP menu(scenarios/ch16-opmenu.sh);Lab 17:傳輸加密補強(scenarios/ch17-transport-hardening.sh);Lab 18:CyberArk 整合(scenarios/ch18-cyberark.sh)。
 // 手動指令只依賴 labs.mjs 的 SETUP 定義的 kc / hc 函式與環境變數($MDS、$RP、$JSON、$CL)。
 import { CID, USER_DN } from './labs.mjs';
 
@@ -129,6 +129,95 @@ hc -H "Authorization: Bearer $T" https://control-center:9022/3.0/services/alertm
       { t: '17.9 C3 ②:不信任簽發的 CA,連線就被擋', why: '同一個網址,這次不帶 demo CA:curl 回錯誤 60(憑證無法驗證)。瀏覽器遇到同樣情況會顯示「不安全」警告。所以導入時要規劃 CA 的發放。',
         manual: [R`docker run --rm --network $NET --entrypoint curl curlimages/curl:latest -sS -m 10 -o /dev/null https://control-center:9022/login 2>&1 | grep -o "curl: ([0-9]*) [^.]*" | head -1`],
         ev: 'c3-badca', re: /curl: \(60\)/, expect: 'curl: (60) SSL certificate …(不信任的憑證鏈)。' },
+    ],
+  },
+  // ───────────────────────── Lab 18 ─────────────────────────
+  {
+    id: 'ch18', n: 18, title: '(進階)與行內 CyberArk 整合:應用程式取密碼、輪替、設定檔密碼不落地', time: '25 分',
+    goal: '用 CyberArk 的開源版秘密管理(Conjur)示範「秘密不落地」這條路:應用程式啟動時以自己的機器身分取密碼;沒被授權的拿不到;輪替後應用自己跟上;OP menu 的帳密、broker 設定檔的密碼也都不再放在檔案裡。PAM 那一側(代登入、錄影、輪替主機帳號)本機無法重現,只在簡報與附錄說明。',
+    pre: ['Lab 7 的觀念(服務帳號 SCRAM)、Lab 16(OP menu)。', 'Conjur 是 profile cyberark 的 4 個容器(資料庫、伺服器、TLS 入口、管理 CLI),本 Lab 第一步會啟動;共用 server 憑證的名稱已含 conjur。', '所有 API key 與主金鑰都放在 demo/config/conjur/ 下的忽略檔或 Conjur 裡,不進版本庫。'],
+    pre_cmd: [
+      'hc -u gary:gary-pw "${JSON[@]}" -X POST $MDS/security/1.0/principals/User%3Asvc-orders/roles/DeveloperWrite/bindings -d \'{"scope":{"clusters":{"kafka-cluster":"' + CID + '"}},"resourcePatterns":[{"resourceType":"Topic","name":"orders.","patternType":"PREFIXED"}]}\' >/dev/null   # 起點:svc-orders 有 orders.* 的寫入權(Lab 7 的結果)',
+      'bash scripts/conjur.sh up >/dev/null && bash scripts/conjur.sh set-cred svc-orders svc-orders orders-secret-v1   # 起點:Conjur 裡「現在該用的帳號與密碼」= svc-orders / 原密碼',
+    ],
+    autoAll: ['./demo.sh 18', './scenarios/ch18-cyberark.sh'],
+    steps: [
+      { t: '18.1 啟動 Conjur 並看 policy:誰(機器身分)能拿什麼(秘密)', defs: true, why: 'scripts/conjur.sh up 會產生資料金鑰、建立帳戶、載入 policy(config/conjur/policy/kafka.yml)並替每個 host 產生 API key。policy 裡:svc-orders 只能讀自己的密碼、opmenu 讀 Alertmanager 帳密、broker 讀主金鑰、rogue-app 有身分但什麼都不能讀。下面同時定義兩個小函式給後面的手動指令用。',
+        manual: [R`bash scripts/conjur.sh up
+CJ=https://conjur
+cjtoken() { hc -X POST --data "$(cat config/conjur/keys/$1.key)" $CJ/authn/demo/host%2Fkafka%2F$1/authenticate | grep -v '^\[HTTP' | base64 -w0; }   # 以 host 的 API key 換 token(8 分鐘有效)
+docker exec -i conjur-cli conjur list -k host
+docker exec -i conjur-cli conjur list -k variable`],
+        ev: 'policy', re: /kafka\/svc-orders\/password/, expect: 'host:broker、legacy-orders、opmenu、rogue-app、svc-orders;variable:四個秘密。', tip: 'macOS 的 base64 沒有 -w0,改用 base64 | tr -d "\\n"。' },
+      { t: '18.2 管理員把 svc-orders 的 SCRAM 密碼存進 Conjur', why: '正式環境由 CyberArk 管理員在 PVWA 或 CLI 做,應用團隊不碰密碼本身。',
+        manual: ['bash scripts/conjur.sh set-cred svc-orders svc-orders orders-secret-v1'], ev: 'admin-set', re: /已寫入 kafka\/svc-orders\/credential/, expect: '已寫入 kafka/svc-orders/credential(帳號 svc-orders)。', tip: '帳號與密碼放在同一個變數(JSON {"u":帳號,"p":密碼}):寫入是單一操作、應用一次取得,輪替時不會有「帳號換了、密碼還沒換」的空檔。若分成兩個變數,應用剛好在空檔裡讀就會拿到不配對的帳密。' },
+      { t: '18.3 應用以自己的機器身分取密碼 → 200', why: '兩步:API key 換 token(POST /authn/…/authenticate),再用 token 取秘密(GET /secrets/…)。密碼只回到呼叫者的記憶體;這裡用 -o /dev/null 不把它印出來。',
+        manual: [R`T=$(cjtoken svc-orders)
+hc -o /dev/null -H "Authorization: Token token=\"$T\"" $CJ/secrets/demo/variable/kafka%2Fsvc-orders%2Fcredential`],
+        ev: 'app-fetch', re: /HTTP 200/, expect: '[HTTP 200]。' },
+      { t: '18.4 對照:有身分但沒被授權的應用(rogue-app)→ 拿不到', why: 'Conjur 回 404 而不是 403:不透露秘密是否存在。',
+        manual: [R`T=$(cjtoken rogue-app)
+hc -o /dev/null -H "Authorization: Token token=\"$T\"" $CJ/secrets/demo/variable/kafka%2Fsvc-orders%2Fcredential`],
+        ev: 'rogue', re: /HTTP 404/, expect: '[HTTP 404]。' },
+      { t: '18.5 對照:錯誤的 API key → 認證就被擋', manual: [R`hc -o /dev/null -X POST --data "wrong-api-key" $CJ/authn/demo/host%2Fkafka%2Fsvc-orders/authenticate`],
+        ev: 'bad-key', re: /HTTP 401/, expect: '[HTTP 401]。' },
+      { t: '18.6 應用啟動:取密碼 → 在記憶體組連線設定 → 寫入 orders.events', why: '腳本做的事:向 Conjur 取「現在該用的帳號」與密碼、在容器的 /dev/shm(記憶體)寫出連線設定、用 SCRAM 連 broker 寫入;容器結束設定就消失。主機與映像裡沒有密碼檔。正式環境的應用在啟動程式碼裡做同樣的事(或用 Summon 把秘密變成環境變數)。',
+        manual: ['bash scripts/app-with-conjur.sh svc-orders orders.events hello-from-conjur'], ev: 'app-start', re: /結果:成功寫入 orders\.events/, expect: '① ② 使用帳號 svc-orders、取得密碼(長度 16 字元;不顯示)→ ③ ④ 結果:成功寫入 orders.events(以 svc-orders 身分)。' },
+      { t: '18.7 輪替:改 Kafka 密碼、更新 Conjur,應用重啟就跟上;舊密碼立刻失效', why: 'CyberArk 的 CPM 沒有 Kafka 的平台定義,正式環境由 CPM 自訂平台或排程呼叫同樣的步驟。要零中斷就用 Lab 9 的「新帳號並行」,這裡用直接改密碼示範 Conjur 這段。',
+        manual: [R`kc kafka-configs --bootstrap-server $BOOT --command-config /clients/token-bootstrap.properties --alter --add-config 'SCRAM-SHA-512=[password=orders-secret-v2]' --entity-type users --entity-name svc-orders
+bash scripts/conjur.sh set-cred svc-orders svc-orders orders-secret-v2
+bash scripts/app-with-conjur.sh svc-orders orders.events after-rotate | tail -1
+kc kafka-topics --bootstrap-server $BOOT --command-config /clients/scram-svc-orders.properties --list 2>&1 | grep -m1 "Authentication failed"   # 還拿舊密碼的設定檔`],
+        ev: 'rotate', re: /成功寫入[\s\S]*(Authentication failed|認證失敗)/, expect: 'Completed updating config → 已寫入 → 結果:成功寫入 → 舊設定檔 Authentication failed。' },
+      { t: '18.8 還原密碼(Kafka 與 Conjur 都改回),讓其他 Lab 不受影響', manual: [R`kc kafka-configs --bootstrap-server $BOOT --command-config /clients/token-bootstrap.properties --alter --add-config 'SCRAM-SHA-512=[password=orders-secret-v1]' --entity-type users --entity-name svc-orders
+bash scripts/conjur.sh set-cred svc-orders svc-orders orders-secret-v1`], ev: 'restore', re: /Completed[\s\S]*已寫入/, expect: 'Completed updating config;已寫入。' },
+      { t: '18.9 零中斷輪替 ⓪:先看安全網——舊帳號沒有任何角色時,腳本拒絕往下做', why: '輪替腳本最怕「做到一半留下半成品」。所以它先確認舊帳號有角色可複製;沒有就中止,什麼都不動(Conjur 也不動)。',
+        manual: ['bash scripts/rotate-with-conjur.sh start nobody svc-x 2>&1 | tail -1', 'bash scripts/app-with-conjur.sh svc-orders orders.events abort-check | tail -1   # 確認應用照常拿得到帳密'],
+        ev: 'rotate2-abort', re: /沒有任何角色[\s\S]*成功寫入/, expect: '✘ 舊帳號 nobody 沒有任何角色…中止(沒有改任何東西);應用仍成功寫入。' },
+      { t: '18.10 零中斷輪替 ①:建新帳號、複製角色、驗證新帳號,才把新帳密一次寫進 Conjur', why: 'Kafka 的 SCRAM 一個帳號只有一組密碼,零中斷只能靠兩個帳號並行(Lab 9)。腳本的順序是:建 svc-orders-v2(密碼隨機)→ 複製舊帳號的全部角色並逐筆檢查 → 驗證新帳號真的連得上、看到的 topic 和舊帳號一模一樣 → 才把新帳密寫進 Conjur。任何一步失敗就回滾新帳號,Conjur 完全沒動,舊帳號照常。',
+        manual: ['bash scripts/rotate-with-conjur.sh start svc-orders svc-orders-v2'], ev: 'rotate2-start', re: /Conjur 已指向 svc-orders-v2/, expect: '① 建立 → ② 角色 DeveloperWrite → User:svc-orders-v2 [HTTP 204] → ③ 新舊帳號看到同樣的 N 個 topic → ④ 寫進 Conjur → 結果:Conjur 已指向 svc-orders-v2;svc-orders 仍可用。' },
+      { t: '18.11 零中斷輪替 ②:應用逐批重啟,設定不用改,自動改用新帳號;還沒重啟的照常', manual: ['bash scripts/app-with-conjur.sh svc-orders orders.events after-parallel-rotate | tail -2', 'kc kafka-topics --bootstrap-server $BOOT --command-config /clients/scram-svc-orders.properties --list | grep -c "^orders"   # 還沒重啟的應用(舊帳號)'],
+        ev: 'rotate2-switch', re: /以 svc-orders-v2 身分[\s\S]*[1-9]/, expect: '重啟的應用:成功寫入(以 svc-orders-v2 身分);舊帳號的設定檔仍列得出 orders topic。' },
+      { t: '18.12 零中斷輪替 ③:不直接刪舊帳號,先「隔離」再看 audit', why: '隔離 = 解除舊帳號的全部角色(已存檔、可回復),SCRAM 憑證還留著。為什麼不直接刪?因為 audit 不記錄 orders.* 讀取成功(避免洗版),光看「允許」會漏掉只讀不寫的 consumer;隔離後還在用的人會變成被拒(DENIED),audit 一定記錄。check 只看隔離之後的事件。',
+        manual: ['bash scripts/rotate-with-conjur.sh quarantine svc-orders | tail -1', 'sleep 3; bash scripts/rotate-with-conjur.sh check svc-orders 1'], ev: 'rotate2-quarantine', re: /判定:沒有人在用/, expect: '結果:svc-orders 已隔離;「隔離之後的 audit:允許 0 筆、被拒 0 筆」→ 判定:沒有人在用。' },
+      { t: '18.13 零中斷輪替 ④:確認沒人用才停用(刪 SCRAM 憑證)', manual: ['bash scripts/rotate-with-conjur.sh finish svc-orders | tail -1', 'kc kafka-topics --bootstrap-server $BOOT --command-config /clients/scram-svc-orders.properties --list 2>&1 | grep -m1 "Authentication failed"', 'bash scripts/app-with-conjur.sh svc-orders orders.events after-finish | tail -1'],
+        ev: 'rotate2-finish', re: /已停用[\s\S]*(Authentication failed|認證失敗)[\s\S]*成功寫入/, expect: '舊帳號 svc-orders 已停用 → 舊設定檔 Authentication failed → 新帳號成功寫入。' },
+      { t: '18.14 還原:svc-orders 回來、Conjur 指回它、移除 svc-orders-v2', manual: ['bash scripts/rotate-with-conjur.sh restore | tail -1'], ev: 'rotate2-restore', re: /svc-orders 已還原/, expect: '結果:svc-orders 已還原;svc-orders-v2 已移除。' },
+      { t: '18.15 如果有人還在用舊帳號:隔離後被抓到,rollback 後恢復', why: '模擬「有一個你不知道的應用還在用舊帳號」:隔離後它的請求被拒,audit 記下 DENIED,check 判定「還有人在用」,你 rollback 把角色綁回去,它就恢復了——沒有任何人被誤傷太久。',
+        manual: [R`bash scripts/rotate-with-conjur.sh quarantine svc-orders | tail -1
+sleep 4; bash scripts/app-with-conjur.sh svc-orders orders.events still-on-old | tail -1     # 還在用舊帳號的應用
+sleep 5; bash scripts/rotate-with-conjur.sh check svc-orders 1 | tail -2
+bash scripts/rotate-with-conjur.sh rollback svc-orders | tail -1
+sleep 5; bash scripts/app-with-conjur.sh svc-orders orders.events back-to-normal | tail -1`],
+        ev: 'rotate2-inuse', re: /被拒絕[\s\S]*還有人在用[\s\S]*已回復[\s\S]*成功寫入/, expect: '隔離後應用:結果:被拒絕 → check:被拒 N 筆、判定:還有人在用 → rollback:角色已回復 → 應用:成功寫入。' },
+      { t: '18.16 實驗:只刪 SCRAM 憑證,擋得住已經連著的舊連線嗎?', why: '長連線 producer(svc-orders,每 2 秒寫一筆,共 14 筆)寫到一半,對舊帳號做事。這個實驗回答「為什麼一定要先解除角色」。下面跑兩次:A 先解除角色再刪憑證;B 只刪憑證、角色保留。每次約 50 秒。',
+        manual: [R`bash scripts/old-connection-test.sh both | tail -5
+bash scripts/rotate-with-conjur.sh restore | tail -1
+echo "=== B:只刪憑證、角色保留"
+bash scripts/old-connection-test.sh scram-only | tail -5
+bash scripts/rotate-with-conjur.sh restore | tail -1`],
+        ev: 'oldconn-both', evb: 'oldconn-scram', re: /判定:解除角色就切斷舊連線[\s\S]*判定:只刪 SCRAM 憑證擋不住/, expect: 'A:只寫進約 6 筆,之後都是授權失敗、認證失敗 0 次 → 判定:解除角色就切斷舊連線;B:14 筆全部寫入 → 判定:只刪 SCRAM 憑證擋不住已建立的連線。',
+        warn: '重點:SCRAM 只在「建立連線」時驗證(connections.max.reauth.ms 預設 0 = 不重新驗證),所以刪掉憑證只擋得住新連線。要切斷已連著的舊連線,必須解除角色;所以輪替流程一律是「先隔離(解除角色)→ 看 audit → 才刪憑證」。長連線的應用也要在認證或授權失敗時重新向 Conjur 取帳密並重建連線,不能只在啟動時取一次。' },
+      { t: '18.17 OP menu:維護模式的帳密改成執行時向 Conjur 取,跳板機上不放帳密檔', why: '設定 OPMENU_ALERTMANAGER_AUTH_CMD(優先於檔案):任何會印出「帳號:密碼」的指令都可以,這裡接 Conjur。沒被授權的身分取不到,維護模式就開不了。',
+        manual: [R`cd opmenu
+export OPMENU_USER=gary OPMENU_PASS=gary-pw OPMENU_YES=1 OPMENU_TICKET=CHG-2026-0400
+export OPMENU_ALERTMANAGER_AUTH_CMD="bash $PWD/../scripts/conjur.sh get-as opmenu opmenu/alertmanager-auth"
+./opmenu.sh --run 25 broker1 2 | tee log/maint18.out | tail -1
+./opmenu.sh --run 26 "$(grep -o 'silence id=[0-9a-f-]*' log/maint18.out | cut -d= -f2)" | tail -1
+OPMENU_ALERTMANAGER_AUTH_CMD="bash $PWD/../scripts/conjur.sh get-as rogue-app opmenu/alertmanager-auth" ./opmenu.sh --run 25 broker1 2 | grep -m1 失敗
+cd ..`],
+        ev: 'opmenu', re: /維護模式已結束[\s\S]*失敗/, expect: '維護模式已開始 → 維護模式已結束 → 用 rogue-app 的身分:建立 silence 失敗:Unauthorized。' },
+      { t: '18.18 設定檔密碼不落地 ①:用 Confluent Secret Protection 加密、主金鑰存進 Conjur', why: '官方功能:設定檔裡的密碼換成加密佔位符,密文放在 security.properties,解密要主金鑰(環境變數 CONFLUENT_SECURITY_MASTER_KEY)。這裡主金鑰直接存進 Conjur,不寫任何檔案。',
+        manual: ['bash scripts/secret-protection.sh setup', 'cat certs/security.properties | cut -c1-110'], ev: 'sp-setup', re: /主金鑰已存入 Conjur/, expect: '主金鑰已存入 Conjur;security.properties 裡 ldap.java.naming.security.credentials 是 ENC[…]。' },
+      { t: '18.19 設定檔密碼不落地 ②:broker2 啟動前向 Conjur 取主金鑰,解開密文後才連 AD', why: 'docker-compose.cyberark.yml 只覆蓋 broker2:密碼改成佔位符、啟動指令先執行 fetch-secret.py(以 host/kafka/broker 的身分取主金鑰放進環境變數)再啟動。正式環境就是 systemd 的 ExecStartPre。驗證:生效設定裡只有佔位符、環境裡沒有明文、人仍能經 broker2 登入(表示 AD 查詢密碼解對了)。',
+        manual: [R`bash scripts/secret-protection.sh apply
+bash scripts/secret-protection.sh show
+hc -o /dev/null -u gary:gary-pw https://broker2:8092/security/1.0/authenticate`],
+        ev: 'sp-apply', re: /securepass[\s\S]*HTTP 200/, expect: 'master key fetched from Conjur;設定裡是 ${securepass:…};環境裡 0 處明文;[HTTP 200]。', warn: '取不到主金鑰 broker 就不會啟動(這是刻意的);所以 Conjur 的可用性要跟 broker 一樣高,正式環境要有 Conjur 的高可用或在主機上留備援方案。' },
+      { t: '18.20 還原 broker2(其他 Lab 不依賴 Conjur)', manual: ['bash scripts/secret-protection.sh revert'], ev: 'sp-revert', re: /已回到原本設定/, expect: 'broker2 已回到原本設定。' },
+      { t: '18.21 稽核:Conjur 記錄誰取了什麼', why: '每一次取秘密與被拒都有紀錄,主體是機器身分;正式環境把這些送進 SIEM。',
+        manual: [R`docker logs conjur-server 2>&1 | grep -E "demo:host:kafka/[a-z-]+ (tried to fetch|fetched)" | sed -E 's/^.*(demo:host:kafka)/\1/' | sort | uniq -c | sort -rn | head`],
+        ev: 'audit', re: /rogue-app tried to fetch/, expect: 'svc-orders fetched …password;opmenu fetched …alertmanager-auth;broker fetched …master-key;rogue-app tried to fetch …: Forbidden。' },
     ],
   },
 ];

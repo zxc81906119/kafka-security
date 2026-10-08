@@ -2,5 +2,5 @@
 $ openssl x509 -in client-legacy-orders.pem -noout -subject -issuer -dates
 subject=CN=legacy-orders, O=Demo
 issuer=CN=Demo Private CA, O=Demo
-notBefore=Oct  7 11:18:47 2026 GMT
-notAfter=Jan  9 11:18:47 2029 GMT
+notBefore=Oct  8 09:48:12 2026 GMT
+notAfter=Jan 10 09:48:12 2029 GMT
