@@ -172,6 +172,23 @@ gary 在 C3 指派 `orders-read` → DeveloperRead;LDAP 介面把 ming 從 devel
 | 稽核 | Conjur 日誌:`demo:host:kafka/rogue-app tried to fetch …: Forbidden`、`… fetched …` | ch18 步驟 13 |
 **實測結果(ch18)**:13 項全過。**注意**:取不到主金鑰 broker 就不啟動(刻意),Conjur 的可用性要與 broker 同級;Kafka 的 SCRAM 輪替沒有現成 CyberArk 平台,靠腳本,由 CPM 自訂平台或排程觸發;CLI 是 `conjur init oss`(v9),docker exec 要 `MSYS_NO_PATHCONV=1`。**未驗證**:商業版 CCP 的 AppID 認證、Conjur 高可用、PAM 側全部。
 
+## 第 19 章(進階)帳號被偷之後:失效、告警、限速、限連線、鎖定(`./demo.sh 19`)
+
+**起點**:第 18 章實驗發現「只刪 SCRAM 憑證,已連著的舊連線不會斷」。這一章假設帳號已被偷,逐項補上平台能做的限制。全部在 docker 實測(2026-10-08)。
+
+| 項目 | 證明 | 設定 / 指令 |
+|---|---|---|
+| SASL 重新認證 | 停用「連著的」帳號(只刪 SCRAM):45 筆嘗試只寫進 27 筆,producer 第一個錯誤是 `Authentication failed during re-authentication`(第 18 章同樣動作 14/14 全寫入) | `KAFKA_LISTENER_NAME_CLIENT_CONNECTIONS_MAX_REAUTH_MS=60000`(demo 值;正式建議 1 小時);`scripts/reauth-test.sh run`。**不能動態改**:`connections.max.reauth.ms` 被 kafka-configs 拒絕;`listener.name.client.…` 寫法會被接受但實測不生效(30/30 全寫入)→ 要改只能重啟 |
+| 認證失敗告警 | 5 次錯誤登入 → `KafkaAuthFailuresBurst` firing(listener CLIENT)→ Alertmanager 收到 | broker telemetry 加 `socket.server.failed.authentication.total` 等指標;規則 `config/c3/security_rules.yml`(5 分鐘增量 > 3);Prometheus 每 60 秒評估,約 2 到 4 分鐘出現 |
+| TLS 套件 | `ECDHE-RSA-AES256-GCM-SHA384` 與 TLS 1.3 接受;`ECDHE-RSA-AES128-SHA`(CBC + SHA-1)、`AES128-SHA` 拒絕。**未設定前 Kafka listener 接受 CBC + SHA-1**;MDS(Jetty)本來就拒絕 | `KAFKA_SSL_ENABLED_PROTOCOLS=TLSv1.3,TLSv1.2`、`KAFKA_SSL_CIPHER_SUITES`(只列 GCM / ChaCha20),在 `x-common-ssl`。只設 Kafka listener,其他元件未設 |
+| 連線數上限 | 單一來源 IP 上限 2:開 4 條,日誌 `Rejected connection … maximum of 2.0 connections` | `kafka-configs --entity-type brokers --entity-default --add-config max.connections.per.ip=2`(動態;`--entity-type ips` 只收連線速率配額,不收這個) |
+| client quota | 同一動作(2500 筆 × 1 KB):不限速 約 2700 筆/秒;`producer_byte_rate=100000` 後 約 167 筆/秒(1/16) | `scripts/quota-test.sh`。**寫入量太小看不出效果**(400 筆不被限速) |
+| AD 帳戶鎖定 | 對 GARY 連續 6 次錯誤 → 用對的密碼也 401(MDS、Kafka PLAIN 同時失敗);bootstrap 憑證(緊急路徑)與 SCRAM 機器帳號不受影響;管理員解鎖後 200 | OpenLDAP ppolicy overlay 模擬(`ldap-config/ppolicy-*.ldif`,`up.sh` 載入,鎖定預設關);`scripts/ad-lockout.sh on / off / status / unlock` |
+
+**踩坑**:(1) telemetry 的 `metrics.include` 用萬用字元或沒排除 delta 型態 → Prometheus 對整批回 500(`invalid temporality and type combination`),連原本的監控指標也被丟;每個名稱後面要加 `(?!.*delta).*`。(2) `python3` 在這台 Windows 是空殼,腳本編輯改用 node / perl。
+
+**未解的問題(重要,待查)**:使用了一段時間、做過很多實驗的叢集,**重啟 broker 會失敗**:broker 啟動時 authorizer 的 client(`_confluent-metadata-coordinator`、cluster-link admin、telemetry producer)連自己的 INTERNAL listener(`broker1:9092`),被自己拒絕 `invalid credentials with SASL mechanism SCRAM-SHA-512`,broker 以 fatal exit 結束,重試與清掉本機 metadata 都沒用。重現 3 次;全新叢集連續重啟 5 次都正常;逐項排除:SCRAM 帳號新增與刪除、user quota、max.connections.per.ip、AD 鎖定、role binding、consumer group 讀取、連著的帳號被刪憑證、metadata 快照存在、metadata 日誌膨脹到 11000 筆。**尚未找到觸發條件**。推測與「inter-broker listener 用存在 metadata 裡的 SCRAM 憑證,啟動時自我認證要等 metadata 載入」有關,**未驗證**。正式環境的含意:在客戶環境滾動重啟 broker 前要在測試環境確認;inter-broker 認證考慮改用不依賴 metadata 的方式(例如 mTLS),需另外驗證。
+
 ## 對應到客戶 RHEL 9 VM 的位置與步驟(手動部署)
 | demo | RHEL 9 VM |
 |---|---|

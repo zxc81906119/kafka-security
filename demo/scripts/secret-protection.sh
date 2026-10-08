@@ -31,7 +31,7 @@ setup)
   echo "[secret-protection] certs/security.properties(加密後的密碼):"; grep '^server.properties' certs/security.properties | cut -c1-110
   ;;
 apply)
-  docker compose -f docker-compose.yml -f docker-compose.cyberark.yml --profile cyberark up -d --wait --wait-timeout 240 broker2 >/dev/null
+  docker compose -f docker-compose.yml -f docker-compose.cyberark.yml --profile cyberark up -d --wait --wait-timeout 240 broker2 >/dev/null || bash scripts/broker-heal.sh broker2 -f docker-compose.yml -f docker-compose.cyberark.yml --profile cyberark
   echo "[secret-protection] broker2 已用加密設定重啟;啟動紀錄:"; docker logs broker2 2>&1 | grep -m1 'secret-protection'
   ;;
 summon-setup)   # CyberArk 官方工具 summon + summon-conjur:下載(校驗 SHA256)到 config/conjur/bin,並產生 broker 的 /etc/conjur.identity
@@ -52,11 +52,11 @@ summon-setup)   # CyberArk 官方工具 summon + summon-conjur:下載(校驗 SHA
   echo "[summon] 就緒:$B/summon、$B/summon-conjur;broker 身分 → config/conjur/identity-broker/conjur.identity"
   ;;
 apply-summon)   # 同 apply,但主金鑰改由 summon 向 Conjur 取(docker-compose.cyberark-summon.yml)
-  docker compose -f docker-compose.yml -f docker-compose.cyberark-summon.yml --profile cyberark up -d --wait --wait-timeout 240 broker2 >/dev/null
+  docker compose -f docker-compose.yml -f docker-compose.cyberark-summon.yml --profile cyberark up -d --wait --wait-timeout 240 broker2 >/dev/null || bash scripts/broker-heal.sh broker2 -f docker-compose.yml -f docker-compose.cyberark-summon.yml --profile cyberark
   echo "[secret-protection] broker2 已用加密設定重啟(主金鑰由 summon 向 Conjur 取);broker2 的啟動指令:"; docker inspect broker2 --format '{{join .Config.Cmd " "}}'
   ;;
 revert)
-  docker compose up -d --wait --wait-timeout 240 broker2 >/dev/null && echo "[secret-protection] broker2 已回到原本設定"
+  { docker compose up -d --wait --wait-timeout 240 broker2 >/dev/null || bash scripts/broker-heal.sh broker2; } && echo "[secret-protection] broker2 已回到原本設定"
   ;;
 show)
   echo "broker2 的 /etc/kafka/kafka.properties 裡 AD 查詢密碼那一行:"; docker exec broker2 grep '^ldap.java.naming.security.credentials' /etc/kafka/kafka.properties

@@ -16,6 +16,10 @@ for i in $(seq 1 30); do docker exec openldap ldapsearch -x -H ldap://localhost 
 echo "[up] 授權 bind DN 唯讀查詢帳號(userPassword 仍不可讀)"
 docker cp ldap-config/acl-bind-dn.ldif openldap:/tmp/acl.ldif >/dev/null
 docker exec openldap ldapmodify -Y EXTERNAL -H ldapi:/// -f /tmp/acl.ldif >/dev/null 2>&1 || echo "  (ACL 可能已套用)"
+echo "[up] 載入密碼政策(ppolicy;鎖定預設關閉,第 19 章才打開)"
+docker cp ldap-config/ppolicy-overlay.ldif openldap:/tmp/pp-overlay.ldif >/dev/null; docker cp ldap-config/ppolicy-default.ldif openldap:/tmp/pp-default.ldif >/dev/null
+docker exec openldap ldapmodify -Y EXTERNAL -H ldapi:/// -f /tmp/pp-overlay.ldif >/dev/null 2>&1 || echo "  (ppolicy overlay 可能已載入)"
+docker exec openldap ldapadd -x -H ldap://localhost -D cn=admin,dc=corp,dc=demo -w adminpw -f /tmp/pp-default.ldif >/dev/null 2>&1 || echo "  (密碼政策項目可能已存在)"
 echo "[up] 啟動 brokers ..."
 docker compose up -d --wait --wait-timeout 240 broker1 broker2
 echo "[up] 等待 MDS ..."

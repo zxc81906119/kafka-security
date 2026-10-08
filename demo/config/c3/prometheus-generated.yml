@@ -22,6 +22,8 @@ rule_files:
   - 'recording_rules-generated.yml'
   # trigger rules file is used for defining triggers which are configured by the user using C3 UI
   - 'trigger_rules-generated.yml'
+  # 第 19 章:安全事件告警(認證失敗、連線數接近上限)
+  - 'security_rules.yml'
 
 # A scrape configuration containing exactly one endpoint to scrape:
 # Here it's Prometheus itself.
