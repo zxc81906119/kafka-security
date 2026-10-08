@@ -1,0 +1,11 @@
+gary 建立 orders-kek(200 = 新建,409 = 已存在):
+[HTTP 409]
+yujie 建立 x-kek:
+{"error_code":40301,"message":"User is denied operation Register on Kek: x-kek"}
+[HTTP 403]
+yujie 讀 orders-kek:
+{"name":"orders-kek","kmsType":"local-kms","kmsKeyId":"demo-local-key","kmsProps":{},"doc":"CSFLE demo (local-kms:僅測試用,正式環境接 KMS / HSM)","shared":false,"ts":1791484046061}
+[HTTP 200]
+ming 讀 orders-kek:
+{"error_code":40301,"message":"User is denied operation Read on Kek: orders-kek"}
+[HTTP 403]

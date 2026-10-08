@@ -1,6 +1,6 @@
 # 【監控 ③】broker 推送指標也走 HTTPS + Basic(api.key / api.secret 就是 Basic 帳密):broker 指標的最新一筆在 2 分鐘內
 $ PromQL: time() - max(timestamp(io_confluent_kafka_server_request_total_time_ms_p99))
-{"status":"success","data":{"resultType":"vector","result":[{"metric":{},"value":[1791472351.593,"0.09599995613098145"]}]}}
+{"status":"success","data":{"resultType":"vector","result":[{"metric":{},"value":[1791483231.493,"51.16300010681152"]}]}}
 [HTTP 200]
-最新一筆指標距今 0.8090000152587891 秒(小於 120 = 指標持續進來)
+最新一筆指標距今 52.379000186920166 秒(小於 120 = 指標持續進來)
 判定:指標持續進來

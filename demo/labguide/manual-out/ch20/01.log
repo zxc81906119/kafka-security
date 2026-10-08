@@ -1,0 +1,17 @@
+[sr] 授權 SR 自己(kafka 叢集範圍)
+  bind User:schema-registry ResourceOwner Topic:_schemas(LITERAL) ->  [HTTP 204] 
+  bind User:schema-registry ResourceOwner Group:schema-registry(LITERAL) ->  [HTTP 204] 
+  bind User:schema-registry DeveloperRead Topic:_confluent-command(LITERAL) ->  [HTTP 204] 
+  bind User:schema-registry DeveloperWrite Topic:_confluent-command(LITERAL) ->  [HTTP 204] 
+  bind User:schema-registry ResourceOwner Topic:_dek_registry(PREFIXED) ->  [HTTP 204] 
+[sr] SR 叢集範圍
+  bind User:schema-registry SecurityAdmin  -> [HTTP 204]
+  bind Group:topic-admin ResourceOwner Subject:* -> [HTTP 204]
+  bind Group:security ResourceOwner Kek:* -> [HTTP 204]
+  bind Group:orders-write DeveloperRead Subject:orders. -> [HTTP 204]
+  bind Group:orders-write DeveloperWrite Subject:orders. -> [HTTP 204]
+  bind Group:orders-write DeveloperRead Kek:orders-kek -> [HTTP 204]
+[sr] 啟動 Schema Registry
+ Container schema-registry Healthy 
+[sr] 等待授權生效(SR 對 MDS 的授權快取)…
+[sr] 就緒(gary 可列 KEK)

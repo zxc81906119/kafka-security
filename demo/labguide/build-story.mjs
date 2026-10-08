@@ -141,7 +141,7 @@ add(
     ['目錄服務', 'OpenLDAP(以 AD 屬性模擬;非真 AD,細節見「如何使用本手冊」的限制說明)'],
     ['環境', 'Docker Compose(Windows 11 + Git Bash 驗證;Linux/macOS 指令相同)'],
     ['證據', '所有「實際輸出」與截圖均來自本環境實跑(專案 demo/evidence/)'],
-    ['與舊版手冊', '本版以故事串起來,並新增 Lab 15(人員異動)、Lab 16(OP menu)、Lab 17(傳輸加密補強)、Lab 18(CyberArk 整合)與 Lab 19(帳號被偷之後);舊版 Confluent-Security-Lab-Guide.docx 保留'],
+    ['與舊版手冊', '本版以故事串起來,並新增 Lab 15(人員異動)、Lab 16(OP menu)、Lab 17(傳輸加密補強)、Lab 18(CyberArk 整合)、Lab 19(帳號被偷之後)與 Lab 20(Schema Registry 與欄位級加密);舊版 Confluent-Security-Lab-Guide.docx 保留'],
   ], [2200, 6826]),
   new Paragraph({ children: [new PageBreak()] }),
 );
@@ -188,6 +188,7 @@ add(...table([
   ['curlimages/curl、alpine/openssl', '50 MB', 'hc 函式的 curl、產生憑證'],
   ['postman/newman:alpine', '0.3 GB', 'Lab 5 的批次測試(第一次跑 Lab 5 時才下載)'],
   ['cyberark/conjur、cyberark/conjur-cli:9、postgres:15、nginx:stable、confluentinc/confluent-cli', '約 1.2 GB', 'Lab 18(CyberArk 整合;第一次跑 Lab 18 時才下載)'],
+  ['confluentinc/cp-schema-registry:8.3.2', '1.5 GB', 'Lab 20(Schema Registry;第一次跑 Lab 20 時才下載)'],
 ], [4200, 1500, 3326], { size: 17 }));
 add(H2('課前常見問題'));
 add(...table([
@@ -390,9 +391,10 @@ add(...table([
   ['demo/docker-compose.yml', '全部容器定義(broker 使用 x-ldap-env;broker/controller 共用 x-common-ssl)'],
   ['demo/scripts/up.sh、reset.sh、bootstrap-rbac.sh', '一鍵建置、重置、第一批授權'],
   ['demo/scripts/k.sh、rp.sh、mds.sh、ldap-group.sh、create-service-account.sh、as-user.sh', '包好的單項指令(對應手動的 kc、hc、ldapmodify…)'],
-  ['demo/scenarios/ch01…ch19-*.sh', '各 Lab 的整章腳本(含自動驗證);ch15 人員異動、ch16 OP menu、ch17 傳輸加密補強、ch18 CyberArk 整合、ch19 帳號被偷之後'],
+  ['demo/scenarios/ch01…ch20-*.sh', '各 Lab 的整章腳本(含自動驗證);ch15 人員異動、ch16 OP menu、ch17 傳輸加密補強、ch18 CyberArk 整合、ch19 帳號被偷之後、ch20 Schema Registry'],
   ['demo/config/conjur/、scripts/conjur.sh、scripts/app-with-conjur.sh、scripts/secret-protection.sh、docker-compose.cyberark.yml、docker-compose.cyberark-summon.yml', 'Lab 18:Conjur 的 policy、TLS 入口、取秘密腳本、應用啟動示範、Secret Protection 與 broker2 覆蓋設定(自寫腳本版與 summon 版)'],
   ['demo/scripts/reauth-test.sh、quota-test.sh、ad-lockout.sh、config/c3/security_rules.yml、ldap-config/ppolicy-*.ldif', 'Lab 19:重新認證、配額、AD 鎖定實驗與認證失敗告警規則'],
+  ['demo/scripts/sr-setup.sh、scenarios/ch20-schema-registry.sh', 'Lab 20:Schema Registry(profile sr)的啟動與授權'],
   ['demo/opmenu/', 'OP menu 程式(README.md 說明項目、設定與限制;test-*.sh 回歸測試)'],
   ['demo/spike/lb-nginx、rp-mds-failover', '負載平衡器與多台 MDS 的實驗(FINDINGS.md)'],
   ['demo/e2e/*.mjs', 'Playwright:C3 / LDAP 介面自動化與截圖;terminal 與 newman 渲染'],

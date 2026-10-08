@@ -1,0 +1,6 @@
+# 【認證】SR 的 REST 要帳密:不帶 401、密碼錯 401、AD 帳密正確 200;授權另外看 role
+$ curl https://schema-registry:8081/subjects   # 對照:不帶帳密 / 錯密碼 / 正確
+不帶帳密 → [HTTP 401]
+密碼錯誤 → [HTTP 401]
+gary 正確 → [HTTP 200]
+判定:不帶帳密與密碼錯誤都是 401,正確帳密 200

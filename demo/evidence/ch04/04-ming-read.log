@@ -1,6 +1,7 @@
 # ming(唯讀)可以讀取 orders.events
 $ kafka-console-consumer --command-config ming.properties --topic orders.events --from-beginning
-ra30604-1
-ra30604-2
-ra30604-3
-Processed a total of 3 messages
+order-A-1001
+hello-from-ming
+ERROR Error processing message, terminating consumer process: 
+org.apache.kafka.common.errors.TimeoutException
+Processed a total of 2 messages

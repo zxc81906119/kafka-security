@@ -1,3 +1,3 @@
 # 【代為申請的 token】restproxy 的憑證向 MDS 申請「代 legacy-orders」的 token:sub 是 legacy-orders,cp_proxy 記錄代理者,有效 1 小時
 $ POST /security/1.0/impersonate  {targetPrincipalName: legacy-orders}   (憑證 CN=restproxy)
-{"cp_proxy":"O=Demo,CN=restproxy","jti":"LtEKVazoLNLe2-UzB4oskw","iss":"Confluent","sub":"legacy-orders","exp":1791475848,"iat":1791472248,"nbf":1791472188,"azp":"legacy-orders","auth_time":1791472248
+{"cp_proxy":"O=Demo,CN=restproxy","jti":"SktFIBCXwtR3lzWxuB4nWw","iss":"Confluent","sub":"legacy-orders","exp":1791486726,"iat":1791483126,"nbf":1791483066,"azp":"legacy-orders","auth_time":1791483126

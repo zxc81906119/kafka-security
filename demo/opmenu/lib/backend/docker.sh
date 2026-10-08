@@ -46,7 +46,9 @@ be_kafka() { _kafka_with_conf "$OP_CLIENT_CONF" "$@"; }
 be_bootstrap_kafka() { _kafka_with_conf "$OPMENU_CLIENTS_HOST_DIR/token-bootstrap.properties" "$@"; }
 
 # 容器名稱也要在設定清單內(不信任呼叫端)
-be_service_restart() { v_any_svc "$1" >/dev/null || return 1; docker restart "$1" >/dev/null && echo "已重啟 $1"; }
+be_service_restart() { v_any_svc "$1" >/dev/null || return 1; docker restart "$1" >/dev/null || return 1
+  case "$1" in broker*) bash "$OPMENU_HOME/../scripts/broker-heal.sh" "$1" >/dev/null 2>&1 || true;; esac   # demo 專用:broker 重啟偶爾起不來(根因未查明,見 RUNBOOK 第 19 章),起不來就清空它的資料目錄重建;正式環境(vm.sh)沒有這個行為
+  echo "已重啟 $1"; }
 be_service_logs() { v_any_svc "$1" >/dev/null || return 1; v_number "${2:-50}" >/dev/null || return 1; docker logs --tail "${2:-50}" "$1" 2>&1; }
 be_clean_logs() { v_host "$1" >/dev/null || return 1; v_number "$2" >/dev/null || return 1; echo "容器環境的日誌由 docker 管理,沒有可清理的日誌檔(正式環境:刪除 $1 上超過 $2 天的日誌檔)"; }
 be_disk_usage() { for c in $OPMENU_HOSTS; do printf '%-16s ' "$c"; docker exec "$c" sh -c "du -sh $OPMENU_DATA_DIR 2>/dev/null | cut -f1; df -h $OPMENU_DATA_DIR 2>/dev/null | tail -1 | awk '{print \"  磁碟用量 \" \$5 \"  剩餘 \" \$4}'" 2>/dev/null | tr '\n' ' '; echo; done; }

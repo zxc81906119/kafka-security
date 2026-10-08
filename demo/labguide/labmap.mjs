@@ -53,6 +53,8 @@ export const MAPS = [
     flows: [['svc-orders(API key → token)', 'Conjur 取 SCRAM 密碼 → 記憶體組設定 → 寫入 orders.events', '✔ 200;寫入成功'], ['rogue-app / 錯誤 API key', 'Conjur', '✘ 404 / 401'], ['輪替:改密碼,或新舊並行(建 v2 → 隔離舊帳號 → 看 audit → 才刪)', '應用重啟自動跟上 / 舊帳號', '✔ 零中斷 / ✘ 解除角色後被拒'], ['實驗:停用舊帳號時已連著的舊連線', '只刪 SCRAM 憑證 / 先解除角色', '✔ 只刪憑證擋不住 / ✘ 解除角色才切斷'], ['OP menu、broker2', '帳密與主金鑰執行時向 Conjur 取(自寫腳本或官方 summon)', '✔ 維護模式開關;設定檔只剩密文仍能查 AD']] },
   { n: 19, prove: '帳號被偷之後:停用的帳號舊連線會失效、認證失敗會告警、流量與連線數有上限;AD 鎖定是雙面刃', use: ['cli', 'broker', 'prom', 'am', 'ad'],
     flows: [['停用「連著的」帳號(只刪 SCRAM 憑證)', 'broker 每 60 秒重新認證', '✔ 約 60 秒內舊連線被切斷(第 18 章預設是切不斷)'], ['連續 5 次錯誤登入', 'broker → Prometheus 規則 → Alertmanager', '✔ KafkaAuthFailuresBurst firing,告警送達'], ['弱 TLS 套件 / 同來源 4 條連線 / 超額流量', 'broker(套件限定、連線上限、quota)', '✘ 弱套件被拒、超額連線被拒、吞吐量 1/16'], ['對 GARY 亂試 6 次', 'MDS / Kafka → AD(鎖定原則)', '✘ GARY 被鎖(連對密碼也進不去);✔ 緊急路徑與機器帳號不受影響;管理員解鎖後恢復']] },
+  { n: 20, prove: 'Schema Registry 納入同一套授權:subject 與 KEK 的權限跟 AD 群組走;欄位級加密(CSFLE)需要加購授權,這個環境無法驗證加密', use: ['cli', 'broker', 'ad', 'certs'],
+    flows: [['無帳密 / 密碼錯', 'Schema Registry(交 MDS 驗證)', '✘ 401'], ['yujie 註冊 orders. / payments. 的 schema', 'SR → MDS 授權(subject role)', '✔ orders. 200 → ✘ payments. 403;列表只看到自己有權限的'], ['gary / yujie / ming 對 KEK', 'SR → MDS 授權(Kek:<名稱> role)', '✔ security 群組可建 → yujie 只能讀 → ✘ ming 無 role 403'], ['註冊帶 ENCRYPT 規則的 schema', 'Schema Registry 授權檢查', '✘ 402 需要企業版 + CSFLE 加購授權(加密與解密未驗證)']] },
 ];
 
 const esc = s => s.replace(/&/g, '&amp;').replace(/</g, '&lt;');

@@ -4,6 +4,5 @@ $ kafka-console-consumer --topic confluent-audit-log-events  | mds.Authorize / A
   12×  User:GARY          mds.Authorize       ALLOWED  security-metadata
    9×  User:GARY          mds.Authorize       ALLOWED  orders.
    7×  User:bootstrap     mds.Authorize       ALLOWED  security-metadata
-   4×  User:bootstrap     mds.Authorize       ALLOWED  orders.events
    4×  User:bootstrap     mds.Authorize       ALLOWED  payments.
    1×  User:YUJIE         mds.Authorize       DENIED   payments.

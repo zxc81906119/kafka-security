@@ -1,0 +1,4 @@
+# 【CSFLE】註冊帶 ENCRYPT 規則的 schema:試用授權回 402「Both enterprise and add-on CSFLE licenses are required」——欄位級加密需要加購授權,這個環境無法驗證加密與解密
+$ POST /subjects/orders.events-value/versions   # body 帶 ruleSet(ENCRYPT)
+{"error_code":40201,"message":"Both enterprise and add-on CSFLE licenses are required."}
+[HTTP 402]

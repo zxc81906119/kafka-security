@@ -1,7 +1,5 @@
 # 【被允許的事件】誰實際寫入/讀取了 orders.events
 $ kafka-console-consumer --topic confluent-audit-log-events  | granted=true 彙總
- 314×  User:svc-quota     kafka.Produce       ALLOWED  orders.events
-  26×  User:svc-reauth    kafka.Produce       ALLOWED  orders.events
    5×  User:YUJIE         kafka.Produce       ALLOWED  orders.events
    3×  User:svc-orders    kafka.Produce       ALLOWED  orders.events
    2×  User:shared-ops    kafka.Produce       ALLOWED  orders.events

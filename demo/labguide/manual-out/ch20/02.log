@@ -1,0 +1,6 @@
+{"error_code":401,"message":"Unauthorized"}
+[HTTP 401]
+{"error_code":401,"message":"Unauthorized"}
+[HTTP 401]
+["payments.events-value","orders.events-value"]
+[HTTP 200]

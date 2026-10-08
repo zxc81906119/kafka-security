@@ -189,6 +189,31 @@ gary 在 C3 指派 `orders-read` → DeveloperRead;LDAP 介面把 ming 從 devel
 
 **未解的問題(重要,待查)**:使用了一段時間、做過很多實驗的叢集,**重啟 broker 會失敗**:broker 啟動時 authorizer 的 client(`_confluent-metadata-coordinator`、cluster-link admin、telemetry producer)連自己的 INTERNAL listener(`broker1:9092`),被自己拒絕 `invalid credentials with SASL mechanism SCRAM-SHA-512`,broker 以 fatal exit 結束,重試與清掉本機 metadata 都沒用。重現 3 次;全新叢集連續重啟 5 次都正常;逐項排除:SCRAM 帳號新增與刪除、user quota、max.connections.per.ip、AD 鎖定、role binding、consumer group 讀取、連著的帳號被刪憑證、metadata 快照存在、metadata 日誌膨脹到 11000 筆。**尚未找到觸發條件**。推測與「inter-broker listener 用存在 metadata 裡的 SCRAM 憑證,啟動時自我認證要等 metadata 載入」有關,**未驗證**。正式環境的含意:在客戶環境滾動重啟 broker 前要在測試環境確認;inter-broker 認證考慮改用不依賴 metadata 的方式(例如 mTLS),需另外驗證。
 
+## 第 20 章(進階)Schema Registry 與欄位級加密(CSFLE):同一套授權,與授權限制(`./demo.sh 20`)
+
+**範圍**:把 Schema Registry(SR)納入同一套身分與授權(MDS / AD 群組),並檢查欄位級加密(CSFLE)在這個環境能驗證到哪裡。2026-10-09 在 docker 實測。**結論先講**:SR 的 RBAC(subject、KEK)可以驗證;**CSFLE 的加密與解密不能驗證**——需要企業版加上 CSFLE 加購授權,試用授權註冊帶 ENCRYPT 規則的 schema 會回 `402 Both enterprise and add-on CSFLE licenses are required`。
+
+**元件**:profile `sr` 的一個容器 `schema-registry`(`confluentinc/cp-schema-registry:8.3.2`,約 1.5 GB 映像、768 MB 記憶體);對外 HTTPS:8081(主機埠 8085,因為 8081 被 phpLDAPadmin 用);`scripts/sr-setup.sh` 補授權並啟動。
+
+| 步驟 | 證明 | 設定 / 指令 |
+|---|---|---|
+| 認證 | 不帶帳密 401、密碼錯 401、AD 帳密 200;SR 不存帳號,Basic 交給 MDS 驗 | `InstallBearerOrBasicSecurityHandler`;`confluent.metadata.bootstrap.server.urls`、`public.key.path` |
+| SR 連 Kafka | 與 REST Proxy 同做法:client 憑證(CN=schema-registry)向 MDS 換 token,OAUTHBEARER | `TokenCertificateLoginCallbackHandler`;`client-schema-registry.keystore.p12`(`make-certs.sh` 產生,server 憑證 SAN 補 schema-registry) |
+| subject 授權 | gary(topic-admin)可註冊 payments.;yujie(orders-write)可註冊 orders.、註冊 payments. 403;yujie 列 subject 只看到 `["orders.events-value"]`;ming(無群組)看到 `[]` | `scripts/sr-setup.sh` 的 `srbind`:scope 要多 `schema-registry-cluster` |
+| KEK 授權 | gary(security 群組,ResourceOwner `Kek:*`)可建 orders-kek;yujie(DeveloperRead `Kek:orders-kek`)建別的 403、讀 200;ming 讀 403 | `dek.registry.rbac.enable=true`;資源名稱 `Kek:<名稱>` |
+| CSFLE | 註冊帶 ENCRYPT 規則的 schema → **402 需要企業版 + CSFLE 加購授權**;加密、解密、金鑰輪替**未驗證** | `RuleSetResourceExtension`(沒開時規則被默默丟掉) |
+
+**踩坑(逐一實測,都已處理在 compose 與 sr-setup.sh)**:
+1. 只開 HTTPS 時要 `SCHEMA_REGISTRY_INTER_INSTANCE_PROTOCOL=https`,否則啟動失敗(`No listener configured with requested scheme http`)。
+2. 啟動前檢查(cub)要 `CUB_CLASSPATH` 含 `/usr/share/java/confluent-security/schema-registry/*`,否則找不到 `TokenCertificateLoginCallbackHandler`。
+3. DEK Registry 要自己的 topic `_dek_registry_keys`,SR 身分要有 `_dek_registry` 開頭的 ResourceOwner,否則啟動失敗(`TopicAuthorizationException`)。
+4. 沒設 `dek.registry.rbac.enable=true` 時,KEK 端點對所有人 403(日誌:`Couldn't find a corresponding operation to authorize`)。
+5. SR 的身分要有 **SR 叢集範圍的 SecurityAdmin**(依官方文件)才能代使用者向 MDS 查授權;沒有時 KEK 端點回 500(日誌:`Authorization request for principal … is not permitted for requestor principal User:schema-registry`、broker 日誌 `Denied Operation = DescribeAccess on resource = Kek:…`)。曾試過把 `User:schema-registry` 加進 `impersonation.super.users`,**沒有用**,已還原。
+6. **靜默失敗(測試時觀察到,未納入自動腳本)**:SR 沒開 `RuleSetResourceExtension` 時,註冊帶 ruleSet 的 schema 不報錯,規則被丟掉(`GET /subjects/.../versions/latest` 沒有 ruleSet);producer 用 `use.latest.version=true` 或帶 `value.rule.set` 照常寫入,**卡號以明文落在 topic**,用一般 console consumer 讀原始位元組可見。上線前要用讀原始位元組的方式確認欄位是密文,不能只看 producer 沒報錯。
+7. 官方文件:KEK 的 RBAC 只管「誰能建、改、讀 KEK」;**解密能力由 KMS 控制,不是 RBAC**。文件列出的 KMS 型態是 AWS / Azure / GCP / HashiCorp Vault,另有 local-kms(僅供測試);地端沒有看到 CyberArk Conjur 等內建型態,需用自訂 KMS driver 或 Vault。
+
+**未驗證 / 要和客戶確認**:CSFLE 授權的商務與取得方式;地端 KMS(Vault 或自訂 driver)對接;機器(不在 AD)如何向 SR 認證(SR 的 REST 只認 AD 帳密或 MDS token);SR 的高可用與多執行個體(`schema.registry.group.id`);加密對效能與 schema 演進的影響。
+
 ## 對應到客戶 RHEL 9 VM 的位置與步驟(手動部署)
 | demo | RHEL 9 VM |
 |---|---|

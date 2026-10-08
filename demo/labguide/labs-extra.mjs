@@ -284,4 +284,46 @@ bash scripts/ad-lockout.sh status GARY`],
         ev: 'lockout-recover', re: /HTTP 200/, expect: '已解鎖;GARY 用對的密碼 [HTTP 200];鎖定已關閉;GARY 未鎖定。' },
     ],
   },
+  {
+    id: 'ch20', n: 20, title: '(進階)Schema Registry 與欄位級加密(CSFLE):同一套授權,與授權限制', time: '15 分',
+    goal: '前面的 Lab 管 Kafka 的 topic 與資料;這個 Lab 把 Schema Registry(schema 與資料合約)納入同一套身分與授權,並檢查欄位級加密(CSFLE)能不能在這個環境驗證。證明四件事:① Schema Registry 的 REST 要帳密,授權由 MDS 依 AD 群組判斷(不另外維護一套帳號);② subject 的權限跟群組走:orders-write 只能碰 orders. 開頭的 subject;③ 加密金鑰(KEK)的管理權限只給 security 群組,一般開發者只能讀、沒有 role 的人連讀都不行;④ 欄位級加密本身需要企業版加上 CSFLE 加購授權——試用授權註冊帶加密規則的 schema 會被拒(402),所以加密與解密在這個環境「沒有驗證」。',
+    pre: ['Lab 0 完成;Lab 3 的 AD 群組(orders-write 有 yujie,topic-admin、security 有 gary)。', 'Schema Registry 是 profile sr 的一個容器(約 768 MB 記憶體),本 Lab 第一步會啟動;它用 client 憑證(CN=schema-registry)向 MDS 換 token 連 Kafka,與 REST Proxy 同一種做法。SR 需要的授權(_schemas、_dek_registry 開頭的 topic、SR 叢集範圍的 SecurityAdmin 等)由 scripts/sr-setup.sh 一次補齊。'],
+    autoAll: ['./demo.sh 20', './scenarios/ch20-schema-registry.sh'],
+    steps: [
+      { t: '20.1 啟動 Schema Registry 並完成授權', why: '兩件事:讓 SR 自己能存取 Kafka(它的身分是憑證 CN=schema-registry,不是 AD 帳號),以及依 AD 群組給人授權。SR 在 compose 裡要開三個 resource extension:安全(RBAC)、DEK Registry(KEK / DEK 管理)、RuleSet(資料合約的規則)。少一個就會有不同的問題,見下面的警告。',
+        manual: ['bash scripts/sr-setup.sh'],
+        ev: 'sr-setup', re: /就緒/, expect: '授權逐項 [HTTP 204];Schema Registry Healthy;最後印「就緒(gary 可列 KEK)」。',
+        warn: '實測踩到的坑(都已在 compose 與 sr-setup.sh 處理):① 只開 HTTPS 時要設 inter.instance.protocol=https,否則啟動失敗;② 啟動前檢查要有 CUB_CLASSPATH(含 confluent-security 的 jar),否則找不到 TokenCertificateLoginCallbackHandler;③ DEK Registry 要自己的 topic(_dek_registry_keys),SR 的身分要有 _dek_registry 開頭的 ResourceOwner,否則啟動失敗;④ 要開 dek.registry.rbac.enable=true,否則 KEK 端點對所有人 403(日誌:Couldn\'t find a corresponding operation to authorize);⑤ SR 的身分要有 SR 叢集範圍的 SecurityAdmin 才能代使用者向 MDS 查授權,否則 KEK 端點回 500;⑥ 沒有開 RuleSet extension 時,註冊帶規則的 schema 會「默默丟掉規則、不報錯」(第 20.5 說明為什麼危險)。' },
+      { t: '20.2 認證:不帶帳密與密碼錯誤都被擋', why: 'Schema Registry 的 REST 和 MDS、REST Proxy 一樣:不帶帳密 401、密碼錯 401。帳密就是 AD 帳密(Basic),SR 把它交給 MDS 驗證,SR 自己不存任何帳號。',
+        manual: [R`hc https://schema-registry:8081/subjects
+hc -u gary:bad https://schema-registry:8081/subjects
+hc -u gary:gary-pw https://schema-registry:8081/subjects`],
+        ev: 'sr-auth', re: /HTTP 401\][\s\S]*HTTP 401\][\s\S]*HTTP 200\]/, expect: '不帶帳密 [HTTP 401];密碼錯 [HTTP 401];gary 正確 [HTTP 200]。' },
+      { t: '20.3 subject 授權:跟著 AD 群組走', why: 'topic-admin(gary)對所有 subject 是 ResourceOwner;orders-write(yujie)只對 orders. 開頭的 subject 有讀寫。所以 yujie 可以註冊 orders.events-value,註冊 payments.events-value 被拒;列出 subject 時,每個人只看到自己有權限的;沒有任何群組的 ming 什麼都看不到。',
+        manual: [R`J='Content-Type: application/vnd.schemaregistry.v1+json'
+ORDER_BODY='{"schemaType":"AVRO","schema":"{\"type\":\"record\",\"name\":\"Order\",\"namespace\":\"demo\",\"fields\":[{\"name\":\"id\",\"type\":\"string\"},{\"name\":\"amount\",\"type\":\"int\"},{\"name\":\"card_no\",\"type\":\"string\",\"confluent:tags\":[\"PII\"]}]}"}'
+hc -u gary:gary-pw -X POST -H "$J" -d "$ORDER_BODY" https://schema-registry:8081/subjects/payments.events-value/versions | tail -1
+hc -u yujie:yujie-pw -X POST -H "$J" -d "$ORDER_BODY" https://schema-registry:8081/subjects/orders.events-value/versions | tail -1
+hc -u yujie:yujie-pw -X POST -H "$J" -d "$ORDER_BODY" https://schema-registry:8081/subjects/payments.events-value/versions | tail -1
+echo "gary 列 subject:"; hc -u gary:gary-pw https://schema-registry:8081/subjects
+echo "yujie 列 subject:"; hc -u yujie:yujie-pw https://schema-registry:8081/subjects
+echo "ming 列 subject:"; hc -u ming:ming-pw https://schema-registry:8081/subjects`],
+        ev: 'sr-subject', re: /HTTP 403\][\s\S]*\["orders\.events-value"\]\n\[HTTP 200\]|判定:yujie 只能碰 orders/, expect: 'gary 註冊 payments 200;yujie 註冊 orders 200;yujie 註冊 payments [HTTP 403];gary 看到兩個 subject;yujie 只看到 ["orders.events-value"];ming 看到 []。',
+        tip: '這個 schema 的 card_no 欄位標了 PII(Avro 的 confluent:tags)。標籤本身不加密任何東西——它只是讓「規則」知道要加密哪些欄位。' },
+      { t: '20.4 KEK 授權:誰能建金鑰、誰能讀', why: 'KEK(key encryption key)是欄位加密的根。資源名稱是 Kek:<名稱>,授權也走 role:security 群組(gary)是 ResourceOwner,可以建;orders-write(yujie)只被授權讀 orders-kek,建別的 KEK 被拒;沒有任何 role 的 ming 連讀都被拒。這裡用 local-kms(Confluent 提供的「僅供測試」KMS 型態),正式環境要接 KMS / HSM。',
+        manual: [R`J='Content-Type: application/vnd.schemaregistry.v1+json'
+echo "gary 建立 orders-kek(200 = 新建,409 = 已存在):"; hc -u gary:gary-pw -X POST -H "$J" -d '{"name":"orders-kek","kmsType":"local-kms","kmsKeyId":"demo-local-key","shared":false,"doc":"CSFLE demo (local-kms)"}' https://schema-registry:8081/dek-registry/v1/keks | tail -1
+echo "yujie 建立 x-kek:"; hc -u yujie:yujie-pw -X POST -H "$J" -d '{"name":"x-kek","kmsType":"local-kms","kmsKeyId":"k","shared":false}' https://schema-registry:8081/dek-registry/v1/keks
+echo "yujie 讀 orders-kek:"; hc -u yujie:yujie-pw https://schema-registry:8081/dek-registry/v1/keks/orders-kek
+echo "ming 讀 orders-kek:"; hc -u ming:ming-pw https://schema-registry:8081/dek-registry/v1/keks/orders-kek`],
+        ev: 'sr-kek', re: /denied operation Register on Kek[\s\S]*"name":"orders-kek"[\s\S]*denied operation Read on Kek|判定:只有被授權的人能建或讀 KEK/, expect: 'yujie 建 x-kek:User is denied operation Register on Kek,403;yujie 讀 orders-kek:回 KEK 內容 200;ming 讀:User is denied operation Read on Kek,403。',
+        warn: '金鑰的「解密能力」不由 RBAC 控制:官方文件寫明,能不能解開 DEK 取決於 KMS(雲端 KMS 的 IAM、Vault 的 token 等),不是 Confluent 的 role。RBAC 只管「誰能建、改、讀 KEK 的中繼資料」。本機的 local-kms 把金鑰衍生自一個環境變數(LOCAL_SECRET),任何拿到這個值的 client 都能解密,所以只能拿來測試。' },
+      { t: '20.5 欄位級加密(CSFLE):授權限制,這個環境無法驗證加密與解密', why: '同一份 schema 加上 ENCRYPT 規則(PII 標籤的欄位用 orders-kek 加密)去註冊。官方文件的 CSFLE 屬於企業版再加購授權的功能。demo 用的是試用授權,註冊時被拒絕:402「Both enterprise and add-on CSFLE licenses are required」。',
+        manual: [R`J='Content-Type: application/vnd.schemaregistry.v1+json'
+ORDER_ENC_BODY='{"schemaType":"AVRO","schema":"{\"type\":\"record\",\"name\":\"Order\",\"namespace\":\"demo\",\"fields\":[{\"name\":\"id\",\"type\":\"string\"},{\"name\":\"amount\",\"type\":\"int\"},{\"name\":\"card_no\",\"type\":\"string\",\"confluent:tags\":[\"PII\"]}]}","ruleSet":{"domainRules":[{"name":"encryptPII","kind":"TRANSFORM","type":"ENCRYPT","mode":"WRITEREAD","tags":["PII"],"params":{"encrypt.kek.name":"orders-kek"},"onFailure":"ERROR,ERROR"}]}}'
+hc -u gary:gary-pw -X POST -H "$J" -d "$ORDER_ENC_BODY" https://schema-registry:8081/subjects/orders.events-value/versions`],
+        ev: 'sr-csfle', re: /add-on CSFLE licenses are required/, expect: '{"error_code":40201,"message":"Both enterprise and add-on CSFLE licenses are required."} [HTTP 402]。',
+        warn: '三個重點:① 沒有驗證:ENCRYPT 規則的實際加密、解密、金鑰輪替、效能,以及 KMS 對接(AWS / Azure / GCP / HashiCorp Vault 是官方支援的型態;沒有看到 CyberArk Conjur 或其他地端 KMS 的內建型態,地端要用自訂 KMS driver 或 Vault),都要在有授權的環境另外驗。② 要評估授權:企業版之外的加購授權,屬商務問題,不是技術設定。③ 危險的靜默失敗(測試時觀察到):如果 Schema Registry 沒有開 RuleSet extension,註冊帶規則的 schema 不會報錯,而是默默丟掉規則;之後 producer 照常寫入,卡號以明文落在 topic 裡(用一般 console consumer 讀原始位元組就看得到)。所以上線前一定要用「讀原始位元組」的方式確認欄位真的是密文,不能只看 producer 沒報錯。' },
+    ],
+  },
 ];

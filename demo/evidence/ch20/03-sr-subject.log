@@ -1,0 +1,9 @@
+# 【subject 授權】授權跟 AD 群組走:orders-write(yujie)只能寫 orders. 開頭的 subject;payments 的被拒;yujie 列 subject 只看得到自己有權限的
+$ POST /subjects/<subject>/versions   # gary(topic-admin)/ yujie(orders-write)
+gary 註冊 payments.events-value → [HTTP 200]
+yujie 註冊 orders.events-value → [HTTP 200]
+yujie 註冊 payments.events-value(新版本)→ [HTTP 403]
+gary 列 subject:["payments.events-value","orders.events-value"]
+yujie 列 subject:["orders.events-value"]
+ming(沒有群組)列 subject:[]
+判定:yujie 只能碰 orders. 開頭的 subject

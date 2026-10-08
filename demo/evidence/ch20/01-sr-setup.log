@@ -1,0 +1,6 @@
+# 【建置】啟動 Schema Registry(profile sr):SR 用 client 憑證(CN=schema-registry)向 MDS 換 token 連 Kafka,人用 AD 帳密;授權依 AD 群組
+$ scripts/sr-setup.sh   # 補 SR 自己的 role、SR 叢集範圍的群組 role,啟動並等授權生效
+[sr] 啟動 Schema Registry
+ Container schema-registry Healthy 
+[sr] 等待授權生效(SR 對 MDS 的授權快取)…
+[sr] 就緒(gary 可列 KEK)

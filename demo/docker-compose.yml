@@ -381,6 +381,7 @@ services:
     environment:
       SCHEMA_REGISTRY_HOST_NAME: schema-registry
       SCHEMA_REGISTRY_LISTENERS: https://0.0.0.0:8081
+      SCHEMA_REGISTRY_INTER_INSTANCE_PROTOCOL: https      # 只開 HTTPS 時必設,否則啟動失敗:No listener configured with requested scheme http
       # 對外 HTTPS:共用 server 憑證(SAN 含 schema-registry)
       SCHEMA_REGISTRY_SSL_KEYSTORE_LOCATION: /etc/kafka/secrets/server.keystore.p12
       SCHEMA_REGISTRY_SSL_KEYSTORE_TYPE: PKCS12
@@ -403,10 +404,11 @@ services:
       SCHEMA_REGISTRY_KAFKASTORE_SSL_TRUSTSTORE_TYPE: PKCS12
       SCHEMA_REGISTRY_KAFKASTORE_SSL_TRUSTSTORE_PASSWORD: changeit
       # RBAC:使用者以 Basic(AD 帳密)或 Bearer(MDS token)進來,授權交給 MDS
-      SCHEMA_REGISTRY_RESOURCE_EXTENSION_CLASS: io.confluent.kafka.schemaregistry.security.SchemaRegistrySecurityResourceExtension
+      SCHEMA_REGISTRY_RESOURCE_EXTENSION_CLASS: io.confluent.kafka.schemaregistry.security.SchemaRegistrySecurityResourceExtension,io.confluent.dekregistry.DekRegistryResourceExtension,io.confluent.kafka.schemaregistry.rulehandler.RuleSetResourceExtension   # DekRegistry = KEK / DEK 管理(沒加時 /dek-registry/v1/* 回 404);RuleSetResource = 資料合約的 ruleSet(沒加時註冊 schema 會默默丟掉 ruleSet,不報錯)。舊註解: 後者 = DEK Registry(欄位級加密的 KEK / DEK 管理);沒加時 /dek-registry/v1/* 回 404
       SCHEMA_REGISTRY_CONFLUENT_SCHEMA_REGISTRY_AUTHORIZER_CLASS: io.confluent.kafka.schemaregistry.security.authorizer.rbac.RbacAuthorizer
       SCHEMA_REGISTRY_REST_SERVLET_INITIALIZOR_CLASSES: io.confluent.common.security.jetty.initializer.InstallBearerOrBasicSecurityHandler
       SCHEMA_REGISTRY_CONFLUENT_SCHEMA_REGISTRY_AUTH_MECHANISM: JETTY_AUTH
+      SCHEMA_REGISTRY_DEK_REGISTRY_RBAC_ENABLE: "true"     # 沒設時 DEK Registry 的 KEK 端點對所有人 403(日誌:Couldn't find a corresponding operation to authorize);設了才依 Kek:<名稱> 的 role 授權
       SCHEMA_REGISTRY_PUBLIC_KEY_PATH: /etc/kafka/secrets/public.pem
       SCHEMA_REGISTRY_SCHEMA_REGISTRY_GROUP_ID: schema-registry
       SCHEMA_REGISTRY_CONFLUENT_METADATA_BOOTSTRAP_SERVER_URLS: https://broker1:8091,https://broker2:8092
@@ -418,6 +420,7 @@ services:
       SCHEMA_REGISTRY_CONFLUENT_METADATA_SSL_TRUSTSTORE_LOCATION: /etc/kafka/secrets/truststore.p12
       SCHEMA_REGISTRY_CONFLUENT_METADATA_SSL_TRUSTSTORE_TYPE: PKCS12
       SCHEMA_REGISTRY_CONFLUENT_METADATA_SSL_TRUSTSTORE_PASSWORD: changeit
+      CUB_CLASSPATH: '/usr/share/java/confluent-security/schema-registry/*:/usr/share/java/schema-registry/*:/usr/share/java/cp-base-new/*'
 
   # ---------------- Control Center (next-gen 2.x) + Prometheus + Alertmanager ----------------
   prometheus:

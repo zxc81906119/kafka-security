@@ -1,3 +1,3 @@
 # 【發 token】yujie 以 AD 帳密向 MDS 登入,拿到 token(JWT,效期 1 小時,尚未到期)
 $ curl -u yujie:*** https://broker1:8091/security/1.0/authenticate    # 取得 auth_token
-"sub":"YUJIE" "exp":1791480342 "iat":1791476742 
+"sub":"YUJIE" "exp":1791487671 "iat":1791484071 

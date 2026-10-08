@@ -46,7 +46,7 @@ export const ACTS = [
     scene: ['一週結束,主管要週報:這一週誰被拒絕、誰被允許、誰動過授權。Ming 不想憑記憶寫,他要從 audit log 把事實撈出來。'] },
   { id: 'week2', title: '第二週:現實的麻煩', when: '第二週', labs: [11, 12, 13, 14],
     scene: ['基本功過關了,但現實不會照教科書走:半夜要有人能建 topic、舊系統不會說 Kafka 的語言、稽核要盤點每條連線、還有一個你不知道的 REST 入口。'] },
-  { id: 'week3', title: '第三週:異動、日常維運、傳輸加密、CyberArk 與帳號被偷', when: '第三週', labs: [15, 16, 17, 18, 19],
+  { id: 'week3', title: '第三週:異動、日常維運、傳輸加密、CyberArk、帳號被偷與 Schema Registry', when: '第三週', labs: [15, 16, 17, 18, 19, 20],
     scene: ['人會調動、會離職;而日常維運不能每次都靠指令記憶。第三週,Ming 處理人員異動,並第一次用平台組自己做的維運選單(OP menu)值班。接著把「線上傳輸」補完整:連 AD 的線路、監控元件、使用者連 C3 的入口。最後,資安要求所有密碼不能再放在檔案裡——行裡的 CyberArk 登場。'] },
 ];
 
@@ -129,6 +129,11 @@ export const LAB_STORY = {
       '最後一項讓 Gary 沉默了一下:AD 的帳戶鎖定原則本來是保護,但攻擊者對 GARY 亂試六次,GARY 自己就被鎖在外面,連 C3 都進不去。Ming 示範了管理員解鎖,也指出:機器帳號與緊急路徑不經過 AD,不受影響,所以那條路要保留、要保護好。'],
     mission: ['讓被停用的帳號,舊連線在固定時間內失效。', '讓認證失敗暴增被看見(告警送到 Alertmanager)。', '限制單一來源與單一帳號能造成的影響,並理解 AD 鎖定的反向風險。'],
     recap: ['重新認證是第二道防線:停用帳號最慢在設定的間隔內失效;要立刻切斷仍是解除角色。', '告警看的是失敗次數的突增;telemetry 指標要明確列名並排除 delta 型態,否則整批被 Prometheus 拒收。', '限速(quota)與連線上限讓影響變慢、讓告警有時間處理,不是阻止。', 'AD 鎖定原則是雙面刃;緊急路徑(bootstrap 憑證)不經 AD,要保留並保護。'] },
+  20: { scene: ['開發團隊問:「我們的 schema 放哪?卡號欄位能不能加密?」Gary 看了 Schema Registry,第一個問題是:它也要納入同一套授權,不能變成另一個沒人管的入口。',
+      'Ming 把 Schema Registry 接上 MDS:不帶帳密 401;yujie 能註冊 orders. 的 schema,註冊 payments. 的被拒;加密金鑰(KEK)只有 security 群組能建,yujie 只能讀,ming 什麼 role 都沒有就連讀都不行。',
+      '輪到欄位加密時,他碰到牆:註冊帶加密規則的 schema 回 402,要企業版再加購 CSFLE 授權。他沒有假裝做完——把「沒驗證」和原因寫進報告,也記下一個危險的失敗模式:Schema Registry 若沒開規則 extension,規則會被默默丟掉,producer 不報錯,卡號卻以明文寫進 topic。'],
+    mission: ['讓 Schema Registry 用同一套 AD 群組授權。', '確認 KEK 的建立與讀取權限分開。', '確認欄位級加密在這個環境能不能驗證,並如實記下原因。'],
+    recap: ['Schema Registry 不另設帳號:認證交 MDS,授權看 subject 與 Kek:<名稱> 的 role。', 'KEK 的解密能力由 KMS 控制,不是 RBAC;local-kms 只能測試。', '欄位級加密需要企業版加 CSFLE 加購授權;這個環境沒有驗證加密與解密。', '上線前要用讀原始位元組的方式確認欄位是密文——規則被丟掉時不會有任何錯誤。'] },
 };
 
 export const EPILOGUE = {
@@ -138,6 +143,7 @@ export const EPILOGUE = {
   todo: [
     ['真實 AD', '巢狀群組、帳號大小寫(RBAC 區分大小寫)、群組異動的實際延遲;客戶 AD 的使用者名稱是 CN。'],
     ['部署環境', '以 docker demo 為準,不另外在真實 CP 節點(RPM、systemd)驗證;多 controller(demo 只有 1 個)與 SELinux 同樣不在驗證範圍。'],
+    ['Schema Registry 與欄位級加密(Lab 20)', '已做:SR 的 RBAC、subject 與 KEK 授權;未驗證:CSFLE 的加密與解密(需企業版加 CSFLE 加購授權)、地端 KMS 對接(文件列的型態是 AWS / Azure / GCP / Vault)、machine 身分如何向 SR 認證(SR 的 REST 只認 AD 帳密或 MDS token)。'],
     ['帳號被偷之後(Lab 19)', 'demo 已做:60 秒重新認證、認證失敗告警、TLS 套件限定、連線數上限、client quota、AD 鎖定雙面刃;未驗證:真實 AD 的鎖定原則與 F5 的登入速率限制、各元件(REST Proxy、C3)的 TLS 套件限定、重新認證間隔對大量 client 的負載。'],
     ['傳輸加密的剩餘題目', 'demo 已做 LDAPS、監控 HTTPS + Basic、C3 HTTPS(Lab 17);未驗證:真實 AD 的 LDAPS 憑證鏈(中繼 CA 要放進信任庫)、Alertmanager 的 mTLS、由 F5 終止 C3 的 TLS 時的行為。'],
     ['負載平衡器', '客戶使用 F5:legacy app 前面的 LB 必須是 L4 透傳;sticky session 與 F5 的 TLS session 行為待客戶確認。'],
