@@ -18,26 +18,26 @@
 /usr/local/bin/summon -p /usr/local/lib/summon/summon-conjur -f /conjur/secrets.yml /etc/confluent/docker/run
     PID    PPID COMMAND
       1       0 summon
-     22       1 java
+     21       1 java
 broker2 的 /etc/kafka/kafka.properties 裡 AD 查詢密碼那一行:
 ldap.java.naming.security.credentials=${securepass:/etc/kafka/secrets/security.properties:server.properties/ldap.java.naming.security.credentials}
 broker2 的環境裡有沒有明文密碼:0 處
 [HTTP 200]
+ Container conjur-server Running 
+ Container conjur-cli Running 
  Container conjur-db Running 
  Container conjur Running 
- Container conjur-cli Running 
- Container conjur-server Running 
  Container conjur-db Waiting 
  Container conjur-db Healthy 
  Container conjur-server Waiting 
  Container conjur-server Healthy 
- Container conjur-server Waiting 
+ Container conjur-cli Waiting 
  Container conjur-db Waiting 
  Container conjur Waiting 
- Container conjur-cli Waiting 
- Container conjur-cli Healthy 
- Container conjur Healthy 
+ Container conjur-server Waiting 
  Container conjur-db Healthy 
+ Container conjur Healthy 
+ Container conjur-cli Healthy 
  Container conjur-server Healthy 
 Loaded policy 'root'
  Container controller1 Running 
@@ -50,9 +50,9 @@ Loaded policy 'root'
  Container controller1 Healthy 
  Container broker2 Starting 
  Container broker2 Started 
- Container controller1 Waiting 
- Container broker2 Waiting 
  Container openldap Waiting 
+ Container broker2 Waiting 
+ Container controller1 Waiting 
  Container openldap Healthy 
  Container controller1 Healthy 
  Container broker2 Healthy

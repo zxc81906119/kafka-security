@@ -1,0 +1,4 @@
+# 【失效 ①】基準設定:CLIENT listener 的 SASL 連線每 60 秒重新認證一次(demo 值;正式環境建議 1 小時。預設 0 = 連著就永遠有效,第 18 章實驗的就是這個狀況)
+$ docker exec broker1 grep connections.max.reauth.ms /etc/kafka/kafka.properties
+listener.name.client.connections.max.reauth.ms=60000
+listener.name.client.connections.max.reauth.ms=60000

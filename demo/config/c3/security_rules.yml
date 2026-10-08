@@ -1,0 +1,12 @@
+# 第 19 章:安全事件告警(Prometheus 規則 → Alertmanager)。指標來自 broker 的 telemetry(docker-compose.yml 已把 socket.server 的認證/連線指標加進 metrics.include)。
+# 正式環境把門檻改成客戶的基準值;告警由 Alertmanager 轉到 SIEM / 值班群組。
+groups:
+- name: kafka-security
+  rules:
+  - alert: KafkaAuthFailuresBurst
+    expr: sum by (listener) (increase(io_confluent_kafka_server_socket_server_failed_authentication_total[5m])) > 3
+    for: 0m
+    labels: { severity: warning, kind: security }
+    annotations:
+      summary: "5 分鐘內 SASL 認證失敗超過 3 次(listener {{ $labels.listener }})"
+      description: "可能是密碼猜測、被偷的憑證在試探,或某個應用拿到舊密碼。查 audit log 看來源 IP 與帳號。"

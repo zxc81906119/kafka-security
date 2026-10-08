@@ -1,0 +1,7 @@
+# 【傳輸】TLS 只收 1.2 / 1.3 與 AEAD 套件:CBC + SHA-1 這類弱套件被拒(未設定前,broker 接受 ECDHE-RSA-AES128-SHA)
+$ openssl s_client -connect broker1:9094 -tls1_2 -cipher <套件>
+TLS1.2 AES256-GCM → 接受(ECDHE-RSA-AES256-GCM-SHA384)
+TLS1.2 AES128-CBC-SHA1 → 拒絕
+TLS1.2 RSA 金鑰交換 CBC → 拒絕
+TLS1.3 → 接受(TLS_AES_256_GCM_SHA384)
+判定:只收 AEAD 套件,CBC + SHA-1 被拒

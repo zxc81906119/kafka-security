@@ -51,6 +51,8 @@ export const MAPS = [
     flows: [['broker → AD', 'LDAPS 636(信任 CA 才連得上)', '✔;389 上沒有 broker 的連線'], ['Prometheus / Alertmanager', '無帳密 / 錯密碼 / 明文 HTTP', '✘ 401 / 401 / 400;帶帳密 ✔ 200'], ['使用者 → C3 9022', '憑證驗證', '✔;不信任 CA → curl 錯誤 60']] },
   { n: 18, prove: '秘密不落地:應用、OP menu、broker 都以機器身分向 CyberArk(Conjur)取密碼;沒被授權的拿不到;輪替後應用自己跟上', use: ['conjur', 'cli', 'broker', 'opmenu', 'am', 'ad'],
     flows: [['svc-orders(API key → token)', 'Conjur 取 SCRAM 密碼 → 記憶體組設定 → 寫入 orders.events', '✔ 200;寫入成功'], ['rogue-app / 錯誤 API key', 'Conjur', '✘ 404 / 401'], ['輪替:改密碼,或新舊並行(建 v2 → 隔離舊帳號 → 看 audit → 才刪)', '應用重啟自動跟上 / 舊帳號', '✔ 零中斷 / ✘ 解除角色後被拒'], ['實驗:停用舊帳號時已連著的舊連線', '只刪 SCRAM 憑證 / 先解除角色', '✔ 只刪憑證擋不住 / ✘ 解除角色才切斷'], ['OP menu、broker2', '帳密與主金鑰執行時向 Conjur 取(自寫腳本或官方 summon)', '✔ 維護模式開關;設定檔只剩密文仍能查 AD']] },
+  { n: 19, prove: '帳號被偷之後:停用的帳號舊連線會失效、認證失敗會告警、流量與連線數有上限;AD 鎖定是雙面刃', use: ['cli', 'broker', 'prom', 'am', 'ad'],
+    flows: [['停用「連著的」帳號(只刪 SCRAM 憑證)', 'broker 每 60 秒重新認證', '✔ 約 60 秒內舊連線被切斷(第 18 章預設是切不斷)'], ['連續 5 次錯誤登入', 'broker → Prometheus 規則 → Alertmanager', '✔ KafkaAuthFailuresBurst firing,告警送達'], ['弱 TLS 套件 / 同來源 4 條連線 / 超額流量', 'broker(套件限定、連線上限、quota)', '✘ 弱套件被拒、超額連線被拒、吞吐量 1/16'], ['對 GARY 亂試 6 次', 'MDS / Kafka → AD(鎖定原則)', '✘ GARY 被鎖(連對密碼也進不去);✔ 緊急路徑與機器帳號不受影響;管理員解鎖後恢復']] },
 ];
 
 const esc = s => s.replace(/&/g, '&amp;').replace(/</g, '&lt;');

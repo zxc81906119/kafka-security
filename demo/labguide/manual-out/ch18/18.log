@@ -15,29 +15,29 @@
 ]
 [secret-protection] 主金鑰已存入 Conjur(kafka/broker/master-key),不在任何檔案裡
 [secret-protection] certs/security.properties(加密後的密碼):
-server.properties/ldap.java.naming.security.credentials = ENC[AES/GCM/NoPadding,data:rP4p2htL2hVtrEREg6Q2NMf5g
-_metadata.master_key.0.salt = ZvUaLN39P8RZWoUNIs74iXc7tZBMXGLINX8f00RTZnA=
-_metadata.symmetric_key.0.created_at = 2026-10-08 13:00:09.994483402 +0000 UTC m=+0.123182015
+server.properties/ldap.java.naming.security.credentials = ENC[AES/GCM/NoPadding,data:UHTsUkKNBrAovvKfNFm/RIp8y
+_metadata.master_key.0.salt = +FVoAAlSQzpWZxssYOxuPY0BiS4ou9mCVN3pnW+57bE=
+_metadata.symmetric_key.0.created_at = 2026-10-08 17:05:34.66122488 +0000 UTC m=+0.100007132
 _metadata.symmetric_key.0.envvar = CONFLUENT_SECURITY_MASTER_KEY
 _metadata.symmetric_key.0.length = 32
 _metadata.symmetric_key.0.iterations = 10000
-_metadata.symmetric_key.0.salt = OLsHuIMYKtlf3peNB1tw0UTueH9no0VqdyIN/hx11d0=
-_metadata.symmetric_key.0.enc = ENC[AES/GCM/NoPadding,data:rtzHq7XQHQqMogaTggy5TKTMmIRcvKf7ihXpCxM504gsvUFb3LA
-server.properties/ldap.java.naming.security.credentials = ENC[AES/GCM/NoPadding,data:rP4p2htL2hVtrEREg6Q2NMf5g
- Container conjur Running 
- Container conjur-db Running 
- Container conjur-server Running 
+_metadata.symmetric_key.0.salt = 0gi+XjlxHyjFd9lohDMyjyZwjmA83Cvu0Gc+tJx98xY=
+_metadata.symmetric_key.0.enc = ENC[AES/GCM/NoPadding,data:7n0kTQ2zQqq5rqGA5YqVk6K+zzxSGoILRU6y1e5GpJGhV48tC94
+server.properties/ldap.java.naming.security.credentials = ENC[AES/GCM/NoPadding,data:UHTsUkKNBrAovvKfNFm/RIp8y
  Container conjur-cli Running 
+ Container conjur Running 
+ Container conjur-server Running 
+ Container conjur-db Running 
  Container conjur-db Waiting 
  Container conjur-db Healthy 
  Container conjur-server Waiting 
  Container conjur-server Healthy 
  Container conjur Waiting 
- Container conjur-db Waiting 
  Container conjur-server Waiting 
+ Container conjur-db Waiting 
  Container conjur-cli Waiting 
- Container conjur Healthy 
  Container conjur-server Healthy 
+ Container conjur Healthy 
  Container conjur-cli Healthy 
  Container conjur-db Healthy 
 Loaded policy 'root'

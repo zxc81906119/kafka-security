@@ -1,0 +1,5 @@
+# 【發現】連續認證失敗 → Prometheus 規則 KafkaAuthFailuresBurst 觸發 → 送到 Alertmanager(5 次錯誤登入:SCRAM 3 次、PLAIN 2 次)
+$ PromQL: sum by (listener)(increase(io_confluent_kafka_server_socket_server_failed_authentication_total[5m])) > 3
+已製造 5 次認證失敗,等待規則評估(每 60 秒一次,指標每 60 秒送一次)…
+Prometheus:"alertname":"KafkaAuthFailuresBurst" "listener":"CLIENT" "state":"firing" 
+Alertmanager:"summary":"5 分鐘內 SASL 認證失敗超過 3 次(listener CLIENT)"

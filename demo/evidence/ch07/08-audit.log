@@ -1,7 +1,5 @@
 # 【稽核】audit log:服務的行為也看得到(principal = User:svc-orders)
 $ kafka-console-consumer --topic confluent-audit-log-events | 整理
-10:08:14  User:svc-orders    kafka.Produce       ALLOWED  orders.events
-10:08:27  User:svc-orders    kafka.Produce       ALLOWED  orders.events
-10:20:30  User:svc-orders    kafka.Metadata      DENIED   orders.events
-10:21:01  User:svc-orders    kafka.Produce       ALLOWED  orders.events
-10:21:05  User:svc-orders    kafka.Metadata      DENIED   payments.events
+16:43:11  User:svc-orders    kafka.Metadata      DENIED   orders.events
+16:43:50  User:svc-orders    kafka.Produce       ALLOWED  orders.events
+16:43:53  User:svc-orders    kafka.Metadata      DENIED   payments.events

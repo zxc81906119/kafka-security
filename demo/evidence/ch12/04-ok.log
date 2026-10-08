@@ -1,4 +1,4 @@
 # 【授權後】legacy app 用憑證寫入 orders.events 成功(200)
 $ curl --cert client-legacy-orders.pem ... -X POST https://restproxy:8086/topics/orders.events
-{"offsets":[{"partition":0,"offset":20,"error_code":null,"error":null}],"key_schema_id":null,"value_schema_id":null}
+{"offsets":[{"partition":0,"offset":5041,"error_code":null,"error":null}],"key_schema_id":null,"value_schema_id":null}
 [HTTP 200]

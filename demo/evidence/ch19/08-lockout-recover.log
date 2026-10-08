@@ -1,0 +1,6 @@
+# 【鎖定 ②】恢復:管理員解鎖(對應 AD 的「解除鎖定帳戶」)→ GARY 立刻可登入;另一種是等鎖定時間(這裡 60 秒)過去自動解除。做完關閉鎖定,回到其他章節的狀態
+$ scripts/ad-lockout.sh unlock GARY;  scripts/ad-lockout.sh off
+[ad-lockout] 已解鎖 GARY(清除 pwdAccountLockedTime / pwdFailureTime)
+GARY 用對的密碼 → [HTTP 200]
+[ad-lockout] 已關閉
+GARY:未鎖定;最近失敗 0 次

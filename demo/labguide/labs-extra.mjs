@@ -227,4 +227,61 @@ hc -o /dev/null -u gary:gary-pw https://broker2:8092/security/1.0/authenticate`]
         ev: 'audit', re: /rogue-app tried to fetch/, expect: 'svc-orders fetched …password;opmenu fetched …alertmanager-auth;broker fetched …master-key;rogue-app tried to fetch …: Forbidden。' },
     ],
   },
+  {
+    id: 'ch19', n: 19, title: '(進階)帳號被偷之後:失效、告警、限速、限連線、鎖定', time: '20 分',
+    goal: '第 18 章發現「只刪 SCRAM 憑證,已連著的舊連線不會斷」。這個 Lab 假設一個帳號已經被偷,逐項證明平台怎麼讓它撐不久、灌不大、被發現、而且不會連累管理員:① SASL 重新認證讓被停用的帳號在固定時間內被切斷;② 認證失敗暴增會觸發告警並送到 Alertmanager;③ TLS 只收 1.2/1.3 與 AEAD 套件;④ 單一來源的連線數上限;⑤ client quota 限制吞吐量;⑥ AD 的帳戶鎖定原則是雙面刃(攻擊者可以故意把管理員鎖住),以及緊急路徑不受影響。',
+    pre: ['Lab 0 完成(含 Control Center 與 Prometheus / Alertmanager:docker compose --profile c3 …)。', '重新認證間隔(60 秒)、TLS 套件限定、telemetry 的認證失敗指標、Prometheus 規則 config/c3/security_rules.yml、AD 的密碼政策(ppolicy)都已經在 compose 與 config 裡(demo 已套用);鎖定預設關閉,第 19.7 才打開、19.8 關回去。'],
+    autoAll: ['./demo.sh 19', './scenarios/ch19-stolen-account.sh'],
+    steps: [
+      { t: '19.1 失效 ①:基準設定——SASL 連線每 60 秒重新認證一次', why: '預設 connections.max.reauth.ms = 0,代表連線建立後就永遠有效(第 18 章實驗看到的)。設成非 0 之後,broker 會要求 client 定期重新認證;帳號被停用,下一次重新認證就失敗、連線被切斷。demo 設 60 秒讓實驗看得到效果;正式環境建議 1 小時,依 client 數量與 SCRAM 驗證負載評估。',
+        manual: [R`docker exec broker1 grep connections.max.reauth.ms /etc/kafka/kafka.properties
+docker exec broker2 grep connections.max.reauth.ms /etc/kafka/kafka.properties`],
+        ev: 'reauth-baseline', re: /reauth\.ms=60000[\s\S]*reauth\.ms=60000/, expect: '兩台 broker 都是 listener.name.client.connections.max.reauth.ms=60000。',
+        warn: '這個設定不能動態改:kafka-configs 對 connections.max.reauth.ms 回 Cannot update these configs dynamically;per-listener 的寫法(listener.name.client.…)會被接受,但實測對連線不生效。要改只能改 compose / server.properties 再滾動重啟 broker。' },
+      { t: '19.2 失效 ②:停用一個「連著的」帳號,舊連線還能寫幾筆?', why: '對照第 18 章:當時只刪 SCRAM 憑證,舊連線 14 筆全寫入。現在同樣的動作(角色保留、只刪憑證),在下一次重新認證時失敗,連線被切斷。腳本用臨時帳號 svc-reauth,每 2 秒寫 1 筆、共 45 筆,第 10 秒刪它的憑證。',
+        manual: ['bash scripts/reauth-test.sh run'],
+        ev: 'reauth-run', re: /判定:60 秒內舊連線被切斷/, expect: '寫進 topic 的筆數少於 45;producer 的第一個錯誤是 Authentication failed during re-authentication;判定:60 秒內舊連線被切斷。',
+        warn: '重新認證只擋「憑證」。這是第二道防線:要立刻切斷,仍然是解除角色(第 18 章的隔離流程);重新認證確保即使忘了,最慢也在設定的間隔內失效。' },
+      { t: '19.3 發現:連續認證失敗 → 告警送到 Alertmanager', why: 'broker 的 telemetry 會送 failed_authentication_total 到 Prometheus(docker-compose.yml 的 metrics.include 已加這個指標)。規則 KafkaAuthFailuresBurst:5 分鐘內失敗超過 3 次就觸發。這裡故意製造 5 次錯誤登入(SCRAM 錯誤密碼 3 次、PLAIN 錯誤密碼 2 次),等規則評估(每 60 秒一次)。',
+        manual: [R`for i in 1 2 3; do kc kafka-topics --bootstrap-server $BOOT --command-config /clients/scram-svc-orders-wrong.properties --list >/dev/null 2>&1; done
+for i in 1 2; do kc kafka-topics --bootstrap-server $BOOT --command-config /clients/plain-yujie-wrong.properties --list >/dev/null 2>&1; done
+for i in $(seq 1 24); do r=$(hc -u c3:prom-pw https://prometheus:9090/api/v1/alerts | head -1); echo "$r" | grep -q KafkaAuthFailuresBurst && break; sleep 15; done
+echo "Prometheus: $(echo "$r" | grep -o '"alertname":"KafkaAuthFailuresBurst"\|"state":"[a-z]*"\|"listener":"[A-Z]*"' | tr '\n' ' ')"
+sleep 20
+echo "Alertmanager: $(hc -u c3:am-pw https://alertmanager:9093/api/v2/alerts | head -1 | grep -o '"summary":"[^"]*"' | head -1)"`],
+        ev: 'alert', re: /"state":"firing"/, expect: 'Prometheus:KafkaAuthFailuresBurst、listener CLIENT、state firing;Alertmanager:摘要「5 分鐘內 SASL 認證失敗超過 3 次(listener CLIENT)」。需要 2 到 4 分鐘。',
+        warn: '重點是「失敗次數的突增」而不是單次失敗:應用拿到舊密碼、攻擊者猜密碼,都會讓這個指標上升。正式環境把門檻改成客戶的基準值,並把告警轉到 SIEM 或值班群組。telemetry 的 metrics.include 每個名稱後面要加 (?!.*delta).*,同名的 delta 型態 Prometheus 不收,整批會被拒(連原本的監控指標也跟著丟)——實測踩過。' },
+      { t: '19.4 傳輸:TLS 只收 1.2 / 1.3 與 AEAD 套件', why: '未設定前,broker 的 CLIENT listener 接受 ECDHE-RSA-AES128-SHA(CBC + SHA-1)這類弱套件。現在 ssl.enabled.protocols=TLSv1.3,TLSv1.2、ssl.cipher.suites 只列 GCM / ChaCha20。用 openssl 指定套件逐一嘗試。',
+        manual: [R`for c in ECDHE-RSA-AES256-GCM-SHA384 ECDHE-RSA-AES128-SHA AES128-SHA; do echo "--- $c"; docker run --rm --network $NET --entrypoint sh alpine/openssl -c "echo | openssl s_client -connect broker1:9094 -tls1_2 -cipher $c 2>&1 | grep -E 'Cipher is|alert handshake' | head -1 | cut -c1-110"; done
+echo "--- TLS 1.3"; docker run --rm --network $NET --entrypoint sh alpine/openssl -c "echo | openssl s_client -connect broker1:9094 -tls1_3 2>&1 | grep 'Cipher is' | head -1"`],
+        ev: 'tls', re: /AES256-GCM-SHA384[\s\S]*(AES128-SHA\n[^\n]*alert handshake failure|AES128-CBC-SHA1 → 拒絕)/, expect: 'AES256-GCM 成功(Cipher is ECDHE-RSA-AES256-GCM-SHA384);AES128-SHA(CBC)與 RSA 金鑰交換被拒(alert handshake failure);TLS 1.3 成功。',
+        warn: '這只設在 Kafka listener(9094 / 9092)。MDS(Jetty,8091)本來就拒絕 CBC 套件(實測);其他元件(REST Proxy、C3、Prometheus)的套件限定要各自設定,這裡沒有做。' },
+      { t: '19.5 限連線:單一來源 IP 最多 2 條', why: '被偷的憑證可能被大量並行連線拿來耗盡 broker 的連線數。max.connections.per.ip 可以動態設定(不必重啟),超過的連線被 broker 直接拒絕。這裡設 2,從同一個來源開 4 條,看 broker 日誌,做完移除。',
+        manual: [R`kc kafka-configs --bootstrap-server $BOOT --command-config /clients/token-bootstrap.properties --entity-type brokers --entity-default --alter --add-config max.connections.per.ip=2
+sleep 3
+docker run --rm --network $NET --entrypoint sh alpine/openssl -c 'for i in 1 2 3 4; do (openssl s_client -connect broker1:9094 -quiet </dev/null >/dev/null 2>&1 &); sleep 0.7; done; sleep 3'
+echo "broker1 日誌:被拒絕的連線 $(docker logs broker1 --since 1m 2>&1 | grep -c 'Rejected connection.*maximum of 2') 條"
+kc kafka-configs --bootstrap-server $BOOT --command-config /clients/token-bootstrap.properties --entity-type brokers --entity-default --alter --delete-config max.connections.per.ip`],
+        ev: 'connlimit', re: /被拒絕的連線 [1-9]/, expect: '第三、四條連線被拒絕(日誌:Rejected connection … address already has the configured maximum of 2.0 connections);最後移除設定。',
+        warn: 'kafka-configs 的 --entity-type ips 只接受連線速率配額(connection_creation_rate),不接受 max.connections.per.ip;後者要設在 brokers 層級。正式環境要注意:同一台跳板機、同一個 NAT 後面的所有 client 會共用一個來源 IP,上限不能設得太小。' },
+      { t: '19.6 限速:client quota', why: '帳號被偷後,攻擊者能灌多少流量?producer_byte_rate 是以使用者(principal)為單位的上限。腳本用臨時帳號 svc-quota,同一個動作(寫 2500 筆 × 1 KB)先不限速、再套用 100 KB/s 比較吞吐量,做完移除配額、帳號與角色。',
+        manual: ['bash scripts/quota-test.sh'],
+        ev: 'quota', re: /判定:限速後吞吐量降為原來的 1\//, expect: '不限速約 2000 到 3000 筆/秒;限速後約 160 筆/秒(約 100 KB/s);判定:限速後吞吐量降為原來的 1/N。',
+        warn: '配額是以「時間窗」計算,寫入量太小(例如幾百筆)會在窗內用完而看不出效果——實測 400 筆沒被限速,2500 筆才明顯。限速是讓影響變慢、讓告警有時間處理,不是阻止寫入;要阻止仍然是解除角色。' },
+      { t: '19.7 鎖定 ①:AD 的帳戶鎖定原則是雙面刃', why: '多數 AD 都有「連續 N 次登入失敗就鎖定」。對一般使用者是好事,但攻擊者可以故意對 GARY 亂試密碼,把管理員鎖在外面(用鎖定當作阻斷服務)。demo 用 OpenLDAP 的 ppolicy 模擬(連續 5 次失敗鎖 60 秒)。同一個 AD 帳號被鎖,MDS、C3、Kafka 的 PLAIN 登入全部失敗;但機器帳號(SCRAM)與緊急路徑(bootstrap 憑證)不經過 AD,不受影響。',
+        manual: [R`bash scripts/ad-lockout.sh on
+for i in 1 2 3 4 5 6; do hc -o /dev/null -u gary:bad-$i $MDS/security/1.0/authenticate | tail -1; done
+echo "GARY 用對的密碼:"; hc -o /dev/null -u gary:gary-pw $MDS/security/1.0/authenticate | tail -1
+bash scripts/ad-lockout.sh status GARY
+echo "緊急路徑(bootstrap 憑證)列 topic:"; kc kafka-topics --bootstrap-server $BOOT --command-config /clients/token-bootstrap.properties --list 2>&1 | grep -v "^WARNING\|SLF4J" | head -2`],
+        ev: 'lockout-dos', re: /GARY:已鎖定/, expect: '6 次錯誤都是 401;用對的密碼也是 401;狀態:GARY 已鎖定,約 60 秒後自動解除;bootstrap 憑證仍能列出 topic。',
+        warn: '設計含意:(1) 高權限 AD 帳號最容易被當成鎖定攻擊的目標,要和客戶確認 AD 的鎖定原則(次數、時間、是否由管理員解鎖);(2) 緊急路徑(bootstrap 憑證)要保留,而且要保護好;(3) 在 MDS 前面的 F5 限制每個來源的登入速率,才能不讓攻擊者輕易觸發鎖定。' },
+      { t: '19.8 鎖定 ②:解鎖與恢復', why: '兩種恢復方式:管理員解鎖(對應 AD 的「解除鎖定帳戶」),或等鎖定時間過去自動解除。這裡用管理員解鎖,GARY 馬上恢復;最後把鎖定關回去,其他 Lab 不受影響。',
+        manual: [R`bash scripts/ad-lockout.sh unlock GARY
+echo "GARY 用對的密碼:"; hc -o /dev/null -u gary:gary-pw $MDS/security/1.0/authenticate | tail -1
+bash scripts/ad-lockout.sh off
+bash scripts/ad-lockout.sh status GARY`],
+        ev: 'lockout-recover', re: /HTTP 200/, expect: '已解鎖;GARY 用對的密碼 [HTTP 200];鎖定已關閉;GARY 未鎖定。' },
+    ],
+  },
 ];

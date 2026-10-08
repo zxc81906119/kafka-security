@@ -2,4 +2,4 @@
 $ (瀏覽器)phpLDAPadmin:rbac-admin 移除 ming
   📸 ch11/ldap-revoke-ming-rbac-admin-before.png — LDAP(模擬 AD)群組 rbac-admin:移除 ming 之前
   📸 ch11/ldap-revoke-ming-rbac-admin-after.png — LDAP(模擬 AD)群組 rbac-admin:移除 ming 之後
-[18:29:01] AD 群組異動完成
+[23:08:18] AD 群組異動完成

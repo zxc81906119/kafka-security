@@ -28,8 +28,8 @@
  Container conjur-server Waiting 
  Container conjur-cli Waiting 
  Container conjur-db Waiting 
- Container conjur-server Healthy 
- Container conjur Healthy 
- Container conjur-db Healthy 
  Container conjur-cli Healthy 
+ Container conjur Healthy 
+ Container conjur-server Healthy 
+ Container conjur-db Healthy 
 Loaded policy 'root'

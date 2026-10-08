@@ -1,0 +1,8 @@
+--- ECDHE-RSA-AES256-GCM-SHA384
+New, TLSv1.2, Cipher is ECDHE-RSA-AES256-GCM-SHA384
+--- ECDHE-RSA-AES128-SHA
+288BC86B25730000:error:0A000410:SSL routines:ssl3_read_bytes:ssl/tls alert handshake failure:ssl/record/rec_la
+--- AES128-SHA
+28DBE555A4790000:error:0A000410:SSL routines:ssl3_read_bytes:ssl/tls alert handshake failure:ssl/record/rec_la
+--- TLS 1.3
+New, TLSv1.3, Cipher is TLS_AES_256_GCM_SHA384

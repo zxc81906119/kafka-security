@@ -1,0 +1,2 @@
+Prometheus: "alertname":"KafkaAuthFailuresBurst" "listener":"CLIENT" "state":"firing" 
+Alertmanager: "summary":"5 分鐘內 SASL 認證失敗超過 3 次(listener CLIENT)"

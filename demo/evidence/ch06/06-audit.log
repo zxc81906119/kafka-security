@@ -1,9 +1,9 @@
 # 【稽核:誰做了什麼】orders.events 的 audit log(最近事件)
 $ kafka-console-consumer --topic confluent-audit-log-events | 整理
-10:19:08  User:YUJIE         kafka.Produce       ALLOWED  orders.events
-10:19:24  User:YUJIE         kafka.Produce       ALLOWED  orders.events
-10:19:24  User:MING          kafka.Produce       DENIED   orders.events
-10:19:33  User:YUJIE         kafka.Produce       ALLOWED  orders.events
-10:19:36  User:MING          kafka.Produce       DENIED   orders.events
-10:19:49  User:shared-ops    kafka.Produce       ALLOWED  orders.events
-10:19:52  User:shared-ops    kafka.Produce       ALLOWED  orders.events
+14:58:48  User:YUJIE         kafka.Produce       ALLOWED  orders.events
+14:59:05  User:YUJIE         kafka.Produce       ALLOWED  orders.events
+14:59:05  User:MING          kafka.Produce       DENIED   orders.events
+14:59:13  User:YUJIE         kafka.Produce       ALLOWED  orders.events
+14:59:16  User:MING          kafka.Produce       DENIED   orders.events
+14:59:29  User:shared-ops    kafka.Produce       ALLOWED  orders.events
+14:59:32  User:shared-ops    kafka.Produce       ALLOWED  orders.events

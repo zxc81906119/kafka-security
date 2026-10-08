@@ -2,7 +2,7 @@
   "collection": {
     "item": [
       {
-        "id": "aa91e1d5-c3a1-4875-9f7a-26d1ca30a8cb",
+        "id": "9d652d43-bcee-4ee5-8d8c-48242ad40b39",
         "name": "1 沒有身分進不來",
         "description": {
           "content": "建立「預設全拒絕」的基準",
@@ -10,7 +10,7 @@
         },
         "item": [
           {
-            "id": "d61a181e-f2b3-4d3e-b254-d3455a595311",
+            "id": "8002a5f5-a880-4d41-a0d4-d3f973a0d8be",
             "name": "1.1 未帶帳密 → 401",
             "request": {
               "description": {
@@ -44,18 +44,18 @@
               {
                 "listen": "test",
                 "script": {
-                  "id": "93bbd7f2-ac26-495e-9949-cdba7b78a834",
+                  "id": "771708ad-2581-4dfb-a57f-c55c1a2250d5",
                   "type": "text/javascript",
                   "exec": [
                     "pm.test(\"未帶帳密應回 401\", function () { pm.response.to.have.status(401); });"
                   ],
-                  "_lastExecutionId": "ba713d40-501e-4ab6-9d8d-688e589f851e"
+                  "_lastExecutionId": "ff6df945-9d45-463f-bb3f-417e2cc5878a"
                 }
               }
             ]
           },
           {
-            "id": "4627a576-216f-4a3c-bd17-b8d0956f3429",
+            "id": "84b38be5-13db-4c7a-a1b9-5a13243313f9",
             "name": "1.2 密碼錯誤 → 401",
             "request": {
               "description": {
@@ -100,12 +100,12 @@
               {
                 "listen": "test",
                 "script": {
-                  "id": "d425d94a-517a-4950-a057-fb327f1106c8",
+                  "id": "4276e042-6403-4ce3-ab79-53240c501e06",
                   "type": "text/javascript",
                   "exec": [
                     "pm.test(\"密碼錯誤應回 401\", function () { pm.response.to.have.status(401); });"
                   ],
-                  "_lastExecutionId": "148554d2-7b15-4df8-bf7e-c4ef22b7279c"
+                  "_lastExecutionId": "151e69f7-b1b9-4e04-8a05-3460aa62f427"
                 }
               }
             ]
@@ -114,7 +114,7 @@
         "event": []
       },
       {
-        "id": "08b3d502-7a0d-48f0-b62c-208c8f0c3332",
+        "id": "6b663e81-5c2a-42f4-a463-b3e502ef8a52",
         "name": "5 人:同一份 AD 身分用在工具上",
         "description": {
           "content": "同一組 AD 帳密,Postman 與 C3 是同一個身分;授權由 AD 群組對應的 role 決定",
@@ -122,7 +122,7 @@
         },
         "item": [
           {
-            "id": "99eee605-18d2-432c-937a-3ded540f82cb",
+            "id": "7604dd36-568a-4054-b1bb-04fc00b0f4c2",
             "name": "5.1 gary(組長)列出 topics → 200",
             "request": {
               "description": {
@@ -167,19 +167,19 @@
               {
                 "listen": "test",
                 "script": {
-                  "id": "5fb7b016-be30-4a1a-a6c8-49ccd08bdbf8",
+                  "id": "742f6910-a94e-4fb7-b37f-76240524d52c",
                   "type": "text/javascript",
                   "exec": [
                     "pm.test(\"gary 應可列出 topics\", function () { pm.response.to.have.status(200); });",
                     "pm.test('可看到 orders.events', function(){ pm.expect(pm.response.text()).to.include('orders.events'); });"
                   ],
-                  "_lastExecutionId": "6667c9f5-bb12-49b4-bbd4-9c49185ef7dc"
+                  "_lastExecutionId": "84f8bc29-4bc9-48ec-a405-6eb211bc4225"
                 }
               }
             ]
           },
           {
-            "id": "e3d1aea3-a0f9-4ae6-8adf-5f0f3585a1c8",
+            "id": "5c4da4f0-e675-458d-a9d2-6662cbf891df",
             "name": "5.2 yujie(developers)寫入 orders.events → 200",
             "request": {
               "description": {
@@ -233,18 +233,18 @@
               {
                 "listen": "test",
                 "script": {
-                  "id": "5326618b-3513-4ae1-92bf-d5d8ad7dcede",
+                  "id": "32240fb7-6eb0-418e-bd7f-556c023c2adb",
                   "type": "text/javascript",
                   "exec": [
                     "pm.test(\"yujie 應可寫入\", function () { pm.response.to.have.status(200); });"
                   ],
-                  "_lastExecutionId": "0417bbde-f8ef-42ef-9a3e-ef348c7eac11"
+                  "_lastExecutionId": "197060af-c10c-41e4-805f-9534488f6210"
                 }
               }
             ]
           },
           {
-            "id": "9fd7b808-3899-42bb-96e4-2259535e8754",
+            "id": "e1336f46-4d73-4223-8151-d366ab8733dd",
             "name": "5.3 yujie 寫入 payments.events → 403",
             "request": {
               "description": {
@@ -298,18 +298,18 @@
               {
                 "listen": "test",
                 "script": {
-                  "id": "557a35c0-9960-42f6-ba5b-9f190850abc0",
+                  "id": "0a9b9677-4827-4a96-b86f-a0a211af0b28",
                   "type": "text/javascript",
                   "exec": [
                     "pm.test(\"yujie 寫 payments 應被拒\", function () { pm.response.to.have.status(403); });"
                   ],
-                  "_lastExecutionId": "9329406b-b881-44e9-b09d-487c91cd8703"
+                  "_lastExecutionId": "e4d26469-02d9-43ff-8cba-0af278a3bf0e"
                 }
               }
             ]
           },
           {
-            "id": "bad1b50d-d15c-4230-98e8-e8e7fa4b7555",
+            "id": "f5002ec3-5589-484c-a23c-b361544f4095",
             "name": "5.4 ming(readonly)寫入 orders.events → 403",
             "request": {
               "description": {
@@ -363,18 +363,18 @@
               {
                 "listen": "test",
                 "script": {
-                  "id": "0469ea67-9652-449f-a55e-daa4294eee05",
+                  "id": "2f6703a8-0fb9-4b75-bcf8-9b6c9c70d767",
                   "type": "text/javascript",
                   "exec": [
                     "pm.test(\"ming(唯讀)寫入應被拒\", function () { pm.response.to.have.status(403); });"
                   ],
-                  "_lastExecutionId": "43fe68a4-c219-4dcc-b88e-bb77b0068f51"
+                  "_lastExecutionId": "ebfd01b7-8881-4678-8150-b228f978117a"
                 }
               }
             ]
           },
           {
-            "id": "f29e5a4b-cb18-4ba8-91d7-6e1271800cb8",
+            "id": "915cfde5-64cc-4ab2-a804-ec2903ff964b",
             "name": "5.5 ming(readonly)列出 topics,仍看得到 orders.events → 200",
             "request": {
               "description": {
@@ -419,13 +419,13 @@
               {
                 "listen": "test",
                 "script": {
-                  "id": "788f0a97-ded1-4ecc-92b0-f3851fea951c",
+                  "id": "3e92ed0a-89c8-49d5-b345-5c6e275bd81e",
                   "type": "text/javascript",
                   "exec": [
                     "pm.test(\"ming 唯讀應可列出 topics\", function () { pm.response.to.have.status(200); });",
                     "pm.test('看得到 orders.events', function(){ pm.expect(pm.response.text()).to.include('orders.events'); });"
                   ],
-                  "_lastExecutionId": "77cab362-a91e-4273-8675-cf1310209403"
+                  "_lastExecutionId": "23f4708f-f77c-4f19-808b-3a85928085a7"
                 }
               }
             ]
@@ -434,7 +434,7 @@
         "event": []
       },
       {
-        "id": "55a017a6-0255-4c4f-9f70-cf2662cf0ab0",
+        "id": "e29ec452-dbce-4603-909b-8a7ac6e668e1",
         "name": "M MDS API(與 C3 同一份資料)",
         "description": {
           "content": "C3 畫面上點的 role assignment,就是這裡查到的資料",
@@ -442,7 +442,7 @@
         },
         "item": [
           {
-            "id": "68265f6b-cbb0-4aab-92d9-a2f65fe14931",
+            "id": "2e69a048-853d-4a0b-be40-c1e27bafc950",
             "name": "M.1 gary 登入 MDS 取得 token → 200",
             "request": {
               "description": {
@@ -489,19 +489,19 @@
               {
                 "listen": "test",
                 "script": {
-                  "id": "ecd354b6-de96-48c4-9010-b85876e2939c",
+                  "id": "f5f8e3a9-01a8-4060-923a-afa3bed76467",
                   "type": "text/javascript",
                   "exec": [
                     "pm.test(\"應回 200 並含 auth_token\", function () { pm.response.to.have.status(200); });",
                     "pm.test('含 auth_token', function(){ pm.expect(pm.response.json()).to.have.property('auth_token'); }); pm.collectionVariables.set('gary_token', pm.response.json().auth_token);"
                   ],
-                  "_lastExecutionId": "cfda2431-9990-4855-ba25-21ec4f882cc0"
+                  "_lastExecutionId": "710bbb12-411d-4d1f-9bdd-455003658003"
                 }
               }
             ]
           },
           {
-            "id": "37db8046-18a8-49af-8a29-0b8fee9fbefd",
+            "id": "8ba945f0-c449-4eed-a98c-e3795788d524",
             "name": "M.2 列出 Group:orders-write 的 role binding",
             "request": {
               "description": {
@@ -550,19 +550,19 @@
               {
                 "listen": "test",
                 "script": {
-                  "id": "cfa1baa8-6e6d-40f7-b0a1-eaaec8a7308a",
+                  "id": "bd5331b4-b3cb-488b-aa8f-442c7059dfef",
                   "type": "text/javascript",
                   "exec": [
                     "pm.test(\"應回 200\", function () { pm.response.to.have.status(200); });",
                     "pm.test('含 DeveloperWrite', function(){ pm.expect(pm.response.text()).to.include('DeveloperWrite'); });"
                   ],
-                  "_lastExecutionId": "ce37f0a0-8e1e-4eb6-aa51-c59bbd530515"
+                  "_lastExecutionId": "1a9a5996-b590-4ca3-9bb0-a5220cc0e89d"
                 }
               }
             ]
           },
           {
-            "id": "8a50ee40-1b1d-42fe-a128-a580824a20ff",
+            "id": "d192ae90-774f-413c-ab6c-8f1cb7fcf7ae",
             "name": "M.3 yujie 嘗試新增 role binding → 403",
             "request": {
               "description": {
@@ -617,12 +617,12 @@
               {
                 "listen": "test",
                 "script": {
-                  "id": "d76d54e5-f2d6-4838-a4a0-1fd92133aa9d",
+                  "id": "b82306d3-cf9a-4c05-9932-5d569b00e1fa",
                   "type": "text/javascript",
                   "exec": [
                     "pm.test(\"非管理員不可新增 role binding\", function () { pm.response.to.have.status(403); });"
                   ],
-                  "_lastExecutionId": "6ba8590a-4a4a-47b9-9787-36692d36053e"
+                  "_lastExecutionId": "284a275a-8c5d-41ea-a9aa-9068eabbfe76"
                 }
               }
             ]
@@ -635,20 +635,20 @@
       {
         "listen": "prerequest",
         "script": {
-          "id": "6554e19f-fb01-4ac7-a915-781759966fb4",
+          "id": "68f57160-ea00-4098-8690-0003045f5fb6",
           "type": "text/javascript",
           "exec": [
             "// MDS 驗證成功後會設定 auth_token cookie;若不清除,之後「換成另一個人的帳密」的請求仍會以前一個人的身分執行(Postman 與 newman 都是)。",
             "const resolved = pm.variables.replaceIn(pm.request.url.toString());",
             "pm.cookies.jar().clear(resolved, function () {});"
           ],
-          "_lastExecutionId": "23d86849-ffd2-4fad-a947-922f4920b476"
+          "_lastExecutionId": "bb9fba65-cfd3-4157-8666-fce75e2c3ae8"
         }
       }
     ],
     "variable": [],
     "info": {
-      "_postman_id": "02dd9e51-665a-41c7-8cdb-42ff844a5935",
+      "_postman_id": "34b146f5-2723-4ede-9c4f-332e9ca572bc",
       "name": "Confluent 安全方案 Demo(AD 人員 + 服務)",
       "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
       "description": {
@@ -661,7 +661,7 @@
     "_": {
       "postman_variable_scope": "environment"
     },
-    "id": "0ca28213-6fc5-429d-bf68-411029a7461e",
+    "id": "d1eff28a-4ad2-40c5-ac3e-30bae5a267f5",
     "name": "Demo - 人(AD 帳號)",
     "values": [
       {
@@ -717,7 +717,7 @@
     ]
   },
   "globals": {
-    "id": "b252065a-ae69-42ec-b970-1ed5386d5f5a",
+    "id": "7d6be8c2-7a65-4719-a51b-c42a49dba751",
     "values": []
   },
   "run": {
@@ -769,10 +769,10 @@
       }
     },
     "timings": {
-      "responseAverage": 172.8,
-      "responseMin": 9,
-      "responseMax": 436,
-      "responseSd": 145.3697355022702,
+      "responseAverage": 190.9,
+      "responseMin": 10,
+      "responseMax": 430,
+      "responseSd": 162.60039975350614,
       "dnsAverage": 0,
       "dnsMin": 0,
       "dnsMax": 0,
@@ -781,8 +781,8 @@
       "firstByteMin": 0,
       "firstByteMax": 0,
       "firstByteSd": 0,
-      "started": 1791454763309,
-      "completed": 1791454765329
+      "started": 1791471544122,
+      "completed": 1791471546325
     },
     "executions": [
       {
@@ -795,11 +795,11 @@
           "eof": false,
           "bof": true,
           "cr": false,
-          "ref": "1e79df92-3306-4ca6-80e6-ba35943c05a6",
-          "httpRequestId": "bb5723e2-72a0-457a-9dec-9e809afe353a"
+          "ref": "6764e0b2-f191-48cc-ac32-5b567aafb0d8",
+          "httpRequestId": "a16e2146-a138-4dda-85c0-1be7f5c09b90"
         },
         "item": {
-          "id": "d61a181e-f2b3-4d3e-b254-d3455a595311",
+          "id": "8002a5f5-a880-4d41-a0d4-d3f973a0d8be",
           "name": "1.1 未帶帳密 → 401",
           "request": {
             "description": {
@@ -833,12 +833,12 @@
             {
               "listen": "test",
               "script": {
-                "id": "93bbd7f2-ac26-495e-9949-cdba7b78a834",
+                "id": "771708ad-2581-4dfb-a57f-c55c1a2250d5",
                 "type": "text/javascript",
                 "exec": [
                   "pm.test(\"未帶帳密應回 401\", function () { pm.response.to.have.status(401); });"
                 ],
-                "_lastExecutionId": "ba713d40-501e-4ab6-9d8d-688e589f851e"
+                "_lastExecutionId": "ff6df945-9d45-463f-bb3f-417e2cc5878a"
               }
             }
           ]
@@ -877,7 +877,7 @@
             },
             {
               "key": "Postman-Token",
-              "value": "0316cb55-1197-4625-99a1-73f54cd54b50",
+              "value": "a4d1e94d-e286-40b2-98dc-a2121802fa90",
               "system": true
             },
             {
@@ -903,13 +903,13 @@
           }
         },
         "response": {
-          "id": "4a4e1b84-8047-4781-b8db-6bb473e28b23",
+          "id": "97236f84-e565-45be-a827-17df9bd2261e",
           "status": "Unauthorized",
           "code": 401,
           "header": [
             {
               "key": "Date",
-              "value": "Thu, 08 Oct 2026 10:19:23 GMT"
+              "value": "Thu, 08 Oct 2026 14:59:04 GMT"
             },
             {
               "key": "Vary",
@@ -933,10 +933,10 @@
             "data": []
           },
           "cookie": [],
-          "responseTime": 39,
+          "responseTime": 36,
           "responseSize": 0
         },
-        "id": "d61a181e-f2b3-4d3e-b254-d3455a595311",
+        "id": "8002a5f5-a880-4d41-a0d4-d3f973a0d8be",
         "assertions": [
           {
             "assertion": "未帶帳密應回 401",
@@ -946,15 +946,15 @@
       },
       {
         "cursor": {
-          "ref": "7b28fd88-b8e0-4456-b63c-cad79cbb89a4",
+          "ref": "325f645a-74b4-4a28-a68c-f5ea86a7b7a8",
           "length": 10,
           "cycles": 1,
           "position": 1,
           "iteration": 0,
-          "httpRequestId": "b4540448-7de8-4136-b826-8aba5e1f39af"
+          "httpRequestId": "06bff76d-6dca-4651-8685-f85d90fbe8c6"
         },
         "item": {
-          "id": "4627a576-216f-4a3c-bd17-b8d0956f3429",
+          "id": "84b38be5-13db-4c7a-a1b9-5a13243313f9",
           "name": "1.2 密碼錯誤 → 401",
           "request": {
             "description": {
@@ -999,12 +999,12 @@
             {
               "listen": "test",
               "script": {
-                "id": "d425d94a-517a-4950-a057-fb327f1106c8",
+                "id": "4276e042-6403-4ce3-ab79-53240c501e06",
                 "type": "text/javascript",
                 "exec": [
                   "pm.test(\"密碼錯誤應回 401\", function () { pm.response.to.have.status(401); });"
                 ],
-                "_lastExecutionId": "148554d2-7b15-4df8-bf7e-c4ef22b7279c"
+                "_lastExecutionId": "151e69f7-b1b9-4e04-8a05-3460aa62f427"
               }
             }
           ]
@@ -1048,7 +1048,7 @@
             },
             {
               "key": "Postman-Token",
-              "value": "df434d14-9b30-4e5b-ad72-5345f8b70cfb",
+              "value": "a6b7d5e8-e7f6-46c0-8189-d5fe5ff27335",
               "system": true
             },
             {
@@ -1085,13 +1085,13 @@
           }
         },
         "response": {
-          "id": "45d3aad3-0682-4b5a-b8a9-75071fbc4bc1",
+          "id": "b9d8c5de-72ba-488f-a3e6-5528f5ba5d17",
           "status": "Unauthorized",
           "code": 401,
           "header": [
             {
               "key": "Date",
-              "value": "Thu, 08 Oct 2026 10:19:23 GMT"
+              "value": "Thu, 08 Oct 2026 14:59:04 GMT"
             },
             {
               "key": "Vary",
@@ -1115,10 +1115,10 @@
             "data": []
           },
           "cookie": [],
-          "responseTime": 68,
+          "responseTime": 77,
           "responseSize": 0
         },
-        "id": "4627a576-216f-4a3c-bd17-b8d0956f3429",
+        "id": "84b38be5-13db-4c7a-a1b9-5a13243313f9",
         "assertions": [
           {
             "assertion": "密碼錯誤應回 401",
@@ -1128,15 +1128,15 @@
       },
       {
         "cursor": {
-          "ref": "27efeb43-7aa2-4815-99f9-e98ec75493e4",
+          "ref": "4b6f16a6-cf76-4a35-b16f-769d510c7a16",
           "length": 10,
           "cycles": 1,
           "position": 2,
           "iteration": 0,
-          "httpRequestId": "b3f89475-f5dd-437f-a41f-24b776ba67b6"
+          "httpRequestId": "ea338f71-c704-45bc-b6e3-8f57d2d1f954"
         },
         "item": {
-          "id": "99eee605-18d2-432c-937a-3ded540f82cb",
+          "id": "7604dd36-568a-4054-b1bb-04fc00b0f4c2",
           "name": "5.1 gary(組長)列出 topics → 200",
           "request": {
             "description": {
@@ -1181,13 +1181,13 @@
             {
               "listen": "test",
               "script": {
-                "id": "5fb7b016-be30-4a1a-a6c8-49ccd08bdbf8",
+                "id": "742f6910-a94e-4fb7-b37f-76240524d52c",
                 "type": "text/javascript",
                 "exec": [
                   "pm.test(\"gary 應可列出 topics\", function () { pm.response.to.have.status(200); });",
                   "pm.test('可看到 orders.events', function(){ pm.expect(pm.response.text()).to.include('orders.events'); });"
                 ],
-                "_lastExecutionId": "6667c9f5-bb12-49b4-bbd4-9c49185ef7dc"
+                "_lastExecutionId": "84f8bc29-4bc9-48ec-a405-6eb211bc4225"
               }
             }
           ]
@@ -1231,7 +1231,7 @@
             },
             {
               "key": "Postman-Token",
-              "value": "0d3724eb-e34e-4919-9a9b-45e16cf69bbb",
+              "value": "855dbc6f-d3ab-4521-abd3-c798bf5882b3",
               "system": true
             },
             {
@@ -1268,13 +1268,13 @@
           }
         },
         "response": {
-          "id": "8f8a85c7-a501-4871-bee9-b5f6c8fbaefd",
+          "id": "617ba6a3-2623-4b86-97df-b7d857b54d64",
           "status": "OK",
           "code": 200,
           "header": [
             {
               "key": "Date",
-              "value": "Thu, 08 Oct 2026 10:19:23 GMT"
+              "value": "Thu, 08 Oct 2026 14:59:04 GMT"
             },
             {
               "key": "Vary",
@@ -1608,10 +1608,10 @@
             ]
           },
           "cookie": [],
-          "responseTime": 383,
+          "responseTime": 401,
           "responseSize": 309
         },
-        "id": "99eee605-18d2-432c-937a-3ded540f82cb",
+        "id": "7604dd36-568a-4054-b1bb-04fc00b0f4c2",
         "assertions": [
           {
             "assertion": "gary 應可列出 topics",
@@ -1625,15 +1625,15 @@
       },
       {
         "cursor": {
-          "ref": "876ff817-9ecf-4e51-88f7-4f86a9a1da9f",
+          "ref": "602ef98a-ebaf-41c7-94fc-8c2305efc7e6",
           "length": 10,
           "cycles": 1,
           "position": 3,
           "iteration": 0,
-          "httpRequestId": "95285590-4cd1-4721-bf92-c8ad7f1b14d8"
+          "httpRequestId": "78d9a4a2-5d56-4864-af5d-e14ce1c2b975"
         },
         "item": {
-          "id": "e3d1aea3-a0f9-4ae6-8adf-5f0f3585a1c8",
+          "id": "5c4da4f0-e675-458d-a9d2-6662cbf891df",
           "name": "5.2 yujie(developers)寫入 orders.events → 200",
           "request": {
             "description": {
@@ -1687,12 +1687,12 @@
             {
               "listen": "test",
               "script": {
-                "id": "5326618b-3513-4ae1-92bf-d5d8ad7dcede",
+                "id": "32240fb7-6eb0-418e-bd7f-556c023c2adb",
                 "type": "text/javascript",
                 "exec": [
                   "pm.test(\"yujie 應可寫入\", function () { pm.response.to.have.status(200); });"
                 ],
-                "_lastExecutionId": "0417bbde-f8ef-42ef-9a3e-ef348c7eac11"
+                "_lastExecutionId": "197060af-c10c-41e4-805f-9534488f6210"
               }
             }
           ]
@@ -1741,7 +1741,7 @@
             },
             {
               "key": "Postman-Token",
-              "value": "10cbbb97-53ff-4b62-bb2c-2d903eb3f3a3",
+              "value": "e0425c44-018b-479e-b854-81b0f19af541",
               "system": true
             },
             {
@@ -1787,13 +1787,13 @@
           }
         },
         "response": {
-          "id": "5a773941-cbb2-4826-bb3f-6594a3db1a0e",
+          "id": "307d381b-e004-4219-af2b-367b45bc71d9",
           "status": "OK",
           "code": 200,
           "header": [
             {
               "key": "Date",
-              "value": "Thu, 08 Oct 2026 10:19:23 GMT"
+              "value": "Thu, 08 Oct 2026 14:59:04 GMT"
             },
             {
               "key": "Vary",
@@ -1851,7 +1851,10 @@
               116,
               34,
               58,
-              57,
+              53,
+              48,
+              51,
+              48,
               44,
               34,
               101,
@@ -1933,10 +1936,10 @@
             ]
           },
           "cookie": [],
-          "responseTime": 436,
-          "responseSize": 115
+          "responseTime": 430,
+          "responseSize": 118
         },
-        "id": "e3d1aea3-a0f9-4ae6-8adf-5f0f3585a1c8",
+        "id": "5c4da4f0-e675-458d-a9d2-6662cbf891df",
         "assertions": [
           {
             "assertion": "yujie 應可寫入",
@@ -1946,15 +1949,15 @@
       },
       {
         "cursor": {
-          "ref": "0ee720a0-5512-4ff7-9062-40d6e85e7257",
+          "ref": "6b8ad19f-588f-4775-a687-8ea273edd929",
           "length": 10,
           "cycles": 1,
           "position": 4,
           "iteration": 0,
-          "httpRequestId": "1f5c8ec2-3844-408c-85a5-1e22c3a01b1c"
+          "httpRequestId": "677dc078-f7e8-4fdd-83b8-d4edbdb26122"
         },
         "item": {
-          "id": "9fd7b808-3899-42bb-96e4-2259535e8754",
+          "id": "e1336f46-4d73-4223-8151-d366ab8733dd",
           "name": "5.3 yujie 寫入 payments.events → 403",
           "request": {
             "description": {
@@ -2008,12 +2011,12 @@
             {
               "listen": "test",
               "script": {
-                "id": "557a35c0-9960-42f6-ba5b-9f190850abc0",
+                "id": "0a9b9677-4827-4a96-b86f-a0a211af0b28",
                 "type": "text/javascript",
                 "exec": [
                   "pm.test(\"yujie 寫 payments 應被拒\", function () { pm.response.to.have.status(403); });"
                 ],
-                "_lastExecutionId": "9329406b-b881-44e9-b09d-487c91cd8703"
+                "_lastExecutionId": "e4d26469-02d9-43ff-8cba-0af278a3bf0e"
               }
             }
           ]
@@ -2062,7 +2065,7 @@
             },
             {
               "key": "Postman-Token",
-              "value": "2329ec6f-f30a-47cd-b56c-568bdf7e511e",
+              "value": "f4c4cc30-ebaa-4bec-832e-d72a1e05a496",
               "system": true
             },
             {
@@ -2108,13 +2111,13 @@
           }
         },
         "response": {
-          "id": "71d36eff-62e9-48cf-808a-ac1f25776791",
+          "id": "72227041-df54-4c3b-a868-d60a8f08b8e1",
           "status": "Forbidden",
           "code": 403,
           "header": [
             {
               "key": "Date",
-              "value": "Thu, 08 Oct 2026 10:19:24 GMT"
+              "value": "Thu, 08 Oct 2026 14:59:05 GMT"
             },
             {
               "key": "Vary",
@@ -2305,10 +2308,10 @@
             ]
           },
           "cookie": [],
-          "responseTime": 96,
+          "responseTime": 82,
           "responseSize": 170
         },
-        "id": "9fd7b808-3899-42bb-96e4-2259535e8754",
+        "id": "e1336f46-4d73-4223-8151-d366ab8733dd",
         "assertions": [
           {
             "assertion": "yujie 寫 payments 應被拒",
@@ -2318,15 +2321,15 @@
       },
       {
         "cursor": {
-          "ref": "dd654d18-3f3b-4130-913a-7419ccd6e9f4",
+          "ref": "6c3a3682-a733-41aa-9b25-701745e275d0",
           "length": 10,
           "cycles": 1,
           "position": 5,
           "iteration": 0,
-          "httpRequestId": "5a5e3627-7592-47a7-9af2-8540190093ef"
+          "httpRequestId": "9bdf68fa-42af-4ee7-87bc-7ecaac27119d"
         },
         "item": {
-          "id": "bad1b50d-d15c-4230-98e8-e8e7fa4b7555",
+          "id": "f5002ec3-5589-484c-a23c-b361544f4095",
           "name": "5.4 ming(readonly)寫入 orders.events → 403",
           "request": {
             "description": {
@@ -2380,12 +2383,12 @@
             {
               "listen": "test",
               "script": {
-                "id": "0469ea67-9652-449f-a55e-daa4294eee05",
+                "id": "2f6703a8-0fb9-4b75-bcf8-9b6c9c70d767",
                 "type": "text/javascript",
                 "exec": [
                   "pm.test(\"ming(唯讀)寫入應被拒\", function () { pm.response.to.have.status(403); });"
                 ],
-                "_lastExecutionId": "43fe68a4-c219-4dcc-b88e-bb77b0068f51"
+                "_lastExecutionId": "ebfd01b7-8881-4678-8150-b228f978117a"
               }
             }
           ]
@@ -2434,7 +2437,7 @@
             },
             {
               "key": "Postman-Token",
-              "value": "6f0e4ff6-28c4-4a5a-9c7a-3cf4aa82e1fa",
+              "value": "bb3fc8b6-2405-4d24-b4ac-d225e762a5d5",
               "system": true
             },
             {
@@ -2480,13 +2483,13 @@
           }
         },
         "response": {
-          "id": "45ced8f1-b5a0-4968-91f3-be5f9e7c5c45",
+          "id": "093b4550-bdda-437a-b4af-ca0205d02d86",
           "status": "Forbidden",
           "code": 403,
           "header": [
             {
               "key": "Date",
-              "value": "Thu, 08 Oct 2026 10:19:24 GMT"
+              "value": "Thu, 08 Oct 2026 14:59:05 GMT"
             },
             {
               "key": "Vary",
@@ -2675,10 +2678,10 @@
             ]
           },
           "cookie": [],
-          "responseTime": 249,
+          "responseTime": 325,
           "responseSize": 168
         },
-        "id": "bad1b50d-d15c-4230-98e8-e8e7fa4b7555",
+        "id": "f5002ec3-5589-484c-a23c-b361544f4095",
         "assertions": [
           {
             "assertion": "ming(唯讀)寫入應被拒",
@@ -2688,15 +2691,15 @@
       },
       {
         "cursor": {
-          "ref": "d637e38d-1f0a-449d-a4e4-d2f0682c0aac",
+          "ref": "3a78fd0d-19a3-482b-a97e-8acd789481af",
           "length": 10,
           "cycles": 1,
           "position": 6,
           "iteration": 0,
-          "httpRequestId": "86583a35-0fcb-471e-9483-b72531b8edf5"
+          "httpRequestId": "7f111a23-6da1-4469-87e3-8d522787088f"
         },
         "item": {
-          "id": "f29e5a4b-cb18-4ba8-91d7-6e1271800cb8",
+          "id": "915cfde5-64cc-4ab2-a804-ec2903ff964b",
           "name": "5.5 ming(readonly)列出 topics,仍看得到 orders.events → 200",
           "request": {
             "description": {
@@ -2741,13 +2744,13 @@
             {
               "listen": "test",
               "script": {
-                "id": "788f0a97-ded1-4ecc-92b0-f3851fea951c",
+                "id": "3e92ed0a-89c8-49d5-b345-5c6e275bd81e",
                 "type": "text/javascript",
                 "exec": [
                   "pm.test(\"ming 唯讀應可列出 topics\", function () { pm.response.to.have.status(200); });",
                   "pm.test('看得到 orders.events', function(){ pm.expect(pm.response.text()).to.include('orders.events'); });"
                 ],
-                "_lastExecutionId": "77cab362-a91e-4273-8675-cf1310209403"
+                "_lastExecutionId": "23f4708f-f77c-4f19-808b-3a85928085a7"
               }
             }
           ]
@@ -2791,7 +2794,7 @@
             },
             {
               "key": "Postman-Token",
-              "value": "424eb124-b8e0-4b4c-b0aa-036967ad1c24",
+              "value": "302946d0-0fbc-4248-8cb5-63642ad8579b",
               "system": true
             },
             {
@@ -2828,13 +2831,13 @@
           }
         },
         "response": {
-          "id": "c3ecec18-93e6-4701-ba65-b777a18c8dc7",
+          "id": "d4a79a56-20ff-4ade-b673-d148a447af48",
           "status": "OK",
           "code": 200,
           "header": [
             {
               "key": "Date",
-              "value": "Thu, 08 Oct 2026 10:19:24 GMT"
+              "value": "Thu, 08 Oct 2026 14:59:05 GMT"
             },
             {
               "key": "Vary",
@@ -2894,10 +2897,10 @@
             ]
           },
           "cookie": [],
-          "responseTime": 287,
+          "responseTime": 388,
           "responseSize": 35
         },
-        "id": "f29e5a4b-cb18-4ba8-91d7-6e1271800cb8",
+        "id": "915cfde5-64cc-4ab2-a804-ec2903ff964b",
         "assertions": [
           {
             "assertion": "ming 唯讀應可列出 topics",
@@ -2911,15 +2914,15 @@
       },
       {
         "cursor": {
-          "ref": "d7bc6ee3-eeff-422e-adc9-92ca748f070f",
+          "ref": "e2819c7d-b29d-4462-b0cb-329711efc9b1",
           "length": 10,
           "cycles": 1,
           "position": 7,
           "iteration": 0,
-          "httpRequestId": "76ff3a2c-6ba9-4825-818f-fa5c376bf5c3"
+          "httpRequestId": "0a3ebce0-e128-4f06-85ac-6190cb7cb861"
         },
         "item": {
-          "id": "68265f6b-cbb0-4aab-92d9-a2f65fe14931",
+          "id": "2e69a048-853d-4a0b-be40-c1e27bafc950",
           "name": "M.1 gary 登入 MDS 取得 token → 200",
           "request": {
             "description": {
@@ -2966,13 +2969,13 @@
             {
               "listen": "test",
               "script": {
-                "id": "ecd354b6-de96-48c4-9010-b85876e2939c",
+                "id": "f5f8e3a9-01a8-4060-923a-afa3bed76467",
                 "type": "text/javascript",
                 "exec": [
                   "pm.test(\"應回 200 並含 auth_token\", function () { pm.response.to.have.status(200); });",
                   "pm.test('含 auth_token', function(){ pm.expect(pm.response.json()).to.have.property('auth_token'); }); pm.collectionVariables.set('gary_token', pm.response.json().auth_token);"
                 ],
-                "_lastExecutionId": "cfda2431-9990-4855-ba25-21ec4f882cc0"
+                "_lastExecutionId": "710bbb12-411d-4d1f-9bdd-455003658003"
               }
             }
           ]
@@ -3018,7 +3021,7 @@
             },
             {
               "key": "Postman-Token",
-              "value": "f10eecf2-e710-430b-8bb7-b2603a3e673d",
+              "value": "72b356a7-3676-4cbd-93f8-69c736ee0d1e",
               "system": true
             },
             {
@@ -3055,13 +3058,13 @@
           }
         },
         "response": {
-          "id": "df3cad6e-8904-4521-9d8c-b6e037489d59",
+          "id": "be68ce67-86e2-4da1-8724-4623270644e1",
           "status": "OK",
           "code": 200,
           "header": [
             {
               "key": "Date",
-              "value": "Thu, 08 Oct 2026 10:19:25 GMT"
+              "value": "Thu, 08 Oct 2026 14:59:06 GMT"
             },
             {
               "key": "Vary",
@@ -3069,7 +3072,7 @@
             },
             {
               "key": "Set-Cookie",
-              "value": "auth_token=eyJhbGciOiJSUzI1NiIsImtpZCI6bnVsbH0.eyJqdGkiOiJJZ0dtTmdNVmVselRkQVN1Um5LNE1nIiwiaXNzIjoiQ29uZmx1ZW50Iiwic3ViIjoiR0FSWSIsImV4cCI6MTc5MTQ1ODM2NSwiaWF0IjoxNzkxNDU0NzY1LCJuYmYiOjE3OTE0NTQ3MDUsImF6cCI6IkdBUlkiLCJhdXRoX3RpbWUiOjE3OTE0NTQ3NjV9.HNWyshhRhgUKVMUUMcEmx_DN1riPosgMDrMQ9-GbYplbAKV3VI5WUkTyQHacicI2FxJMHggWM_a3LxBeUdr9aBGcpzL8e8L8T10F626s5UcFApfoVRsrpsN1cGxkkalZg_P1zOiQEWCBThDIpwx1PiqPga1DkBPz2H0H4fifhWfd0gVxjwhPoU4RIRL0s9KcMQG0cwd7VCewW0UXMVhrmkBjp4oxDsF6nyv3vPl18vRp_oWcWiY8TNvByShaKTzJDhAmO7qhFphD6992R_2jcd9U9Mn-OhfAXSVz2X6_EgOO1Mqx0MqvKprUBIbkfFwCJ0DCw6b3SWzRymJk3Ol2sw; HttpOnly; Secure; Path=/; Expires=Thu, 08 Oct 2026 11:19:25 GMT; SameSite=Lax; Max-Age=3600"
+              "value": "auth_token=eyJhbGciOiJSUzI1NiIsImtpZCI6bnVsbH0.eyJqdGkiOiJQbVNjMXVqZFpsZDdiOGVsblBYNTFRIiwiaXNzIjoiQ29uZmx1ZW50Iiwic3ViIjoiR0FSWSIsImV4cCI6MTc5MTQ3NTE0NiwiaWF0IjoxNzkxNDcxNTQ2LCJuYmYiOjE3OTE0NzE0ODYsImF6cCI6IkdBUlkiLCJhdXRoX3RpbWUiOjE3OTE0NzE1NDZ9.mywQWg1c5oX4A2SvjWsSylOqQTju5o7EiT4UO4_1kA-PSEIdORXrA90pgU6vc3CZpHW0S6uYAh2_JZP9aLWxrz4iWKRFMZLkMx4rXclHUkUBSYBGcqwyMdb25WL-nYCBoUbCDn0YGJbIaaBB8DHQc8svV_4Zmb3FBZR-5Krb69ABjogFgcKPkPd03gtFRvyJ3WIHm-p7Ko_C1tIDPKzddkZgeQiT2-VGzdW7ilX3wVhQi0BcgfUtxkNMT2TxxS0BvMMj71J3zTQ58cPB8CmjoPgf7Fpo2CyA3Ui5DTrzMs4TZHhM9Oagut60AGCg2prq3hgoTh7gU3ecGadj0FTriw; HttpOnly; Secure; Path=/; Expires=Thu, 08 Oct 2026 15:59:06 GMT; SameSite=Lax; Max-Age=3600"
             },
             {
               "key": "Content-Type",
@@ -3081,7 +3084,7 @@
             },
             {
               "key": "Content-Length",
-              "value": "521"
+              "value": "520"
             }
           ],
           "stream": {
@@ -3149,35 +3152,35 @@
               79,
               105,
               74,
-              74,
-              90,
-              48,
-              100,
-              116,
-              84,
-              109,
-              100,
-              78,
+              81,
+              98,
               86,
-              109,
+              78,
+              106,
+              77,
+              88,
+              86,
+              113,
+              90,
+              70,
+              112,
+              115,
+              90,
+              68,
+              100,
+              105,
+              79,
+              71,
               86,
               115,
-              101,
+              98,
               108,
+              66,
+              89,
+              78,
+              84,
+              70,
               82,
-              107,
-              81,
-              86,
-              78,
-              49,
-              85,
-              109,
-              53,
-              76,
-              78,
-              69,
-              49,
-              110,
               73,
               105,
               119,
@@ -3237,13 +3240,13 @@
               77,
               84,
               81,
-              49,
-              79,
-              68,
-              77,
-              50,
+              51,
               78,
-              83,
+              84,
+              69,
+              48,
+              78,
+              105,
               119,
               105,
               97,
@@ -3260,12 +3263,12 @@
               120,
               78,
               68,
-              85,
-              48,
+              99,
+              120,
               78,
-              122,
-              89,
-              49,
+              84,
+              81,
+              50,
               76,
               67,
               74,
@@ -3283,12 +3286,12 @@
               69,
               48,
               78,
-              84,
-              81,
-              51,
-              77,
+              122,
+              69,
+              48,
+              79,
               68,
-              85,
+              89,
               115,
               73,
               109,
@@ -3331,355 +3334,355 @@
               69,
               48,
               78,
-              84,
-              81,
-              51,
+              122,
+              69,
+              49,
               78,
-              106,
-              86,
+              68,
+              90,
               57,
               46,
-              72,
-              78,
-              87,
-              121,
-              115,
-              104,
-              104,
-              82,
-              104,
-              103,
-              85,
-              75,
-              86,
-              77,
-              85,
-              85,
-              77,
-              99,
-              69,
               109,
-              120,
-              95,
-              68,
-              78,
-              49,
-              114,
-              105,
-              80,
-              111,
-              115,
-              103,
-              77,
-              68,
-              114,
-              77,
-              81,
-              57,
-              45,
-              71,
-              98,
-              89,
-              112,
-              108,
-              98,
-              65,
-              75,
-              86,
-              51,
-              86,
-              73,
-              53,
-              87,
-              85,
-              107,
-              84,
               121,
+              119,
               81,
-              72,
-              97,
-              99,
-              105,
-              99,
-              73,
-              50,
-              70,
-              120,
-              74,
-              77,
-              72,
-              103,
-              103,
               87,
-              77,
-              95,
-              97,
-              51,
-              76,
-              120,
-              66,
-              101,
+              103,
+              49,
+              99,
+              53,
+              111,
+              88,
+              52,
+              65,
+              50,
+              83,
+              118,
+              106,
+              87,
+              115,
+              83,
+              121,
+              108,
+              79,
+              113,
+              81,
+              84,
+              106,
+              117,
+              53,
+              111,
+              55,
+              69,
+              105,
+              84,
+              52,
               85,
+              79,
+              52,
+              95,
+              49,
+              107,
+              65,
+              45,
+              80,
+              83,
+              69,
+              73,
               100,
+              79,
+              82,
+              88,
               114,
+              65,
+              57,
+              48,
+              112,
+              103,
+              85,
+              54,
+              118,
+              99,
+              51,
+              67,
+              90,
+              112,
+              72,
+              87,
+              48,
+              83,
+              54,
+              117,
+              89,
+              65,
+              104,
+              50,
+              95,
+              74,
+              90,
+              80,
               57,
               97,
+              76,
+              87,
+              120,
+              114,
+              122,
+              52,
+              105,
+              87,
+              75,
+              82,
+              70,
+              77,
+              90,
+              76,
+              107,
+              77,
+              120,
+              52,
+              114,
+              88,
+              99,
+              108,
+              72,
+              85,
+              107,
+              85,
+              66,
+              83,
+              89,
               66,
               71,
               99,
-              112,
-              122,
-              76,
-              56,
-              101,
-              56,
-              76,
-              56,
-              84,
-              49,
-              48,
-              70,
-              54,
+              113,
+              119,
+              121,
+              77,
+              100,
+              98,
               50,
-              54,
-              115,
               53,
-              85,
-              99,
-              70,
-              65,
-              112,
-              102,
+              87,
+              76,
+              45,
+              110,
+              89,
+              67,
+              66,
               111,
-              86,
-              82,
-              115,
-              114,
-              112,
-              115,
-              78,
-              49,
-              99,
+              85,
+              98,
+              67,
+              68,
+              110,
+              48,
+              89,
               71,
-              120,
-              107,
-              107,
+              74,
+              98,
+              73,
               97,
-              108,
+              97,
+              66,
+              66,
+              56,
+              68,
+              72,
+              81,
+              99,
+              56,
+              115,
+              118,
+              86,
+              95,
+              52,
+              90,
+              109,
+              98,
+              51,
+              70,
+              66,
+              90,
+              82,
+              45,
+              53,
+              75,
+              114,
+              98,
+              54,
+              57,
+              65,
+              66,
+              106,
+              111,
+              103,
+              70,
+              103,
+              99,
+              75,
+              80,
+              107,
+              80,
+              100,
+              48,
+              51,
+              103,
+              116,
+              70,
+              82,
+              118,
+              121,
+              74,
+              51,
+              87,
+              73,
+              72,
+              109,
+              45,
+              112,
+              55,
+              75,
+              111,
+              95,
+              67,
+              49,
+              116,
+              73,
+              68,
+              80,
+              75,
+              122,
+              100,
+              100,
+              107,
               90,
               103,
-              95,
-              80,
-              49,
-              122,
-              79,
-              105,
-              81,
-              69,
-              87,
-              67,
-              66,
-              84,
-              104,
-              68,
-              73,
-              112,
-              119,
-              120,
-              49,
-              80,
-              105,
-              113,
-              80,
-              103,
-              97,
-              49,
-              68,
-              107,
-              66,
-              80,
-              122,
-              50,
-              72,
-              48,
-              72,
-              52,
-              102,
-              105,
-              102,
-              104,
-              87,
-              102,
-              100,
-              48,
-              103,
-              86,
-              120,
-              106,
-              119,
-              104,
-              80,
-              111,
-              85,
-              52,
-              82,
-              73,
-              82,
-              76,
-              48,
-              115,
-              57,
-              75,
-              99,
-              77,
-              81,
-              71,
-              48,
-              99,
-              119,
-              100,
-              55,
-              86,
-              67,
               101,
-              119,
-              87,
-              48,
-              85,
-              88,
-              77,
-              86,
-              104,
-              114,
-              109,
-              107,
-              66,
-              106,
-              112,
-              52,
-              111,
-              120,
-              68,
-              115,
-              70,
-              54,
-              110,
-              121,
-              118,
-              51,
-              118,
-              80,
-              108,
-              49,
-              56,
-              118,
-              82,
-              112,
-              95,
-              111,
-              87,
-              99,
-              87,
+              81,
               105,
-              89,
-              56,
               84,
-              78,
-              118,
-              66,
-              121,
-              83,
-              104,
-              97,
-              75,
-              84,
+              50,
+              45,
+              86,
+              71,
               122,
-              74,
-              68,
-              104,
-              65,
-              109,
-              79,
+              100,
+              87,
               55,
-              113,
+              105,
+              108,
+              88,
+              51,
+              119,
+              86,
               104,
+              81,
+              105,
+              48,
+              66,
+              99,
+              103,
+              102,
+              85,
+              116,
+              120,
+              107,
+              78,
+              77,
+              84,
+              50,
+              84,
+              120,
+              120,
+              83,
+              48,
+              66,
+              118,
+              77,
+              77,
+              106,
+              55,
+              49,
+              74,
+              51,
+              122,
+              84,
+              81,
+              53,
+              56,
+              99,
+              80,
+              66,
+              56,
+              67,
+              109,
+              106,
+              111,
+              80,
+              103,
+              102,
+              55,
               70,
               112,
-              104,
-              68,
-              54,
-              57,
-              57,
+              111,
               50,
-              82,
-              95,
-              50,
-              106,
-              99,
-              100,
-              57,
-              85,
-              57,
-              77,
-              110,
-              45,
-              79,
-              104,
-              102,
+              67,
+              121,
               65,
-              88,
-              83,
-              86,
+              51,
+              85,
+              105,
+              53,
+              68,
+              84,
+              114,
               122,
-              50,
-              88,
-              54,
-              95,
-              69,
+              77,
+              115,
+              52,
+              84,
+              90,
+              72,
+              104,
+              77,
+              57,
+              79,
+              97,
               103,
-              79,
-              79,
-              49,
-              77,
-              113,
-              120,
+              117,
+              116,
+              54,
               48,
-              77,
-              113,
-              118,
-              75,
+              65,
+              71,
+              67,
+              103,
+              50,
               112,
               114,
+              113,
+              51,
+              104,
+              103,
+              111,
+              84,
+              104,
+              55,
+              103,
               85,
-              66,
-              73,
-              98,
-              107,
-              102,
-              70,
-              119,
-              67,
-              74,
+              51,
+              101,
+              99,
+              71,
+              97,
+              100,
+              106,
               48,
-              68,
-              67,
-              119,
-              54,
-              98,
-              51,
-              83,
-              87,
-              122,
-              82,
-              121,
-              109,
-              74,
-              107,
-              51,
-              79,
-              108,
-              50,
-              115,
+              70,
+              84,
+              114,
+              105,
               119,
               34,
               44,
@@ -3726,10 +3729,10 @@
             ]
           },
           "cookie": [],
-          "responseTime": 94,
+          "responseTime": 73,
           "responseSize": 636
         },
-        "id": "68265f6b-cbb0-4aab-92d9-a2f65fe14931",
+        "id": "2e69a048-853d-4a0b-be40-c1e27bafc950",
         "assertions": [
           {
             "assertion": "應回 200 並含 auth_token",
@@ -3743,15 +3746,15 @@
       },
       {
         "cursor": {
-          "ref": "81fe3b88-8032-41ef-a1da-8c0c084164ca",
+          "ref": "85857aeb-8a78-489b-8030-78c121f1c718",
           "length": 10,
           "cycles": 1,
           "position": 8,
           "iteration": 0,
-          "httpRequestId": "102185af-e513-4912-9d06-d7dd066fa45e"
+          "httpRequestId": "d8c3d0a7-795b-40c5-b62a-611381e6b0a1"
         },
         "item": {
-          "id": "37db8046-18a8-49af-8a29-0b8fee9fbefd",
+          "id": "8ba945f0-c449-4eed-a98c-e3795788d524",
           "name": "M.2 列出 Group:orders-write 的 role binding",
           "request": {
             "description": {
@@ -3800,13 +3803,13 @@
             {
               "listen": "test",
               "script": {
-                "id": "cfa1baa8-6e6d-40f7-b0a1-eaaec8a7308a",
+                "id": "bd5331b4-b3cb-488b-aa8f-442c7059dfef",
                 "type": "text/javascript",
                 "exec": [
                   "pm.test(\"應回 200\", function () { pm.response.to.have.status(200); });",
                   "pm.test('含 DeveloperWrite', function(){ pm.expect(pm.response.text()).to.include('DeveloperWrite'); });"
                 ],
-                "_lastExecutionId": "ce37f0a0-8e1e-4eb6-aa51-c59bbd530515"
+                "_lastExecutionId": "1a9a5996-b590-4ca3-9bb0-a5220cc0e89d"
               }
             }
           ]
@@ -3840,7 +3843,7 @@
             },
             {
               "key": "Authorization",
-              "value": "Bearer eyJhbGciOiJSUzI1NiIsImtpZCI6bnVsbH0.eyJqdGkiOiJJZ0dtTmdNVmVselRkQVN1Um5LNE1nIiwiaXNzIjoiQ29uZmx1ZW50Iiwic3ViIjoiR0FSWSIsImV4cCI6MTc5MTQ1ODM2NSwiaWF0IjoxNzkxNDU0NzY1LCJuYmYiOjE3OTE0NTQ3MDUsImF6cCI6IkdBUlkiLCJhdXRoX3RpbWUiOjE3OTE0NTQ3NjV9.HNWyshhRhgUKVMUUMcEmx_DN1riPosgMDrMQ9-GbYplbAKV3VI5WUkTyQHacicI2FxJMHggWM_a3LxBeUdr9aBGcpzL8e8L8T10F626s5UcFApfoVRsrpsN1cGxkkalZg_P1zOiQEWCBThDIpwx1PiqPga1DkBPz2H0H4fifhWfd0gVxjwhPoU4RIRL0s9KcMQG0cwd7VCewW0UXMVhrmkBjp4oxDsF6nyv3vPl18vRp_oWcWiY8TNvByShaKTzJDhAmO7qhFphD6992R_2jcd9U9Mn-OhfAXSVz2X6_EgOO1Mqx0MqvKprUBIbkfFwCJ0DCw6b3SWzRymJk3Ol2sw",
+              "value": "Bearer eyJhbGciOiJSUzI1NiIsImtpZCI6bnVsbH0.eyJqdGkiOiJQbVNjMXVqZFpsZDdiOGVsblBYNTFRIiwiaXNzIjoiQ29uZmx1ZW50Iiwic3ViIjoiR0FSWSIsImV4cCI6MTc5MTQ3NTE0NiwiaWF0IjoxNzkxNDcxNTQ2LCJuYmYiOjE3OTE0NzE0ODYsImF6cCI6IkdBUlkiLCJhdXRoX3RpbWUiOjE3OTE0NzE1NDZ9.mywQWg1c5oX4A2SvjWsSylOqQTju5o7EiT4UO4_1kA-PSEIdORXrA90pgU6vc3CZpHW0S6uYAh2_JZP9aLWxrz4iWKRFMZLkMx4rXclHUkUBSYBGcqwyMdb25WL-nYCBoUbCDn0YGJbIaaBB8DHQc8svV_4Zmb3FBZR-5Krb69ABjogFgcKPkPd03gtFRvyJ3WIHm-p7Ko_C1tIDPKzddkZgeQiT2-VGzdW7ilX3wVhQi0BcgfUtxkNMT2TxxS0BvMMj71J3zTQ58cPB8CmjoPgf7Fpo2CyA3Ui5DTrzMs4TZHhM9Oagut60AGCg2prq3hgoTh7gU3ecGadj0FTriw",
               "system": true
             },
             {
@@ -3860,7 +3863,7 @@
             },
             {
               "key": "Postman-Token",
-              "value": "f7c65985-3fc5-4356-9e1e-e0d5303482a2",
+              "value": "1626a26c-abba-4dd4-8005-4c8a7ad4aa67",
               "system": true
             },
             {
@@ -3894,20 +3897,20 @@
             "bearer": [
               {
                 "type": "any",
-                "value": "eyJhbGciOiJSUzI1NiIsImtpZCI6bnVsbH0.eyJqdGkiOiJJZ0dtTmdNVmVselRkQVN1Um5LNE1nIiwiaXNzIjoiQ29uZmx1ZW50Iiwic3ViIjoiR0FSWSIsImV4cCI6MTc5MTQ1ODM2NSwiaWF0IjoxNzkxNDU0NzY1LCJuYmYiOjE3OTE0NTQ3MDUsImF6cCI6IkdBUlkiLCJhdXRoX3RpbWUiOjE3OTE0NTQ3NjV9.HNWyshhRhgUKVMUUMcEmx_DN1riPosgMDrMQ9-GbYplbAKV3VI5WUkTyQHacicI2FxJMHggWM_a3LxBeUdr9aBGcpzL8e8L8T10F626s5UcFApfoVRsrpsN1cGxkkalZg_P1zOiQEWCBThDIpwx1PiqPga1DkBPz2H0H4fifhWfd0gVxjwhPoU4RIRL0s9KcMQG0cwd7VCewW0UXMVhrmkBjp4oxDsF6nyv3vPl18vRp_oWcWiY8TNvByShaKTzJDhAmO7qhFphD6992R_2jcd9U9Mn-OhfAXSVz2X6_EgOO1Mqx0MqvKprUBIbkfFwCJ0DCw6b3SWzRymJk3Ol2sw",
+                "value": "eyJhbGciOiJSUzI1NiIsImtpZCI6bnVsbH0.eyJqdGkiOiJQbVNjMXVqZFpsZDdiOGVsblBYNTFRIiwiaXNzIjoiQ29uZmx1ZW50Iiwic3ViIjoiR0FSWSIsImV4cCI6MTc5MTQ3NTE0NiwiaWF0IjoxNzkxNDcxNTQ2LCJuYmYiOjE3OTE0NzE0ODYsImF6cCI6IkdBUlkiLCJhdXRoX3RpbWUiOjE3OTE0NzE1NDZ9.mywQWg1c5oX4A2SvjWsSylOqQTju5o7EiT4UO4_1kA-PSEIdORXrA90pgU6vc3CZpHW0S6uYAh2_JZP9aLWxrz4iWKRFMZLkMx4rXclHUkUBSYBGcqwyMdb25WL-nYCBoUbCDn0YGJbIaaBB8DHQc8svV_4Zmb3FBZR-5Krb69ABjogFgcKPkPd03gtFRvyJ3WIHm-p7Ko_C1tIDPKzddkZgeQiT2-VGzdW7ilX3wVhQi0BcgfUtxkNMT2TxxS0BvMMj71J3zTQ58cPB8CmjoPgf7Fpo2CyA3Ui5DTrzMs4TZHhM9Oagut60AGCg2prq3hgoTh7gU3ecGadj0FTriw",
                 "key": "token"
               }
             ]
           }
         },
         "response": {
-          "id": "713701c1-f51e-485c-978f-93a3d16f52b9",
+          "id": "c52697c8-4f37-476d-ac6f-4edf5e95c48f",
           "status": "OK",
           "code": 200,
           "header": [
             {
               "key": "Date",
-              "value": "Thu, 08 Oct 2026 10:19:25 GMT"
+              "value": "Thu, 08 Oct 2026 14:59:06 GMT"
             },
             {
               "key": "Vary",
@@ -4127,10 +4130,10 @@
             ]
           },
           "cookie": [],
-          "responseTime": 9,
+          "responseTime": 10,
           "responseSize": 195
         },
-        "id": "37db8046-18a8-49af-8a29-0b8fee9fbefd",
+        "id": "8ba945f0-c449-4eed-a98c-e3795788d524",
         "assertions": [
           {
             "assertion": "應回 200",
@@ -4144,15 +4147,15 @@
       },
       {
         "cursor": {
-          "ref": "6f573340-67d5-4144-8727-af42e92120d8",
+          "ref": "2c38d83b-7187-458e-a923-62004a0f1de1",
           "length": 10,
           "cycles": 1,
           "position": 9,
           "iteration": 0,
-          "httpRequestId": "b7bded84-6434-4019-8a1b-b22ec3e940ba"
+          "httpRequestId": "81fbd8fa-c39c-4210-bc5f-0ee09b000353"
         },
         "item": {
-          "id": "8a50ee40-1b1d-42fe-a128-a580824a20ff",
+          "id": "d192ae90-774f-413c-ab6c-8f1cb7fcf7ae",
           "name": "M.3 yujie 嘗試新增 role binding → 403",
           "request": {
             "description": {
@@ -4207,12 +4210,12 @@
             {
               "listen": "test",
               "script": {
-                "id": "d76d54e5-f2d6-4838-a4a0-1fd92133aa9d",
+                "id": "b82306d3-cf9a-4c05-9932-5d569b00e1fa",
                 "type": "text/javascript",
                 "exec": [
                   "pm.test(\"非管理員不可新增 role binding\", function () { pm.response.to.have.status(403); });"
                 ],
-                "_lastExecutionId": "6ba8590a-4a4a-47b9-9787-36692d36053e"
+                "_lastExecutionId": "284a275a-8c5d-41ea-a9aa-9068eabbfe76"
               }
             }
           ]
@@ -4267,7 +4270,7 @@
             },
             {
               "key": "Postman-Token",
-              "value": "b823f1dc-bf65-45a6-aaca-89d32728bd8b",
+              "value": "b95448ad-dad1-4bdc-a8d0-6b956289f8aa",
               "system": true
             },
             {
@@ -4313,13 +4316,13 @@
           }
         },
         "response": {
-          "id": "585f65ce-3b40-428a-a694-00b1dfa7559e",
+          "id": "a59b71b8-5430-4f1f-92af-cd9cb3d664e7",
           "status": "Forbidden",
           "code": 403,
           "header": [
             {
               "key": "Date",
-              "value": "Thu, 08 Oct 2026 10:19:25 GMT"
+              "value": "Thu, 08 Oct 2026 14:59:06 GMT"
             },
             {
               "key": "Vary",
@@ -4623,10 +4626,10 @@
             ]
           },
           "cookie": [],
-          "responseTime": 67,
+          "responseTime": 87,
           "responseSize": 283
         },
-        "id": "8a50ee40-1b1d-42fe-a128-a580824a20ff",
+        "id": "d192ae90-774f-413c-ab6c-8f1cb7fcf7ae",
         "assertions": [
           {
             "assertion": "非管理員不可新增 role binding",
@@ -4636,7 +4639,7 @@
       }
     ],
     "transfers": {
-      "responseTotal": 1723
+      "responseTotal": 1725
     },
     "failures": [],
     "error": null

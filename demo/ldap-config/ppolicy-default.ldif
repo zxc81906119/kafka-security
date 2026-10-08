@@ -1,0 +1,15 @@
+# 預設密碼政策(對應 AD 的「帳戶鎖定原則」):連續 5 次失敗鎖 60 秒,失敗次數 5 分鐘內累計。pwdLockout 平時 FALSE(不鎖),第 19 章實驗時改 TRUE。
+dn: ou=policies,dc=corp,dc=demo
+objectClass: organizationalUnit
+ou: policies
+
+dn: cn=default,ou=policies,dc=corp,dc=demo
+objectClass: pwdPolicy
+objectClass: person
+cn: default
+sn: default
+pwdAttribute: userPassword
+pwdLockout: FALSE
+pwdMaxFailure: 5
+pwdLockoutDuration: 60
+pwdFailureCountInterval: 300

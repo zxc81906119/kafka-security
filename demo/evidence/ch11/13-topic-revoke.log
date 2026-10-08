@@ -2,4 +2,4 @@
 $ (瀏覽器)phpLDAPadmin:topic-admin 移除 yujie
   📸 ch11/ldap-revoke-yujie-topic-admin-before.png — LDAP(模擬 AD)群組 topic-admin:移除 yujie 之前
   📸 ch11/ldap-revoke-yujie-topic-admin-after.png — LDAP(模擬 AD)群組 topic-admin:移除 yujie 之後
-[18:27:35] AD 群組異動完成
+[23:06:50] AD 群組異動完成

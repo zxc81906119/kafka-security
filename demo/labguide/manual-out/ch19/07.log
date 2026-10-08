@@ -1,0 +1,13 @@
+[ad-lockout] 已打開:連續 5 次失敗鎖 60 秒(pwdMaxFailure=5、pwdLockoutDuration=60)
+[HTTP 401]
+[HTTP 401]
+[HTTP 401]
+[HTTP 401]
+[HTTP 401]
+[HTTP 401]
+GARY 用對的密碼:
+[HTTP 401]
+GARY:已鎖定(4 秒前鎖定,56 秒後自動解除;或由管理員解鎖)
+緊急路徑(bootstrap 憑證)列 topic:
+__consumer_offsets
+__internal_confluent_only_broker_info

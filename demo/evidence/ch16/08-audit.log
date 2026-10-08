@@ -1,9 +1,9 @@
 # 【45 查詢 audit】最近 4 小時被拒絕(DENIED)的事件,依主體與資源列出
 $ ./opmenu.sh --run 45 240 '' DENIED
-最近 240 分鐘符合 96 筆(結果 DENIED);顯示最後 50 筆:
-2026-10-08T10:32:58 User:MING        kafka.Metadata       Describe       orders.events              DENIED
-2026-10-08T10:35:31 User:legacy-orders kafka.Metadata       Describe       orders.events              DENIED
-2026-10-08T10:35:31 User:legacy-orders kafka.Metadata       Describe       payments.events            DENIED
-2026-10-08T10:35:36 User:legacy-orders kafka.Metadata       Describe       payments.events            DENIED
-2026-10-08T10:35:36 User:MING        kafka.Metadata       Describe       orders.events              DENIED
-2026-10-08T10:35:36 User:legacy-other kafka.Metadata       Describe       orders.events              DENIED
+最近 240 分鐘符合 4112 筆(結果 DENIED);顯示最後 50 筆:
+2026-10-08T16:17:33 User:svc-quota   kafka.Metadata       Describe       orders.events              DENIED
+2026-10-08T16:17:34 User:svc-quota   kafka.Metadata       Describe       orders.events              DENIED
+2026-10-08T16:17:35 User:svc-quota   kafka.Metadata       Describe       orders.events              DENIED
+2026-10-08T16:17:36 User:svc-quota   kafka.Metadata       Describe       orders.events              DENIED
+2026-10-08T16:17:37 User:svc-quota   kafka.Metadata       Describe       orders.events              DENIED
+2026-10-08T16:17:37 User:svc-quota   kafka.Metadata       Describe       orders.events              DENIED

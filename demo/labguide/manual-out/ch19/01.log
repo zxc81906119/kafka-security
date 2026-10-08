@@ -1,0 +1,2 @@
+listener.name.client.connections.max.reauth.ms=60000
+listener.name.client.connections.max.reauth.ms=60000

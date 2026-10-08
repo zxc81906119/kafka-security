@@ -14,6 +14,8 @@ x-common-ssl: &common-ssl
   KAFKA_SSL_TRUSTSTORE_PASSWORD: changeit
   KAFKA_SSL_CLIENT_AUTH: none
   KAFKA_SSL_ENDPOINT_IDENTIFICATION_ALGORITHM: https
+  KAFKA_SSL_ENABLED_PROTOCOLS: TLSv1.3,TLSv1.2     # 第 19 章:只留 TLS 1.2 / 1.3(明確列出,不靠 JDK 預設)
+  KAFKA_SSL_CIPHER_SUITES: TLS_AES_256_GCM_SHA384,TLS_AES_128_GCM_SHA256,TLS_CHACHA20_POLY1305_SHA256,TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256   # 只留 AEAD(GCM / ChaCha20);實測未設定時 broker 接受 ECDHE-RSA-AES128-SHA(CBC + SHA-1)
 
 x-ldap-env: &ldap-env   # 只有 broker 需要(controller 不需要:實測無 LDAP 設定的 controller,群組型 role 的 CreateTopics 仍正確授權)
   # --- LDAP(模擬 AD):bind DN 唯讀查詢帳號 + 以群組成員屬性對映 ---
@@ -63,6 +65,7 @@ x-broker-env: &broker-env
     username="kafka-broker" password="broker-secret";
   # --- CLIENT listener:人 = PLAIN + LDAP;服務 = SCRAM ---
   KAFKA_LISTENER_NAME_CLIENT_SASL_ENABLED_MECHANISMS: PLAIN,SCRAM-SHA-512,OAUTHBEARER
+  KAFKA_LISTENER_NAME_CLIENT_CONNECTIONS_MAX_REAUTH_MS: "60000"   # 第 19 章:SASL 連線每 60 秒重新認證(demo 為了讓實驗看得到效果;正式環境建議 1 小時,依 client 數量評估)。預設 0 = 連著就永遠有效,第 18 章實驗就是這個情況。這個設定不能動態改,要重啟 broker
   KAFKA_LISTENER_NAME_CLIENT_PLAIN_SASL_SERVER_CALLBACK_HANDLER_CLASS: io.confluent.security.auth.provider.ldap.LdapAuthenticateCallbackHandler
   KAFKA_LISTENER_NAME_CLIENT_PLAIN_SASL_JAAS_CONFIG: org.apache.kafka.common.security.plain.PlainLoginModule required;
   KAFKA_LISTENER_NAME_CLIENT_SCRAM___SHA___512_SASL_JAAS_CONFIG: org.apache.kafka.common.security.scram.ScramLoginModule required;
@@ -106,7 +109,7 @@ x-broker-env: &broker-env
   KAFKA_METRIC_REPORTERS: io.confluent.telemetry.reporter.TelemetryReporter
   KAFKA_CONFLUENT_TELEMETRY_EXPORTER_C3PLUSPLUS_TYPE: "http"
   KAFKA_CONFLUENT_TELEMETRY_EXPORTER_C3PLUSPLUS_ENABLED: "true"
-  KAFKA_CONFLUENT_TELEMETRY_EXPORTER_C3PLUSPLUS_METRICS_INCLUDE: "io.confluent.kafka.server.request.(?!.*delta).*|io.confluent.kafka.server.server.broker.state|io.confluent.kafka.server.replica.manager.leader.count|io.confluent.kafka.server.request.queue.size|io.confluent.kafka.server.broker.topic.failed.produce.requests.rate.1.min|io.confluent.kafka.server.tier.archiver.total.lag|io.confluent.kafka.server.request.total.time.ms.p99|io.confluent.kafka.server.broker.topic.failed.fetch.requests.rate.1.min|io.confluent.kafka.server.broker.topic.total.fetch.requests.rate.1.min|io.confluent.kafka.server.partition.caught.up.replicas.count|io.confluent.kafka.server.partition.observer.replicas.count|io.confluent.kafka.server.tier.tasks.num.partitions.in.error|io.confluent.kafka.server.broker.topic.bytes.out.rate.1.min|io.confluent.kafka.server.request.total.time.ms.p95|io.confluent.kafka.server.controller.active.controller.count|io.confluent.kafka.server.request.total.time.ms.p999|io.confluent.kafka.server.controller.active.broker.count|io.confluent.kafka.server.request.handler.pool.request.handler.avg.idle.percent.rate.1.min|io.confluent.kafka.server.controller.unclean.leader.elections.rate.1.min|io.confluent.kafka.server.replica.manager.partition.count|io.confluent.kafka.server.controller.unclean.leader.elections.total|io.confluent.kafka.server.partition.replicas.count|io.confluent.kafka.server.broker.topic.total.produce.requests.rate.1.min|io.confluent.kafka.server.controller.offline.partitions.count|io.confluent.kafka.server.socket.server.network.processor.avg.idle.percent|io.confluent.kafka.server.partition.under.replicated|io.confluent.kafka.server.log.log.start.offset|io.confluent.kafka.server.log.tier.size|io.confluent.kafka.server.log.size|io.confluent.kafka.server.tier.fetcher.bytes.fetched.total|io.confluent.kafka.server.request.total.time.ms.p50|io.confluent.kafka.server.tenant.consumer.lag.offsets|io.confluent.kafka.server.log.log.end.offset|io.confluent.kafka.server.broker.topic.bytes.in.rate.1.min|io.confluent.kafka.server.partition.under.min.isr|io.confluent.kafka.server.partition.in.sync.replicas.count|io.confluent.telemetry.http.exporter.batches.dropped|io.confluent.telemetry.http.exporter.items.total|io.confluent.telemetry.http.exporter.items.succeeded|io.confluent.telemetry.http.exporter.send.time.total.millis|io.confluent.kafka.server.controller.leader.election.rate.(?!.*delta).*|io.confluent.telemetry.http.exporter.batches.failed"
+  KAFKA_CONFLUENT_TELEMETRY_EXPORTER_C3PLUSPLUS_METRICS_INCLUDE: "io.confluent.kafka.server.request.(?!.*delta).*|io.confluent.kafka.server.server.broker.state|io.confluent.kafka.server.replica.manager.leader.count|io.confluent.kafka.server.request.queue.size|io.confluent.kafka.server.broker.topic.failed.produce.requests.rate.1.min|io.confluent.kafka.server.tier.archiver.total.lag|io.confluent.kafka.server.request.total.time.ms.p99|io.confluent.kafka.server.broker.topic.failed.fetch.requests.rate.1.min|io.confluent.kafka.server.broker.topic.total.fetch.requests.rate.1.min|io.confluent.kafka.server.partition.caught.up.replicas.count|io.confluent.kafka.server.partition.observer.replicas.count|io.confluent.kafka.server.tier.tasks.num.partitions.in.error|io.confluent.kafka.server.broker.topic.bytes.out.rate.1.min|io.confluent.kafka.server.request.total.time.ms.p95|io.confluent.kafka.server.controller.active.controller.count|io.confluent.kafka.server.request.total.time.ms.p999|io.confluent.kafka.server.controller.active.broker.count|io.confluent.kafka.server.request.handler.pool.request.handler.avg.idle.percent.rate.1.min|io.confluent.kafka.server.controller.unclean.leader.elections.rate.1.min|io.confluent.kafka.server.replica.manager.partition.count|io.confluent.kafka.server.controller.unclean.leader.elections.total|io.confluent.kafka.server.partition.replicas.count|io.confluent.kafka.server.broker.topic.total.produce.requests.rate.1.min|io.confluent.kafka.server.controller.offline.partitions.count|io.confluent.kafka.server.socket.server.network.processor.avg.idle.percent|io.confluent.kafka.server.partition.under.replicated|io.confluent.kafka.server.log.log.start.offset|io.confluent.kafka.server.log.tier.size|io.confluent.kafka.server.log.size|io.confluent.kafka.server.tier.fetcher.bytes.fetched.total|io.confluent.kafka.server.request.total.time.ms.p50|io.confluent.kafka.server.tenant.consumer.lag.offsets|io.confluent.kafka.server.log.log.end.offset|io.confluent.kafka.server.broker.topic.bytes.in.rate.1.min|io.confluent.kafka.server.partition.under.min.isr|io.confluent.kafka.server.partition.in.sync.replicas.count|io.confluent.telemetry.http.exporter.batches.dropped|io.confluent.telemetry.http.exporter.items.total|io.confluent.telemetry.http.exporter.items.succeeded|io.confluent.telemetry.http.exporter.send.time.total.millis|io.confluent.kafka.server.controller.leader.election.rate.(?!.*delta).*|io.confluent.telemetry.http.exporter.batches.failed|io.confluent.kafka.server.socket.server.failed.authentication.total(?!.*delta).*|io.confluent.kafka.server.socket.server.successful.authentication.total(?!.*delta).*|io.confluent.kafka.server.socket.server.failed.reauthentication.total(?!.*delta).*|io.confluent.kafka.server.socket.server.connection.count(?!.*delta).*|io.confluent.kafka.server.socket.server.connection.quotas.total.limit(?!.*delta).*"   # 第 19 章:只加明確要用的指標(認證失敗/成功、重新認證失敗、連線數與上限)。名稱後面要加 (?!.*delta).*:同名的 delta 型態 Prometheus 不收,整批會被拒(實測,連原本的監控指標也跟著丟);也不要用萬用字元
   KAFKA_CONFLUENT_TELEMETRY_EXPORTER_C3PLUSPLUS_CLIENT_BASE_URL: "https://prometheus:9090/api/v1/otlp"
   KAFKA_CONFLUENT_TELEMETRY_EXPORTER_C3PLUSPLUS_CLIENT_COMPRESSION: "gzip"
   KAFKA_CONFLUENT_TELEMETRY_EXPORTER_C3PLUSPLUS_API_KEY: "c3"            # api.key / api.secret 就是 Prometheus 的 Basic 帳密
@@ -354,6 +357,67 @@ services:
       KAFKA_REST_CONFLUENT_METADATA_SSL_TRUSTSTORE_TYPE: PKCS12
       KAFKA_REST_CONFLUENT_METADATA_SSL_TRUSTSTORE_PASSWORD: changeit
       CUB_CLASSPATH: '/usr/share/java/confluent-security/kafka-rest/*:/usr/share/java/kafka-rest/*:/usr/share/java/cp-base-new/*'
+
+  # ---------------- 第 20 章:Schema Registry(RBAC)+ 欄位級加密(CSFLE) ----------------
+  schema-registry:
+    image: confluentinc/cp-schema-registry:8.3.2
+    container_name: schema-registry
+    hostname: schema-registry
+    profiles: ["sr", "full"]
+    depends_on:
+      broker1: { condition: service_healthy }
+      broker2: { condition: service_healthy }
+    mem_limit: 768m
+    healthcheck:
+      test: ["CMD-SHELL", "timeout 3 bash -c 'exec 3<>/dev/tcp/localhost/8081'"]
+      interval: 10s
+      timeout: 5s
+      retries: 18
+      start_period: 20s
+    volumes:
+      - ./certs:/etc/kafka/secrets:ro
+    ports:
+      - "${HOST_PORT_SR:-8085}:8081"       # 主機 8081 已被 phpLDAPadmin 使用
+    environment:
+      SCHEMA_REGISTRY_HOST_NAME: schema-registry
+      SCHEMA_REGISTRY_LISTENERS: https://0.0.0.0:8081
+      # 對外 HTTPS:共用 server 憑證(SAN 含 schema-registry)
+      SCHEMA_REGISTRY_SSL_KEYSTORE_LOCATION: /etc/kafka/secrets/server.keystore.p12
+      SCHEMA_REGISTRY_SSL_KEYSTORE_TYPE: PKCS12
+      SCHEMA_REGISTRY_SSL_KEYSTORE_PASSWORD: changeit
+      SCHEMA_REGISTRY_SSL_KEY_PASSWORD: changeit
+      SCHEMA_REGISTRY_SSL_TRUSTSTORE_LOCATION: /etc/kafka/secrets/truststore.p12
+      SCHEMA_REGISTRY_SSL_TRUSTSTORE_TYPE: PKCS12
+      SCHEMA_REGISTRY_SSL_TRUSTSTORE_PASSWORD: changeit
+      # 連 broker(_schemas topic):與 REST Proxy 相同做法——client 憑證(CN=schema-registry)向 MDS 換 token,OAUTHBEARER
+      SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS: SASL_SSL://broker1:9094,SASL_SSL://broker2:9094
+      SCHEMA_REGISTRY_KAFKASTORE_SECURITY_PROTOCOL: SASL_SSL
+      SCHEMA_REGISTRY_KAFKASTORE_SASL_MECHANISM: OAUTHBEARER
+      SCHEMA_REGISTRY_KAFKASTORE_SASL_LOGIN_CALLBACK_HANDLER_CLASS: io.confluent.kafka.clients.plugins.auth.token.TokenCertificateLoginCallbackHandler
+      SCHEMA_REGISTRY_KAFKASTORE_SASL_JAAS_CONFIG: org.apache.kafka.common.security.oauthbearer.OAuthBearerLoginModule required metadataServerUrls="https://broker1:8091,https://broker2:8092";
+      SCHEMA_REGISTRY_KAFKASTORE_SSL_KEYSTORE_LOCATION: /etc/kafka/secrets/client-schema-registry.keystore.p12
+      SCHEMA_REGISTRY_KAFKASTORE_SSL_KEYSTORE_TYPE: PKCS12
+      SCHEMA_REGISTRY_KAFKASTORE_SSL_KEYSTORE_PASSWORD: changeit
+      SCHEMA_REGISTRY_KAFKASTORE_SSL_KEY_PASSWORD: changeit
+      SCHEMA_REGISTRY_KAFKASTORE_SSL_TRUSTSTORE_LOCATION: /etc/kafka/secrets/truststore.p12
+      SCHEMA_REGISTRY_KAFKASTORE_SSL_TRUSTSTORE_TYPE: PKCS12
+      SCHEMA_REGISTRY_KAFKASTORE_SSL_TRUSTSTORE_PASSWORD: changeit
+      # RBAC:使用者以 Basic(AD 帳密)或 Bearer(MDS token)進來,授權交給 MDS
+      SCHEMA_REGISTRY_RESOURCE_EXTENSION_CLASS: io.confluent.kafka.schemaregistry.security.SchemaRegistrySecurityResourceExtension
+      SCHEMA_REGISTRY_CONFLUENT_SCHEMA_REGISTRY_AUTHORIZER_CLASS: io.confluent.kafka.schemaregistry.security.authorizer.rbac.RbacAuthorizer
+      SCHEMA_REGISTRY_REST_SERVLET_INITIALIZOR_CLASSES: io.confluent.common.security.jetty.initializer.InstallBearerOrBasicSecurityHandler
+      SCHEMA_REGISTRY_CONFLUENT_SCHEMA_REGISTRY_AUTH_MECHANISM: JETTY_AUTH
+      SCHEMA_REGISTRY_PUBLIC_KEY_PATH: /etc/kafka/secrets/public.pem
+      SCHEMA_REGISTRY_SCHEMA_REGISTRY_GROUP_ID: schema-registry
+      SCHEMA_REGISTRY_CONFLUENT_METADATA_BOOTSTRAP_SERVER_URLS: https://broker1:8091,https://broker2:8092
+      SCHEMA_REGISTRY_CONFLUENT_METADATA_SERVER_URLS_MAX_AGE_MS: 60000
+      SCHEMA_REGISTRY_CONFLUENT_METADATA_SSL_KEYSTORE_LOCATION: /etc/kafka/secrets/client-schema-registry.keystore.p12
+      SCHEMA_REGISTRY_CONFLUENT_METADATA_SSL_KEYSTORE_TYPE: PKCS12
+      SCHEMA_REGISTRY_CONFLUENT_METADATA_SSL_KEYSTORE_PASSWORD: changeit
+      SCHEMA_REGISTRY_CONFLUENT_METADATA_SSL_KEY_PASSWORD: changeit
+      SCHEMA_REGISTRY_CONFLUENT_METADATA_SSL_TRUSTSTORE_LOCATION: /etc/kafka/secrets/truststore.p12
+      SCHEMA_REGISTRY_CONFLUENT_METADATA_SSL_TRUSTSTORE_TYPE: PKCS12
+      SCHEMA_REGISTRY_CONFLUENT_METADATA_SSL_TRUSTSTORE_PASSWORD: changeit
 
   # ---------------- Control Center (next-gen 2.x) + Prometheus + Alertmanager ----------------
   prometheus:

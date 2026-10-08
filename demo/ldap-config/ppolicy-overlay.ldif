@@ -1,0 +1,15 @@
+# 第 19 章:模擬 AD 的「帳號鎖定」(ppolicy overlay)。只載入模組與 overlay;鎖定本身預設關閉(見 ppolicy-default.ldif 的 pwdLockout),
+#   第 19 章才暫時打開,做完關回去,其他章節不受影響。以 ldapi:/// EXTERNAL(root)套用,up.sh 在 ACL 之後執行。
+dn: cn=module{0},cn=config
+changetype: modify
+add: olcModuleLoad
+olcModuleLoad: ppolicy
+
+dn: olcOverlay=ppolicy,olcDatabase={1}mdb,cn=config
+changetype: add
+objectClass: olcOverlayConfig
+objectClass: olcPPolicyConfig
+olcOverlay: ppolicy
+olcPPolicyDefault: cn=default,ou=policies,dc=corp,dc=demo
+olcPPolicyHashCleartext: FALSE
+olcPPolicyUseLockout: TRUE
