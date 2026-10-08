@@ -23,7 +23,7 @@ bash scripts/setup-e2e.sh                       # 瀏覽器自動化(各 Lab 的
 
 ## Lab 18(CyberArk 整合)
 
-Lab 18 用 CyberArk 的開源版 Conjur,要多下載約 1.2 GB 映像;第一步 `bash scripts/conjur.sh up` 會啟動它(profile `cyberark`,4 個容器)。PAM 側(代登入、錄影、輪替主機帳號)本機無法重現,手冊附錄 E 有說明。
+Lab 18 用 CyberArk 的開源版 Conjur,要多下載約 1.2 GB 映像;第一步 `bash scripts/conjur.sh up` 會啟動它(profile `cyberark`,4 個容器)。Lab 18.20 第一次執行 `scripts/secret-protection.sh summon-setup` 會再從 GitHub(cyberark 官方 release)下載 summon 與 summon-conjur 約 10 MB(校驗 SHA256)。PAM 側(代登入、錄影、輪替主機帳號)本機無法重現,手冊附錄 E 有說明。
 
 ## 練習時
 

@@ -1,0 +1,19 @@
+# 第 18 章(變化版):同 docker-compose.cyberark.yml,但 broker 啟動前取主金鑰改用 CyberArk 官方工具 summon + summon-conjur,
+#   不用自己寫 fetch 腳本:summon 以主機身分向 Conjur 取 secrets.yml 列的秘密,注入成子程序的環境變數後執行原本的啟動程式。
+#   正式環境的 systemd 只要一行:ExecStart=/usr/local/bin/summon -p summon-conjur -f /etc/kafka/secrets.yml /usr/bin/kafka-server-start /etc/kafka/server.properties
+# 需要:config/conjur/bin/{summon,summon-conjur}(scripts/secret-protection.sh summon-setup 會下載並產生 /etc/conjur.identity)
+# 用法: scripts/secret-protection.sh apply-summon
+services:
+  broker2:
+    volumes:
+      - ./config/conjur/bin/summon:/usr/local/bin/summon:ro
+      - ./config/conjur/bin/summon-conjur:/usr/local/lib/summon/summon-conjur:ro
+      - ./config/conjur/conjur.conf:/etc/conjur.conf:ro                         # Conjur 位址、帳戶、CA(無秘密)
+      - ./config/conjur/identity-broker:/conjur/identity:ro                     # 這台主機的身分與 API key(netrc 格式;正式環境放 /etc/conjur.identity、權限 0600。這裡掛目錄:Docker Desktop 單檔掛載時 summon-conjur 讀不到)
+      - ./config/conjur/secrets-broker.yml:/conjur/secrets.yml:ro
+    environment:
+      KAFKA_LDAP_JAVA_NAMING_SECURITY_CREDENTIALS: "$${securepass:/etc/kafka/secrets/security.properties:server.properties/ldap.java.naming.security.credentials}"
+      KAFKA_CONFIG_PROVIDERS: securepass
+      KAFKA_CONFIG_PROVIDERS_SECUREPASS_CLASS: io.confluent.kafka.security.config.provider.SecurePassConfigProvider
+    # summon 取不到秘密就不會執行後面的指令(broker 不啟動)
+    command: ["/usr/local/bin/summon", "-p", "/usr/local/lib/summon/summon-conjur", "-f", "/conjur/secrets.yml", "/etc/confluent/docker/run"]
