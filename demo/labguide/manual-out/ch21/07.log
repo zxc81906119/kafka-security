@@ -1,0 +1,12 @@
+Created topic ha.roll.
+背景 producer:2400 筆、每秒 6 筆、acks=all、冪等;同時依序重啟 broker1 → broker2 → broker3 → 非 active controller → active controller
+active controller = controller1(最後重啟)
+  重啟 broker1 → 健康,URP=0
+  重啟 broker2 → 健康,URP=0
+  重啟 broker3 → 健康,URP=0
+  重啟 controller2 → 健康
+  重啟 controller3 → 健康
+  重啟 controller1 → 健康
+producer 回報送出 2400 筆;topic 實際 2400 筆;送出失敗 0 筆
+判定:滾動重啟 3 台 broker 與 3 台 controller 期間,producer 零失敗、零遺失(2400 = 2400)
+LeaderId:               2

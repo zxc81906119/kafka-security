@@ -1,0 +1,11 @@
+目前 topic 筆數:500
+停 broker2、broker3(只剩 broker1)
+ Topic: ha.test Partition: 0 Leader: 11 Replicas: 12,13,11 Isr: 11 Offline: 12,13 Elr: 13 LastKnownElr: 
+ Topic: ha.test Partition: 1 Leader: 11 Replicas: 13,11,12 Isr: 11 Offline: 12,13 Elr: 13 LastKnownElr: 
+ Topic: ha.test Partition: 2 Leader: 11 Replicas: 11,12,13 Isr: 11 Offline: 12,13 Elr: 13 LastKnownElr: 
+acks=all 寫入 50 筆:成功 0 筆(ISR 1 < min.isr 2,被拒絕,producer 重試到逾時)
+        50 TimeoutException: Expiring 50 record
+acks=1 寫入 50 筆:producer 回報成功 50 筆;但 consumer 看得到的筆數仍是 500(原本 500)——高水位沒有前進,這 50 筆讀不到
+用 consumer group 讀取: 逾時(內部 topic __consumer_offsets 的 min.isr 也不足,加入不了群組)
+恢復後 topic 筆數:550
+判定:ISR 低於 min.isr 時,acks=all 被擋,acks=1 看似成功卻讀不到(恢復後才出現)——這就是要用 acks=all 加 min.isr 的理由

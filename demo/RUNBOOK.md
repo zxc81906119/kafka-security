@@ -237,6 +237,21 @@ gary 在 C3 指派 `orders-read` → DeveloperRead;LDAP 介面把 ming 從 devel
 
 **未驗證 / 要和客戶確認**:CSFLE 授權的商務與取得方式;地端 KMS(Vault 或自訂 driver)對接;機器(不在 AD)如何向 SR 認證(SR 的 REST 只認 AD 帳密或 MDS token);SR 的高可用與多執行個體(`schema.registry.group.id`);加密對效能與 schema 演進的影響。
 
+## 第 21 章(進階)HA 叢集:3 controller、3 broker 的停機行為與滾動重啟(`./demo.sh 21`,需先 `scripts/ha.sh on`)
+
+**環境**:`docker-compose.ha.yml` 加 controller2、controller3、broker3;副本 3、min.insync.replicas 2;靜態 quorum(`kraft.version` 0,正式環境官方建議動態)。`scripts/ha.sh on|off` 切換(會清除所有資料;在 `.env` 加 `COMPOSE_FILE` 與 `COMPOSE_PATH_SEPARATOR=,`),HA 模式不要同時開 cyberark、sr profile(記憶體)。不在 `demo.sh all` 與 preflight 的基礎鏈內。
+
+| 實驗 | 實測結果(7 步 0 失敗;手冊自檢 7 步 0 不符合) | 腳本 |
+|---|---|---|
+| quorum | 3 個 voter、1 個 leader;3 台 broker 是 observer | `scripts/ha-lab.sh quorum` |
+| 停 1 台 broker | acks=all 寫入不中斷;URP 大於 0(要告警);恢復後補齊 | `broker-down` |
+| 停 2 台 broker(剩 1) | ISR 1 < min.isr 2:acks=all 被擋(逾時 0 筆成功);**acks=1 producer 回報成功但 consumer 讀不到**(高水位不前進,恢復後才出現);consumer group 加入不了(__consumer_offsets 的 min.isr 也不足) | `brokers-down` |
+| 停 1 台 controller | 建 topic、寫入正常 | `ctrl-down` |
+| 停 2 台 controller(失去多數) | 建 topic 與 describe 沒回應;既有 topic 讀寫仍可(實測 2 分鐘內;更長時間未測) | `ctrls-down` |
+| 滾動重啟 | 背景寫入 2400 筆(acks=all、冪等),依序重啟 3 broker(每台等 URP=0)再 3 controller(active 最後):2400 = 2400,零失敗 | `rolling` |
+
+**踩坑**:perf 的 sticky partitioner 會把一批資料放在同一分區,檢查「讀得到」要加總全部分區,不能只看分區 0;`kafka-producer-perf-test --producer.config` 已棄用,改 `--command-config`。
+
 ## 對應到客戶 RHEL 9 VM 的位置與步驟(手動部署)
 | demo | RHEL 9 VM |
 |---|---|

@@ -1,0 +1,9 @@
+# 【停 2 台 controller】失去多數:控制面(建 topic、describe、換 leader)停擺,但既有 topic 的讀寫(資料面)繼續;恢復多數後才恢復
+$ docker stop controller2 controller3;kafka-topics --create(逾時);寫入與讀取既有 topic;docker start
+停 controller2、controller3(剩 1/3,失去多數)
+建立 topic(等 25 秒):沒有回應(逾時)
+describe topic(等 25 秒):3
+寫入既有 topic(acks=all):送出 100 筆
+讀取既有 topic 全部分區:750 筆
+恢復後建立 topic:Created topic ha.c2.
+判定:失去 controller 多數時,資料面(既有 topic 的讀寫)繼續運作,但控制面(建 topic、describe、換 leader)停擺;恢復多數後才恢復

@@ -392,7 +392,7 @@ add(...table([
   ['demo/scripts/up.sh、reset.sh、bootstrap-rbac.sh', '一鍵建置、重置、第一批授權'],
   ['demo/scripts/k.sh、rp.sh、mds.sh、ldap-group.sh、create-service-account.sh、as-user.sh', '包好的單項指令(對應手動的 kc、hc、ldapmodify…)'],
   ['demo/scenarios/ch01…ch20-*.sh', '各 Lab 的整章腳本(含自動驗證);ch15 人員異動、ch16 OP menu、ch17 傳輸加密補強、ch18 CyberArk 整合、ch19 帳號被偷之後、ch20 Schema Registry'],
-  ['demo/config/conjur/、scripts/conjur.sh、scripts/app-with-conjur.sh、scripts/secret-protection.sh、scripts/rolling-rotate-test.sh、docker-compose.cyberark.yml、docker-compose.cyberark-summon.yml', 'Lab 18:Conjur 的 policy、TLS 入口、取秘密腳本、應用啟動示範、Secret Protection 與 broker2 覆蓋設定(自寫腳本版與 summon 版)'],
+  ['demo/config/conjur/、scripts/conjur.sh、scripts/app-with-conjur.sh、scripts/secret-protection.sh、scripts/rolling-rotate-test.sh、docker-compose.ha.yml、scripts/ha.sh、scripts/ha-lab.sh、docker-compose.cyberark.yml、docker-compose.cyberark-summon.yml', 'Lab 18:Conjur 的 policy、TLS 入口、取秘密腳本、應用啟動示範、Secret Protection 與 broker2 覆蓋設定(自寫腳本版與 summon 版)'],
   ['demo/scripts/reauth-test.sh、quota-test.sh、ad-lockout.sh、config/c3/security_rules.yml、ldap-config/ppolicy-*.ldif', 'Lab 19:重新認證、配額、AD 鎖定實驗與認證失敗告警規則'],
   ['demo/scripts/sr-setup.sh、scenarios/ch20-schema-registry.sh', 'Lab 20:Schema Registry(profile sr)的啟動與授權'],
   ['demo/opmenu/', 'OP menu 程式(README.md 說明項目、設定與限制;test-*.sh 回歸測試)'],

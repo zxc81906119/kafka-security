@@ -48,6 +48,8 @@ export const ACTS = [
     scene: ['基本功過關了,但現實不會照教科書走:半夜要有人能建 topic、舊系統不會說 Kafka 的語言、稽核要盤點每條連線、還有一個你不知道的 REST 入口。'] },
   { id: 'week3', title: '第三週:異動、日常維運、傳輸加密、CyberArk、帳號被偷與 Schema Registry', when: '第三週', labs: [15, 16, 17, 18, 19, 20],
     scene: ['人會調動、會離職;而日常維運不能每次都靠指令記憶。第三週,Ming 處理人員異動,並第一次用平台組自己做的維運選單(OP menu)值班。接著把「線上傳輸」補完整:連 AD 的線路、監控元件、使用者連 C3 的入口。最後,資安要求所有密碼不能再放在檔案裡——行裡的 CyberArk 登場。'] },
+  { id: 'week4', title: '第四週:平台韌性', when: '第四週', labs: [21],
+    scene: ['前三週都在精簡環境裡做。主管問了一句很現實的話:「如果半夜壞一台,會怎樣?壞兩台呢?」Ming 決定不憑印象回答,切到 3 台 controller、3 台 broker 的環境,一台一台停給大家看。'] }
 ];
 
 // 每個 Lab 的故事:scene 情境、mission 任務、recap 小結(學到的事 + 對應的規矩)
@@ -134,6 +136,11 @@ export const LAB_STORY = {
       '輪到欄位加密時,他碰到牆:註冊帶加密規則的 schema 回 402,要企業版再加購 CSFLE 授權。他沒有假裝做完——把「沒驗證」和原因寫進報告,也記下一個危險的失敗模式:Schema Registry 若沒開規則 extension,規則會被默默丟掉,producer 不報錯,卡號卻以明文寫進 topic。'],
     mission: ['讓 Schema Registry 用同一套 AD 群組授權。', '確認 KEK 的建立與讀取權限分開。', '確認欄位級加密在這個環境能不能驗證,並如實記下原因。'],
     recap: ['Schema Registry 不另設帳號:認證交 MDS,授權看 subject 與 Kek:<名稱> 的 role。', 'KEK 的解密能力由 KMS 控制,不是 RBAC;local-kms 只能測試。', '欄位級加密需要企業版加 CSFLE 加購授權;這個環境沒有驗證加密與解密。', '上線前要用讀原始位元組的方式確認欄位是密文——規則被丟掉時不會有任何錯誤。'] },
+  21: { scene: ['Ming 把環境切成 HA:3 台 controller、3 台 broker,副本 3、min.insync.replicas 2。他先確認 quorum 是 3 個 voter,再開始停機。',
+      '停 1 台 broker,寫入不中斷,但副本不足的分區數(URP)變成大於 0——他把它記成一條要設告警的指標。停到只剩 1 台時,acks=all 全被擋;更嚇人的是 acks=1 的 producer 回報「成功」,consumer 卻一筆也看不到,要等 broker 回來才出現。',
+      '接著是 controller:停 1 台沒事;停 2 台,建 topic 和 describe 都沒回應,但既有 topic 還能讀寫。最後他背景寫入 2400 筆,依序重啟 3 台 broker 與 3 台 controller,active controller 最後,結果送出與實際筆數都是 2400。'],
+    mission: ['確認 3 台 controller 的 quorum 與容錯範圍。', '實際停 1 台與 2 台 broker,看寫入與讀取的差別。', '實際停 1 台與 2 台 controller,看控制面與資料面的差別。', '用滾動重啟驗證「重啟不等於停機」。'],
+    recap: ['副本 3 加 min.isr 2:允許壞 1 台 broker、不允許壞 2 台;壞 2 台時 acks=all 被擋,acks=1 會讓應用誤以為成功(讀不到)。', 'URP 大於 0 是要告警的訊號;ISR 低於 min.isr 時寫入被拒。', 'controller 3 台容忍 1 台;失去多數時控制面停擺,資料面只是暫時撐著,不是可依賴的容錯。', '滾動重啟的順序:broker 一台一台(等 URP 回 0)、controller 非 active 先、active 最後。', '測試環境用靜態 quorum 簡化;正式環境建議動態 quorum,並實際演練。'] }
 };
 
 export const EPILOGUE = {

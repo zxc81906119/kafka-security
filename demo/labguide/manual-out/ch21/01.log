@@ -1,0 +1,8 @@
+LeaderId:               2
+CurrentVoters:          [{"id": 1, "endpoints": ["CONTROLLER://controller1:9093"]}, {"id": 2, "endpoints": ["CONTROLLER://controller2:9093"]}, {"id": 3, "endpoints": ["CONTROLLER://controller3:9093"]}
+CurrentObservers:       [{"id": 11, "directoryId": "fGzlnjzCLGY5QfeEfWuLzA"}, {"id": 12, "directoryId": "uccefbiECOkefTCK07b5qQ"}, {"id": 13, "directoryId": "XmT1wpY6PVCkkAhUTnBGag"}]
+kraft.version / metadata.version:
+Feature: confluent.metadata.version SupportedMinVersion: CP-7.3-IV3 SupportedMaxVersion: CP-8.3-IV0B FinalizedVersionLevel: CP-8.3-IV0B Epoc
+Feature: kraft.version SupportedMinVersion: 0 SupportedMaxVersion: 1 FinalizedVersionLevel: 0 Epoch: 13306
+Feature: metadata.version SupportedMinVersion: 3.3-IV3 SupportedMaxVersion: 4.3-IV0 FinalizedVersionLevel: UNKNOWN 0 Epoch: 13306
+判定:3 個 controller 都是 voter(quorum 容得下 1 台故障),3 台 broker 是 observer

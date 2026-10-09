@@ -1,0 +1,8 @@
+# 【副本 3】建立 RF=3、min.insync.replicas=2 的 topic,寫入 300 筆(acks=all)並比對筆數
+$ kafka-topics --create --replication-factor 3 --config min.insync.replicas=2;kafka-producer-perf-test --producer-props acks=all
+Created topic ha.test.
+ Topic: ha.test Partition: 0 Leader: 13 Replicas: 13,11,12 Isr: 13,11,12 Offline: Elr: LastKnownElr: 
+ Topic: ha.test Partition: 1 Leader: 11 Replicas: 11,12,13 Isr: 11,12,13 Offline: Elr: LastKnownElr: 
+ Topic: ha.test Partition: 2 Leader: 12 Replicas: 12,13,11 Isr: 12,13,11 Offline: Elr: LastKnownElr: 
+寫入(acks=all):送出 300 筆;topic 實際 300 筆
+判定:副本 3、min.isr 2 的 topic 寫入與讀回正常(300 = 300)

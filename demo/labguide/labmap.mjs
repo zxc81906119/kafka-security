@@ -55,6 +55,8 @@ export const MAPS = [
     flows: [['停用「連著的」帳號(只停用 SCRAM 憑證)', 'broker 每 60 秒重新認證', '✔ 約 60 秒內舊連線被切斷(第 18 章預設是切不斷)'], ['連續 5 次錯誤登入', 'broker → Prometheus 規則 → Alertmanager', '✔ KafkaAuthFailuresBurst firing,告警送達'], ['弱 TLS 套件 / 同來源 4 條連線 / 超額流量', 'broker(套件限定、連線上限、quota)', '✘ 弱套件被拒、超額連線被拒、吞吐量 1/16'], ['對 GARY 亂試 6 次', 'MDS / Kafka → AD(鎖定原則)', '✘ GARY 被鎖(連對密碼也進不去);✔ 緊急路徑與機器帳號不受影響;管理員解鎖後恢復'], ['刪除 SCRAM 帳號 → 重啟 broker(KAFKA-20774)', 'broker 重放 metadata', '✘ 所有 SCRAM 登入失敗 → ✔ 重建被刪帳號再重啟即恢復;所以停用一律覆寫密碼不刪除']] },
   { n: 20, prove: 'Schema Registry 納入同一套授權:subject 與 KEK 的權限跟 AD 群組走;欄位級加密(CSFLE)需要加購授權,這個環境無法驗證加密', use: ['cli', 'broker', 'ad', 'certs'],
     flows: [['無帳密 / 密碼錯', 'Schema Registry(交 MDS 驗證)', '✘ 401'], ['yujie 註冊 orders. / payments. 的 schema', 'SR → MDS 授權(subject role)', '✔ orders. 200 → ✘ payments. 403;列表只看到自己有權限的'], ['gary / yujie / ming 對 KEK', 'SR → MDS 授權(Kek:<名稱> role)', '✔ security 群組可建 → yujie 只能讀 → ✘ ming 無 role 403'], ['註冊帶 ENCRYPT 規則的 schema', 'Schema Registry 授權檢查', '✘ 402 需要企業版 + CSFLE 加購授權(加密與解密未驗證)'], ['讀 topic 原始位元組', 'kafka-console-consumer', '✘ 卡號是明文 → 上線前一定要這樣檢查']] },
+  { n: 21, prove: 'HA 叢集(3 controller、3 broker、副本 3、min.isr 2):少 1 台不影響,少 2 台 broker 時 acks=all 被擋、acks=1 讀不到;controller 失去多數時控制面停擺;滾動重啟零遺失', use: ['cli', 'broker'],
+    flows: [['停 1 台 broker', 'ISR 剩 2 ≥ min.isr 2', '✔ acks=all 寫入不中斷;URP>0 要告警'], ['停 2 台 broker', 'ISR 1 < min.isr 2', '✘ acks=all 被拒;acks=1 回報成功卻讀不到'], ['停 1 台 controller', '剩 2/3 仍有多數', '✔ 建 topic、寫入正常'], ['停 2 台 controller', '失去多數', '✘ 建 topic 與 describe 沒回應 → ✔ 既有 topic 讀寫仍可'], ['滾動重啟 3 broker + 3 controller', 'URP=0 才做下一台;active controller 最後', '✔ 背景寫入 2400 = 2400,零失敗']] },
 ];
 
 const esc = s => s.replace(/&/g, '&amp;').replace(/</g, '&lt;');

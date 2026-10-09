@@ -1,0 +1,10 @@
+# 【停 1 台 broker】剩 2 台:ISR 剩 2、仍滿足 min.isr 2,acks=all 寫入不中斷;URP(副本不足分區)大於 0 是要告警的訊號;恢復後補齊
+$ docker stop broker3;kafka-topics --describe --under-replicated-partitions;寫入;docker start broker3
+停 broker3
+ Topic: ha.test Partition: 0 Leader: 11 Replicas: 13,11,12 Isr: 11,12 Offline: 13 Elr: LastKnownElr: 
+ Topic: ha.test Partition: 1 Leader: 11 Replicas: 11,12,13 Isr: 11,12 Offline: 13 Elr: LastKnownElr: 
+ Topic: ha.test Partition: 2 Leader: 12 Replicas: 12,13,11 Isr: 12,11 Offline: 13 Elr: LastKnownElr: 
+URP(副本不足的分區)數:146
+只剩 2 台,acks=all 寫入:送出 200 筆
+恢復 broker3:ISR 補齊、URP=0
+判定:停 1 台 broker 時寫入不中斷(ISR 剩 2 ≥ min.isr 2),URP 大於 0 是告警訊號,恢復後補齊
