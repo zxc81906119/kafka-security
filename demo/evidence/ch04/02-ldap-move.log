@@ -5,4 +5,4 @@ $ (瀏覽器)phpLDAPadmin:orders-read 加入 ming、orders-write 移除 ming
   📸 ch04/ldap-ming-to-readonly-after.png — LDAP(模擬 AD)群組 orders-read:加入 ming 之後
   📸 ch04/ldap-ming-from-developers-before.png — LDAP(模擬 AD)群組 orders-write:移除 ming 之前
   📸 ch04/ldap-ming-from-developers-after.png — LDAP(模擬 AD)群組 orders-write:移除 ming 之後
-[09:15:17] AD 群組異動完成
+[14:29:51] AD 群組異動完成

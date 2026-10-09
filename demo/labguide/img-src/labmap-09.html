@@ -17,7 +17,7 @@
   .ar{color:#4a5a6a;font-size:18px}
   </style></head><body><div class="s">
   <h1>Lab 9 地圖 <span>(選修)密碼輪替、內部通道、AD 故障</span></h1>
-  <div class="prove">這堂要證明:密碼輪替不中斷;內部通道也要身分;AD 掛了服務不受影響</div>
+  <div class="prove">這堂要證明:密碼輪替不中斷;內部通道是 mTLS(共用憑證),沒憑證進不來、不是 super user 做不了事;AD 掛了服務不受影響</div>
   <div class="lab">動到的元件(打亮者)</div><div class="chips"><span class="chip ">瀏覽器</span><span class="chip ">Postman</span><span class="chip on">Kafka CLI / curl(kc、hc)</span><span class="chip ">OP menu</span><span class="chip ">憑證</span><span class="chip on">模擬 AD(openldap)</span><span class="chip ">phpLDAPadmin</span><span class="chip on">controller</span><span class="chip on">broker + MDS</span><span class="chip ">REST Proxy</span><span class="chip ">Control Center</span><span class="chip ">Prometheus</span><span class="chip ">Alertmanager</span><span class="chip ">legacy app</span><span class="chip ">CyberArk(Conjur)</span></div>
   <div class="f"><div class="a">svc-orders-v2 新舊並行 → 停用舊帳號</div><div class="ar">➜</div><div class="b">broker</div><div class="ar">➜</div><div class="c ok">✔ 不中斷;舊密碼立刻失效</div></div><div class="f"><div class="a">沒有身分連 CONTROLLER 9093</div><div class="ar">➜</div><div class="b">controller</div><div class="ar">➜</div><div class="c bad">✘ 認證失敗</div></div><div class="f"><div class="a">停掉 AD</div><div class="ar">➜</div><div class="b">SCRAM 服務照常寫入;人登入失敗</div><div class="ar">➜</div><div class="c mix">✔ / ✘</div></div>
   </div></body></html>

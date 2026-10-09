@@ -1,0 +1,10 @@
+① 新建 SCRAM 帳號 svc-bugtest,再刪除它(--delete-config)
+Completed updating config for user svc-bugtest.
+Completed updating config for user svc-bugtest.
+② 重啟 broker1(重放 metadata):healthy
+   svc-orders 用 SCRAM 登入 broker1 → 成功;登入 broker2(沒重啟)→ 成功
+③ 救回:把被刪的 svc-bugtest 重新建立(任何密碼),再重啟 broker1
+Completed updating config for user svc-bugtest.
+   重啟 broker1:healthy
+   svc-orders 用 SCRAM 登入 broker1 → 成功
+判定:這次沒有重現(重啟後 成功)——此 bug 取決於 metadata 重放的狀態:全新叢集 100% 重現,跑過很多章節、已有 metadata 快照的環境不一定。沒重現不代表安全,停用帳號仍一律覆寫隨機密碼、不刪除

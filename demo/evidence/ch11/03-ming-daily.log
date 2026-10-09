@@ -2,5 +2,5 @@
 $ kafka-console-consumer --command-config ming.properties --topic orders.events --from-beginning
 still-ok
 {"order":"A-3001","by":"yujie"}
-heartbeat from yujie at 2026-10-09T01:16:22Z
+heartbeat from yujie at 2026-10-09T06:30:55Z
 Processed a total of 3 messages

@@ -241,7 +241,7 @@ docker exec broker2 grep connections.max.reauth.ms /etc/kafka/kafka.properties`]
       { t: '19.2 失效 ②:停用一個「連著的」帳號,舊連線還能寫幾筆?', why: '對照第 18 章:當時只停用 SCRAM 憑證,舊連線 14 筆全寫入。現在同樣的動作(角色保留、只停用憑證),在下一次重新認證時失敗,連線被切斷。腳本用臨時帳號 svc-reauth,每 2 秒寫 1 筆、共 45 筆,第 10 秒刪它的憑證。',
         manual: ['bash scripts/reauth-test.sh run'],
         ev: 'reauth-run', re: /判定:60 秒內舊連線被切斷/, expect: '寫進 topic 的筆數少於 45;producer 的第一個錯誤是 Authentication failed during re-authentication;判定:60 秒內舊連線被切斷。',
-        warn: '為什麼「停用」是覆寫成隨機密碼、不是刪除憑證:實測(CP 8.3.2、KRaft)刪除 SCRAM 憑證之後,下一次重啟 broker 會失敗(broker 啟動時向自己做 SCRAM 認證被拒);全新叢集可 100% 重現,改成覆寫隨機密碼就正常。已經刪過的帳號,事後重新建立即可救回。正式環境在確認 Confluent 的說法前,不要用 --delete-config 刪 SCRAM 憑證(RUNBOOK 第 19 章有重現步驟與對照表)。 重新認證只擋「憑證」。這是第二道防線:要立刻切斷,仍然是解除角色(第 18 章的隔離流程);重新認證確保即使忘了,最慢也在設定的間隔內失效。' },
+        warn: '為什麼「停用」是覆寫成隨機密碼、不是刪除憑證:實測(CP 8.3.2、KRaft)刪除 SCRAM 憑證之後,下一次重啟 broker 會失敗(broker 啟動時向自己做 SCRAM 認證被拒);全新叢集可 100% 重現,改成覆寫隨機密碼就正常。已經刪過的帳號,事後重新建立再重啟 broker 即可救回。內部通道改成 mTLS(Lab 9.5)後 broker 不會再起不來,但重啟後 CLIENT 埠的 SCRAM 帳號會全部登入失敗(實測),所以這條規則仍然必要。這是 Apache Kafka 的已知 bug KAFKA-20774(ScramDelta.apply() 在 REMOVE 對象不存在時丟掉整組 SCRAM 使用者;修復版 4.5.0 尚未發行,CP 8.3.2 的 Kafka 4.3.x 受影響)。在升到含修復的版本之前,不要用 --delete-config 刪 SCRAM 憑證(RUNBOOK 第 19 章有重現步驟、對照表與 bug 連結)。 重新認證只擋「憑證」。這是第二道防線:要立刻切斷,仍然是解除角色(第 18 章的隔離流程);重新認證確保即使忘了,最慢也在設定的間隔內失效。' },
       { t: '19.3 發現:連續認證失敗 → 告警送到 Alertmanager', why: 'broker 的 telemetry 會送 failed_authentication_total 到 Prometheus(docker-compose.yml 的 metrics.include 已加這個指標)。規則 KafkaAuthFailuresBurst:5 分鐘內失敗超過 3 次就觸發。這裡故意製造 5 次錯誤登入(SCRAM 錯誤密碼 3 次、PLAIN 錯誤密碼 2 次),等規則評估(每 60 秒一次)。',
         manual: [R`for i in 1 2 3; do kc kafka-topics --bootstrap-server $BOOT --command-config /clients/scram-svc-orders-wrong.properties --list >/dev/null 2>&1; done
 for i in 1 2; do kc kafka-topics --bootstrap-server $BOOT --command-config /clients/plain-yujie-wrong.properties --list >/dev/null 2>&1; done
@@ -282,6 +282,10 @@ echo "GARY 用對的密碼:"; hc -o /dev/null -u gary:gary-pw $MDS/security/1.0/
 bash scripts/ad-lockout.sh off
 bash scripts/ad-lockout.sh status GARY`],
         ev: 'lockout-recover', re: /HTTP 200/, expect: '已解鎖;GARY 用對的密碼 [HTTP 200];鎖定已關閉;GARY 未鎖定。' },
+      { t: '19.9 已知 bug:刪除 SCRAM 帳號後重啟 broker,所有 SCRAM 登入失敗(KAFKA-20774)', why: '這就是為什麼整本手冊「停用帳號」都是覆寫隨機密碼、不用 --delete-config。Apache Kafka 的 ScramDelta.apply() 在重放 metadata 時,遇到對象不在目前 image 裡的 REMOVE 紀錄,會把整個 SCRAM 機制的使用者表丟掉(連 kafka-broker 這種應該存在的帳號也消失);修復在 Kafka 4.5.0,尚未發行,CP 8.3.2 的 Kafka 4.3.x 受影響。實驗:新建一個帳號再刪掉,重啟 broker1,svc-orders 用 SCRAM 登入 broker1 失敗(沒重啟的 broker2 正常);把被刪的帳號重新建立,再重啟 broker1,恢復。內部通道已改 mTLS(Lab 9.5),所以 broker 本身起得來;改之前 broker 會直接起不來。',
+        manual: ['bash scripts/scram-delete-bug.sh'],
+        ev: 'scram-bug', re: /判定:(已重現 KAFKA-20774|這次沒有重現)/, expect: '全新叢集:② 重啟後 svc-orders 登入 broker1 失敗、broker2 成功;③ 重建帳號再重啟後 broker1 成功;判定:已重現 KAFKA-20774…。跑過很多章節的環境可能是「判定:這次沒有重現」(bug 取決於 metadata 重放狀態),兩種都屬正常。約 3 到 4 分鐘。',
+        warn: '對客戶的說法:升到含修復的版本前,不要用 --delete-config 刪 SCRAM 帳號;停用 = 覆寫隨機密碼 + 解除 role binding;已經刪過就重建同名帳號再滾動重啟。對不存在的帳號執行刪除也會觸發(本專案舊版 reset.sh 就是這樣中的)。bug 連結與對照表在 RUNBOOK 第 19 章。' },
     ],
   },
   {
@@ -324,6 +328,10 @@ ORDER_ENC_BODY='{"schemaType":"AVRO","schema":"{\"type\":\"record\",\"name\":\"O
 hc -u gary:gary-pw -X POST -H "$J" -d "$ORDER_ENC_BODY" https://schema-registry:8081/subjects/orders.events-value/versions`],
         ev: 'sr-csfle', re: /add-on CSFLE licenses are required/, expect: '{"error_code":40201,"message":"Both enterprise and add-on CSFLE licenses are required."} [HTTP 402]。',
         warn: '三個重點:① 沒有驗證:ENCRYPT 規則的實際加密、解密、金鑰輪替、效能,以及 KMS 對接(AWS / Azure / GCP / HashiCorp Vault 是官方支援的型態;沒有看到 CyberArk Conjur 或其他地端 KMS 的內建型態,地端要用自訂 KMS driver 或 Vault),都要在有授權的環境另外驗。② 要評估授權:企業版之外的加購授權,屬商務問題,不是技術設定。③ 危險的靜默失敗(測試時觀察到):如果 Schema Registry 沒有開 RuleSet extension,註冊帶規則的 schema 不會報錯,而是默默丟掉規則;之後 producer 照常寫入,卡號以明文落在 topic 裡(用一般 console consumer 讀原始位元組就看得到)。所以上線前一定要用「讀原始位元組」的方式確認欄位真的是密文,不能只看 producer 沒報錯。' },
+      { t: '20.6 上線前的檢查習慣:讀 topic 的原始位元組,確認欄位到底有沒有被加密', why: '不要只看 producer 沒報錯。yujie 用 Avro(orders.events-value v1)寫一筆含卡號的訂單,再以一般 console consumer(bootstrap 身分)讀原始位元組找卡號。這個環境會看到明文——因為沒有 CSFLE 授權、規則不存在;正式環境若看到明文,就代表加密規則沒生效(例如 20.1 警告裡的靜默失敗)。',
+        manual: ['bash scripts/sr-raw-check.sh'],
+        ev: 'sr-raw', re: /判定:topic 裡的卡號是明文/, expect: '① 寫入完成(producer 沒有報錯);② od -c 看得到卡號字串;判定:topic 裡的卡號是明文。',
+        warn: '把這個檢查做成上線前與每次改 schema 規則後的固定步驟;有授權的環境應該看到密文(base64 的 ciphertext),看到明文就是事故。' },
     ],
   },
 ];

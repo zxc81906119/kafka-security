@@ -22,6 +22,11 @@ if [ -f certs/.done ]; then
     docker run --rm -v "$OUT:/certs" --entrypoint sh alpine/openssl -c "cd /certs; openssl x509 -req -in server.csr -CA ca.pem -CAkey ca.key -CAcreateserial -out server.pem -days 825 -sha256 -extfile san.cnf -extensions v3 2>/dev/null; openssl pkcs12 -export -in server.pem -inkey server.key -certfile ca.pem -name server -out server.keystore.p12 -passout pass:$PASS; chmod 644 server.pem server.keystore.p12"
     echo "server 憑證 SAN 已補 schema-registry(同 key、同 CA)"
   fi
+  # 已有 CA:補產內部通道共用憑證(CN=kafka-internal,mTLS;broker↔broker 與 broker↔controller 共用)
+  if [ ! -f certs/internal.keystore.p12 ]; then
+    docker run --rm -v "$OUT:/certs" --entrypoint sh alpine/openssl -c "cd /certs; printf '[req]\ndistinguished_name=dn\nreq_extensions=v3\nprompt=no\n[dn]\nCN=kafka-internal\nO=Demo\n[v3]\nsubjectAltName=DNS:broker1,DNS:broker2,DNS:controller1,DNS:localhost\nextendedKeyUsage=serverAuth,clientAuth\n' > internal.cnf; openssl genrsa -out internal.key 2048 2>/dev/null; openssl req -new -key internal.key -out internal.csr -config internal.cnf; openssl x509 -req -in internal.csr -CA ca.pem -CAkey ca.key -CAcreateserial -out internal.pem -days 825 -sha256 -extfile internal.cnf -extensions v3 2>/dev/null; openssl pkcs12 -export -in internal.pem -inkey internal.key -certfile ca.pem -name internal -out internal.keystore.p12 -passout pass:$PASS; chmod 644 internal.* "
+    echo "補產內部通道共用憑證: internal(CN=kafka-internal)"
+  fi
   # 已有 CA:僅補產缺少的 client 憑證
   for n in c3 restproxy bootstrap legacy-orders schema-registry; do
     if [ ! -f certs/client-$n.keystore.p12 ]; then
@@ -63,6 +68,24 @@ for n in c3 restproxy bootstrap legacy-orders schema-registry; do
   openssl x509 -req -in client-$n.csr -CA ca.pem -CAkey ca.key -CAcreateserial -out client-$n.pem -days 825 -sha256 2>/dev/null
   openssl pkcs12 -export -in client-$n.pem -inkey client-$n.key -certfile ca.pem -name $n -out client-$n.keystore.p12 -passout pass:'"$PASS"'
 done
+# --- 內部通道共用憑證:broker↔broker(INTERNAL)與 broker↔controller(CONTROLLER)都用這一張,做 mTLS 身分 ---
+# CN=kafka-internal;SAN 含 broker1、broker2、controller1(同一張同時當 server 與 client 憑證,所以 EKU 兩個都要)
+cat > internal.cnf <<EOF2
+[req]
+distinguished_name=dn
+req_extensions=v3
+prompt=no
+[dn]
+CN=kafka-internal
+O=Demo
+[v3]
+subjectAltName=DNS:broker1,DNS:broker2,DNS:controller1,DNS:localhost
+extendedKeyUsage=serverAuth,clientAuth
+EOF2
+openssl genrsa -out internal.key 2048 2>/dev/null
+openssl req -new -key internal.key -out internal.csr -config internal.cnf
+openssl x509 -req -in internal.csr -CA ca.pem -CAkey ca.key -CAcreateserial -out internal.pem -days 825 -sha256 -extfile internal.cnf -extensions v3 2>/dev/null
+openssl pkcs12 -export -in internal.pem -inkey internal.key -certfile ca.pem -name internal -out internal.keystore.p12 -passout pass:'"$PASS"'
 # --- MDS token 金鑰 ---
 openssl genrsa -out keypair.pem 2048 2>/dev/null
 openssl rsa -in keypair.pem -outform PEM -pubout -out public.pem 2>/dev/null

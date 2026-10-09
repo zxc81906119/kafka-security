@@ -5,8 +5,8 @@ $ kafka-console-consumer --topic confluent-audit-log-events | 依來源 IP 彙�
    4×  C3         | User:MING | kafka.DescribeConfigs
    4×  C3         | User:MING | kafka.CreateTopics
    3×  REST Proxy | User:YUJIE | kafka.Metadata
-   2×  REST Proxy | User:YUJIE | kafka.Produce
    2×  REST Proxy | User:legacy-orders | kafka.Metadata
-   1×  REST Proxy | User:MING | kafka.Produce
+   2×  REST Proxy | User:YUJIE | kafka.Produce
    1×  REST Proxy | User:legacy-orders | kafka.Produce
    1×  REST Proxy | User:legacy-other | kafka.Metadata
+   1×  REST Proxy | User:MING | kafka.Produce

@@ -6,11 +6,11 @@ $ ./opmenu.sh --run 11
 broker1:9094 (id: 11
 broker2:9094 (id: 12
 -- MDS(OPMENU_MDS_URL,逐台):
-  https://broker1:8091                     正常(0.011628s)
--- 你的 MDS token:已用 12s,剩約 3588s
+  https://broker1:8091                     正常(0.016033s)
+-- 你的 MDS token:已用 14s,剩約 3586s
 -- broker 在線:2 / 2(設定的 broker 數)
 -- controller quorum(需要 ClusterAdmin):
   LeaderId:               1
-  HighWatermark:          5650
+  HighWatermark:          6596
   CurrentVoters:          [{"id": 1, "endpoints": ["CONTROLLER://controller1:9093"]}]
 -- AD:登入時已通過 MDS 驗證,代表當時 MDS 到 AD 這段可用;之後若要重新確認請重新登入

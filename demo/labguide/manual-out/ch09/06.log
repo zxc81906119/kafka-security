@@ -1,5 +1,3 @@
 __internal_confluent_only_broker_info
-orders.events
-orders.payments
 Error while executing topic command : Authorization failed.
 ERROR org.apache.kafka.common.errors.TopicAuthorizationException: Authorization failed.

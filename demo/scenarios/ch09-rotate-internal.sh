@@ -24,12 +24,12 @@ step rot-old-dead "【輪替 4/4】舊密碼立刻失效;新帳號照常" \
 bash "$DEMO_ROOT/scripts/create-service-account.sh" svc-orders orders-secret-v1 >/dev/null
 
 # ---- B. 內部通道不接受「人」或「未授權」的連線 ----
-step ctl-anon "【內部通道】CONTROLLER 埠(9093):只有 TLS、沒有 SASL 身分的連線 → 拒絕"   "kafka-broker-api-versions --bootstrap-server controller1:9093 --command-config ssl-only.properties"   'K kafka-broker-api-versions --bootstrap-server controller1:9093 --command-config /clients/ssl-only.properties 2>&1 | head -3' 'Disconnected|disconnected|Timed out|timed out|fail|Fail|authenticat'
-step ctl-ad "【內部通道】用 AD 人員帳密(yujie)連 CONTROLLER → 拒絕(controller 只認內部靜態帳號,不查 AD)" \
-  "kafka-broker-api-versions --bootstrap-server controller1:9093 --command-config yujie.properties" \
-  'K kafka-broker-api-versions --bootstrap-server controller1:9093 --command-config /clients/plain-yujie.properties 2>&1 | head -3' 'Authentication failed|authentication'
-step int-svc "【內部通道】INTERNAL 埠(9092)只是另一個 SASL 埠:有效的 SCRAM 帳號(svc-orders)能「認證」進去 —— 所以必須靠防火牆只開放給 broker/controller 節點"   "kafka-topics --bootstrap-server broker1:9092 --command-config svc-orders.properties --list"   'K kafka-topics --bootstrap-server broker1:9092 --command-config /clients/scram-svc-orders.properties --list 2>&1 | grep -v "^_" | head -4' 'orders.events'
-step int-svc-authz "【內部通道】但授權仍然生效:svc-orders 即使連上 INTERNAL 埠,也不能做叢集管理(建立 topic → 被拒)"   "kafka-topics --bootstrap-server broker1:9092 --command-config svc-orders.properties --create --topic hack"   'K kafka-topics --bootstrap-server broker1:9092 --command-config /clients/scram-svc-orders.properties --create --topic hack --partitions 1 --replication-factor 2 2>&1 | head -3' 'Authorization failed|not authorized|Not authorized|TopicAuthorization'
+step ctl-anon "【內部通道】CONTROLLER 埠(9093)是 mTLS:沒有 client 憑證的連線 → TLS 握手就被拒(不是 SASL,帳密在這裡沒有用)"   "kafka-broker-api-versions --bootstrap-server controller1:9093 --command-config ssl-only.properties"   'K kafka-broker-api-versions --bootstrap-server controller1:9093 --command-config /clients/ssl-only.properties 2>&1 | head -3' 'Disconnected|disconnected|Timed out|timed out|fail|Fail|authenticat|handshake'
+step ctl-ad "【內部通道】拿 SCRAM 帳密(svc-orders)連 CONTROLLER → 拒絕:這個埠根本不接受 SASL,只認憑證" \
+  "kafka-broker-api-versions --bootstrap-server controller1:9093 --command-config svc-orders.properties" \
+  'K kafka-broker-api-versions --bootstrap-server controller1:9093 --command-config /clients/scram-svc-orders.properties 2>&1 | head -3' 'handshake is not completed|Authentication failed|authentication|isconnected'
+step int-svc "【內部通道】INTERNAL 埠(9092)也是 mTLS:同一個 CA 簽的任何 client 憑證(這裡用 CN=legacy-orders)都能完成 TLS、能列出 topic —— 所以仍然要靠防火牆只開放給 broker/controller 節點"   "kafka-topics --bootstrap-server broker1:9092 --command-config mtls-legacy-orders.properties --list"   'K kafka-topics --bootstrap-server broker1:9092 --command-config /clients/mtls-legacy-orders.properties --list 2>&1 | head -4' '__internal_confluent_only_broker_info|orders.events'
+step int-svc-authz "【內部通道】但授權仍然生效:CN=legacy-orders 不是 super user,連上 INTERNAL 埠也不能做叢集管理(建立 topic → 被拒);只有 CN=kafka-internal(broker 與 controller 共用那張)才是 super user"   "kafka-topics --bootstrap-server broker1:9092 --command-config mtls-legacy-orders.properties --create --topic hack"   'K kafka-topics --bootstrap-server broker1:9092 --command-config /clients/mtls-legacy-orders.properties --create --topic hack --partitions 1 --replication-factor 2 2>&1 | head -3' 'Authorization failed|not authorized|Not authorized|TopicAuthorization'
 
 # ---- C. AD 故障時 ----
 echo "    ── AD(LDAP)故障演練:停掉 openldap 容器 ──"

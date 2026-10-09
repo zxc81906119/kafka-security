@@ -1,6 +1,6 @@
 # 【KEK 授權】KEK 只有 security 群組(gary)能建;yujie(orders-write)只被授權「讀」orders-kek;ming 沒有任何 role
 $ POST /dek-registry/v1/keks   # gary / yujie;GET /dek-registry/v1/keks/orders-kek   # yujie / ming
-gary 建立 KEK orders-kek → [HTTP 200](200 = 新建,409 = 已存在)
+gary 建立 KEK orders-kek → [HTTP 409](200 = 新建,409 = 已存在)
 yujie 建立 KEK x-kek → {"error_code":40301,"message":"User is denied operation Register on Kek: x-kek"} [HTTP 403] 
 yujie 讀 KEK orders-kek → [HTTP 200]
 ming 讀 KEK orders-kek → {"error_code":40301,"message":"User is denied operation Read on Kek: orders-kek"} [HTTP 403] 

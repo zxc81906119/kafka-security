@@ -1,6 +1,6 @@
 Completed updating config for user svc-orders.
 Completed updating config for user svc-orders-v2.
 [HTTP 204]
-ERROR [Producer clientId=console-producer] Connection to node -1 (broker1/172.20.0.6:9094) failed authentication due to: Authentication failed during authentication due to invalid credentials with SASL mechanism SCRAM-SHA-512
+ERROR [Producer clientId=console-producer] Connection to node -1 (broker1/172.20.0.5:9094) failed authentication due to: Authentication failed during authentication due to invalid credentials with SASL mechanism SCRAM-SHA-512
 WARN [Producer clientId=console-producer] Bootstrap broker broker1:9094 (id: -1 rack: null isFenced: false) disconnected
 org.apache.kafka.common.errors.SaslAuthenticationException: Authentication failed during authentication due to invalid credentials with SASL mechanism SCRAM-SHA-512

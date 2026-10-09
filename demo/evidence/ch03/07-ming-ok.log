@@ -1,3 +1,3 @@
 # 【數秒後】ming 取得權限:同一個指令這次成功
 $ echo hi | kafka-console-producer ... --command-config ming.properties --topic orders.events
-ming 寫入成功(約 3 秒內生效,Kafka 端零變更)
+ming 寫入成功(約 4 秒內生效,Kafka 端零變更)

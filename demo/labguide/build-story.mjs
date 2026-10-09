@@ -208,8 +208,8 @@ add(...table([
   ['元件', '主機埠(容器埠)', '協定 / 身分'],
   ['模擬 AD(openldap)', '389;636 只在容器內(broker 走 LDAPS)', 'bind DN 唯讀查詢帳號;使用者名稱 = CN'],
   ['phpLDAPadmin', '8081', 'cn=admin,dc=corp,dc=demo / adminpw'],
-  ['controller1', '9093 只在容器內', 'SASL/PLAIN 靜態帳號(kafka-controller)'],
-  ['broker1 / broker2(Kafka)', '9094 / 19194(容器內都是 9094)', 'CLIENT:人 PLAIN+AD、服務 SCRAM、元件 OAUTHBEARER;INTERNAL 9092 只在容器內'],
+  ['controller1', '9093 只在容器內', 'mTLS(與 broker 共用憑證 CN=kafka-internal)'],
+  ['broker1 / broker2(Kafka)', '9094 / 19194(容器內都是 9094)', 'CLIENT:人 PLAIN+AD、服務 SCRAM、元件 OAUTHBEARER;INTERNAL 9092(mTLS,共用內部憑證)只在容器內'],
   ['broker1 / broker2(MDS)', '8091 / 8092', 'HTTPS;Basic(AD)或 client 憑證;Admin REST(/kafka/v3)共用此埠'],
   ['REST Proxy', '8086', 'HTTPS;人 Basic、legacy app client 憑證'],
   ['Control Center', '9022(9021 只給容器內健康檢查)', 'HTTPS;人用 AD 帳密;C3 自己用 CN=c3 憑證'],
@@ -259,7 +259,7 @@ add(H2('設計重點(兩個身分平面)'));
   '平台元件(C3、REST Proxy、bootstrap)各用一張 client 憑證向 MDS 認證,不需要 AD 服務帳號。',
   'Control Center:人用本人身分(瀏覽器登入 → 使用者 token),機器用自己的憑證身分(C3 自己是 User:c3、SystemAdmin);Prometheus / Alertmanager 以 HTTPS + Basic 保護(Lab 13、Lab 17);C3 與 AD 連線也都走加密(HTTPS、LDAPS;Lab 17);broker 內建 Admin REST 依官方 kafka.rest. 設定保護(Lab 14)。',
   'legacy app 只能用 HTTP:改走 REST Proxy,機器出示 client 憑證(CN = 主體)、人仍用 Basic,兩者並存(Lab 12);服務帳號(SCRAM)不能直接進 REST Proxy。',
-  'KRaft 內部通道:CONTROLLER 用 SASL/PLAIN;broker↔broker 用 SCRAM;INTERNAL/CONTROLLER 埠必須以防火牆限制。',
+  'KRaft 內部通道:CONTROLLER 與 INTERNAL 都是 mTLS,broker 與 controller 共用一張憑證(CN=kafka-internal);不用 SCRAM(刪除過 SCRAM 憑證後重啟 broker 會失敗,Lab 19);INTERNAL/CONTROLLER 埠必須以防火牆限制。',
 ].forEach(t => add(bullet(t)));
 add(H2('限制與如實說明'));
 [
@@ -379,7 +379,7 @@ add(...table([
   ['KAFKA_* 環境變數', '/etc/kafka/server.properties(broker)、controller.properties;KAFKA_LISTENER_NAME_CLIENT_… → listener.name.client.…'],
   ['certs/', '/etc/kafka/secrets/(權限 600、owner cp-kafka);AD CS 根憑證同時放系統信任(update-ca-trust)與 Java truststore'],
   ['各元件 SCRAM 密碼', 'Secret Protection / 檔案權限 600 + systemd 獨立使用者;Vault 為後續'],
-  ['controller 的設定', 'demo 的 controller 在 CONTROLLER 埠(9093)用 SASL/PLAIN 靜態帳號(kafka-controller),設定在 docker-compose 的環境變數;VM 上寫在 controller.properties,並以防火牆只對 broker 與 controller 節點開放 9093'],
+  ['controller 的設定', 'demo 的 controller 在 CONTROLLER 埠(9093)用 mTLS(與 broker 共用憑證 CN=kafka-internal),設定在 docker-compose 的環境變數;VM 上寫在 controller.properties,並以防火牆只對 broker 與 controller 節點開放 9093'],
   ['.env 的 audit router', 'server.properties:confluent.security.event.router.config=<JSON 單行>'],
   ['LDAP 設定(x-ldap-env)', 'broker 設定 ldap.*(官方:MDS 叢集所有 broker 都需要;只有 MDS writer broker 向 LDAP 取群組)。controller 不設 ldap.*,改設 kraft.controller.enabled=true 與 token key(官方做法,實測通過)'],
   ['kc / hc 函式', '在 VM 上直接用 kafka-topics、kafka-configs、curl,參數相同(--command-config 指向各人的 client.properties)'],

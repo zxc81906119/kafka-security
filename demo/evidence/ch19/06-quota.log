@@ -1,9 +1,9 @@
 # 【限速】client quota:被偷的帳號能灌多少流量?同一個動作,不限速 vs 套用 producer_byte_rate
 $ kafka-configs --alter --entity-type users --entity-name <帳號> --add-config producer_byte_rate=100000
 ① 不限速(帳號 svc-quota 被偷,攻擊者全速寫入):
-2500 records sent, 3172.588832 records/sec (3.03 MB/sec)
+2500 records sent, 1784.439686 records/sec (1.70 MB/sec)
 Completed updating config for user svc-quota.
 ② 套用 producer_byte_rate=100000(約 100 KB/s)後,同一個動作:
-2500 records sent, 166.766727 records/sec (0.16 MB/sec)
+2500 records sent, 164.225186 records/sec (0.16 MB/sec)
 配額設定:Quota configs for user-principal 'svc-quota' are producer_byte_rate=100000.0
-判定:限速後吞吐量降為原來的 1/19(3173 → 167 筆/秒)
+判定:限速後吞吐量降為原來的 1/11(1784 → 164 筆/秒)

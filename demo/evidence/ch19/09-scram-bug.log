@@ -1,0 +1,12 @@
+# 【已知 bug】刪除 SCRAM 帳號(--delete-config)後重啟 broker:重放 metadata 時整組 SCRAM 使用者被丟掉,所有 SCRAM 登入失敗(KAFKA-20774,fix 在 Kafka 4.5.0 未發行;CP 8.3.2 受影響)。救回:重建被刪帳號再重啟。所以這個 demo 停用帳號一律覆寫隨機密碼、不刪除
+$ scripts/scram-delete-bug.sh   # 新建→刪除→重啟 broker1→SCRAM 登入失敗→重建帳號→重啟→恢復
+① 新建 SCRAM 帳號 svc-bugtest,再刪除它(--delete-config)
+Completed updating config for user svc-bugtest.
+Completed updating config for user svc-bugtest.
+② 重啟 broker1(重放 metadata):healthy
+   svc-orders 用 SCRAM 登入 broker1 → 成功;登入 broker2(沒重啟)→ 成功
+③ 救回:把被刪的 svc-bugtest 重新建立(任何密碼),再重啟 broker1
+Completed updating config for user svc-bugtest.
+   重啟 broker1:healthy
+   svc-orders 用 SCRAM 登入 broker1 → 成功
+判定:這次沒有重現(重啟後 成功)——此 bug 取決於 metadata 重放的狀態:全新叢集 100% 重現,跑過很多章節、已有 metadata 快照的環境不一定。沒重現不代表�

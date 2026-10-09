@@ -1,4 +1,4 @@
-# 【內部通道】但授權仍然生效:svc-orders 即使連上 INTERNAL 埠,也不能做叢集管理(建立 topic → 被拒)
-$ kafka-topics --bootstrap-server broker1:9092 --command-config svc-orders.properties --create --topic hack
+# 【內部通道】但授權仍然生效:CN=legacy-orders 不是 super user,連上 INTERNAL 埠也不能做叢集管理(建立 topic → 被拒);只有 CN=kafka-internal(broker 與 controller 共用那張)才是 super user
+$ kafka-topics --bootstrap-server broker1:9092 --command-config mtls-legacy-orders.properties --create --topic hack
 Error while executing topic command : Authorization failed.
 ERROR org.apache.kafka.common.errors.TopicAuthorizationException: Authorization failed.

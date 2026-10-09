@@ -49,20 +49,23 @@ x-broker-env: &broker-env
   KAFKA_PROCESS_ROLES: broker
   KAFKA_CONTROLLER_QUORUM_VOTERS: 1@controller1:9093
   KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
-  KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:SASL_SSL,INTERNAL:SASL_SSL,CLIENT:SASL_SSL
+  KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:SSL,INTERNAL:SSL,CLIENT:SASL_SSL
   KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
   KAFKA_HEAP_OPTS: "-Xms768m -Xmx768m"
-  # --- 內部通道:CONTROLLER = SASL/PLAIN(靜態帳號,無 LDAP callback);INTERNAL = SASL/SCRAM-SHA-512 ---
-  KAFKA_SASL_MECHANISM_CONTROLLER_PROTOCOL: PLAIN
-  KAFKA_LISTENER_NAME_CONTROLLER_SASL_ENABLED_MECHANISMS: PLAIN
-  KAFKA_LISTENER_NAME_CONTROLLER_PLAIN_SASL_JAAS_CONFIG: >-
-    org.apache.kafka.common.security.plain.PlainLoginModule required
-    username="kafka-broker" password="broker-secret";
-  KAFKA_SASL_MECHANISM_INTER_BROKER_PROTOCOL: SCRAM-SHA-512
-  KAFKA_LISTENER_NAME_INTERNAL_SASL_ENABLED_MECHANISMS: SCRAM-SHA-512
-  KAFKA_LISTENER_NAME_INTERNAL_SCRAM___SHA___512_SASL_JAAS_CONFIG: >-
-    org.apache.kafka.common.security.scram.ScramLoginModule required
-    username="kafka-broker" password="broker-secret";
+  # --- 內部通道:CONTROLLER(broker→controller)與 INTERNAL(broker↔broker)都是 mTLS,共用一張憑證 internal.keystore.p12(CN=kafka-internal)---
+  #   不用 SASL:SCRAM 憑證存在 metadata 裡,刪除過 SCRAM 憑證後重啟 broker 會因為自己認證不過而起不來(見 RUNBOOK 第 19 章);mTLS 身分不依賴 metadata。
+  #   身分 = 憑證 CN(ssl.principal.mapping.rules)→ User:kafka-internal(在 super.users)。同一張憑證 broker 與 controller 共用,代價是 audit 看不出是哪一台。
+  KAFKA_SSL_PRINCIPAL_MAPPING_RULES: "RULE:^.*CN=([^,]*).*$$/$$1/,DEFAULT"
+  KAFKA_LISTENER_NAME_INTERNAL_SSL_CLIENT_AUTH: required
+  KAFKA_LISTENER_NAME_CONTROLLER_SSL_CLIENT_AUTH: required
+  KAFKA_LISTENER_NAME_INTERNAL_SSL_KEYSTORE_LOCATION: /etc/kafka/secrets/internal.keystore.p12
+  KAFKA_LISTENER_NAME_INTERNAL_SSL_KEYSTORE_TYPE: PKCS12
+  KAFKA_LISTENER_NAME_INTERNAL_SSL_KEYSTORE_PASSWORD: changeit
+  KAFKA_LISTENER_NAME_INTERNAL_SSL_KEY_PASSWORD: changeit
+  KAFKA_LISTENER_NAME_CONTROLLER_SSL_KEYSTORE_LOCATION: /etc/kafka/secrets/internal.keystore.p12
+  KAFKA_LISTENER_NAME_CONTROLLER_SSL_KEYSTORE_TYPE: PKCS12
+  KAFKA_LISTENER_NAME_CONTROLLER_SSL_KEYSTORE_PASSWORD: changeit
+  KAFKA_LISTENER_NAME_CONTROLLER_SSL_KEY_PASSWORD: changeit
   # --- CLIENT listener:人 = PLAIN + LDAP;服務 = SCRAM ---
   KAFKA_LISTENER_NAME_CLIENT_SASL_ENABLED_MECHANISMS: PLAIN,SCRAM-SHA-512,OAUTHBEARER
   KAFKA_LISTENER_NAME_CLIENT_CONNECTIONS_MAX_REAUTH_MS: "60000"   # 第 19 章:SASL 連線每 60 秒重新認證(demo 為了讓實驗看得到效果;正式環境建議 1 小時,依 client 數量評估)。預設 0 = 連著就永遠有效,第 18 章實驗就是這個情況。這個設定不能動態改,要重啟 broker
@@ -77,7 +80,7 @@ x-broker-env: &broker-env
   KAFKA_AUTHORIZER_CLASS_NAME: io.confluent.kafka.security.authorizer.ConfluentServerAuthorizer
   KAFKA_LOG4J_LOGGERS: "kafka.authorizer.logger=INFO,io.confluent.security.authorizer=INFO"
   KAFKA_CONFLUENT_AUTHORIZER_ACCESS_RULE_PROVIDERS: CONFLUENT,KRAFT_ACL
-  KAFKA_SUPER_USERS: User:kafka-broker;User:kafka-controller;User:bootstrap
+  KAFKA_SUPER_USERS: User:kafka-internal;User:kafka-broker;User:kafka-controller;User:bootstrap
   KAFKA_ALLOW_EVERYONE_IF_NO_ACL_FOUND: "false"
   # --- 副本數(只有 2 個 broker) ---
   KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 2
@@ -206,23 +209,25 @@ services:
       KAFKA_CONTROLLER_QUORUM_VOTERS: 1@controller1:9093
       KAFKA_LISTENERS: CONTROLLER://controller1:9093
       KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
-      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:SASL_SSL
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:SSL
       KAFKA_HEAP_OPTS: "-Xms256m -Xmx256m"
-      KAFKA_SASL_MECHANISM_CONTROLLER_PROTOCOL: PLAIN
-      KAFKA_LISTENER_NAME_CONTROLLER_SASL_ENABLED_MECHANISMS: PLAIN
-      KAFKA_LISTENER_NAME_CONTROLLER_PLAIN_SASL_JAAS_CONFIG: >-
-        org.apache.kafka.common.security.plain.PlainLoginModule required
-        username="kafka-controller" password="controller-secret"
-        user_kafka-controller="controller-secret"
-        user_kafka-broker="broker-secret";
+      # 內部通道 mTLS(與 broker 共用同一張 internal.keystore.p12,CN=kafka-internal)
+      KAFKA_SSL_PRINCIPAL_MAPPING_RULES: "RULE:^.*CN=([^,]*).*$$/$$1/,DEFAULT"
+      KAFKA_LISTENER_NAME_CONTROLLER_SSL_CLIENT_AUTH: required
+      KAFKA_LISTENER_NAME_CONTROLLER_SSL_KEYSTORE_LOCATION: /etc/kafka/secrets/internal.keystore.p12
+      KAFKA_LISTENER_NAME_CONTROLLER_SSL_KEYSTORE_TYPE: PKCS12
+      KAFKA_LISTENER_NAME_CONTROLLER_SSL_KEYSTORE_PASSWORD: changeit
+      KAFKA_LISTENER_NAME_CONTROLLER_SSL_KEY_PASSWORD: changeit
       # RBAC 部署:controller 也使用 ConfluentServerAuthorizer(CreateTopics 等請求在 controller 端授權,否則看不到 RBAC role binding)
       KAFKA_AUTHORIZER_CLASS_NAME: io.confluent.kafka.security.authorizer.ConfluentServerAuthorizer
       KAFKA_CONFLUENT_AUTHORIZER_ACCESS_RULE_PROVIDERS: CONFLUENT,KRAFT_ACL
       # controller 端 RBAC provider 需連到 brokers 讀取 MDS 的授權資料(_confluent-metadata-auth),以獨立的內部 SCRAM 身分 kafka-controller(super user;與 broker 的 kafka-broker 分開,audit 與撤銷才分得清)
       KAFKA_CONFLUENT_METADATA_BOOTSTRAP_SERVERS: broker1:9092,broker2:9092
-      KAFKA_CONFLUENT_METADATA_SECURITY_PROTOCOL: SASL_SSL
-      KAFKA_CONFLUENT_METADATA_SASL_MECHANISM: SCRAM-SHA-512
-      KAFKA_CONFLUENT_METADATA_SASL_JAAS_CONFIG: org.apache.kafka.common.security.scram.ScramLoginModule required username="kafka-controller" password="controller-secret";
+      KAFKA_CONFLUENT_METADATA_SECURITY_PROTOCOL: SSL
+      KAFKA_CONFLUENT_METADATA_SSL_KEYSTORE_LOCATION: /etc/kafka/secrets/internal.keystore.p12
+      KAFKA_CONFLUENT_METADATA_SSL_KEYSTORE_TYPE: PKCS12
+      KAFKA_CONFLUENT_METADATA_SSL_KEYSTORE_PASSWORD: changeit
+      KAFKA_CONFLUENT_METADATA_SSL_KEY_PASSWORD: changeit
       KAFKA_CONFLUENT_METADATA_SSL_TRUSTSTORE_LOCATION: /etc/kafka/secrets/truststore.p12
       KAFKA_CONFLUENT_METADATA_SSL_TRUSTSTORE_TYPE: PKCS12
       KAFKA_CONFLUENT_METADATA_SSL_TRUSTSTORE_PASSWORD: changeit
@@ -230,16 +235,18 @@ services:
       KAFKA_PASSWORD_ENCODER_SECRET: encoder-secret
       # audit log 寫入器連線(controller 沒有 inter-broker 設定,需明列)
       KAFKA_CONFLUENT_SECURITY_EVENT_LOGGER_EXPORTER_KAFKA_BOOTSTRAP_SERVERS: broker1:9092,broker2:9092
-      KAFKA_CONFLUENT_SECURITY_EVENT_LOGGER_EXPORTER_KAFKA_SECURITY_PROTOCOL: SASL_SSL
-      KAFKA_CONFLUENT_SECURITY_EVENT_LOGGER_EXPORTER_KAFKA_SASL_MECHANISM: SCRAM-SHA-512
-      KAFKA_CONFLUENT_SECURITY_EVENT_LOGGER_EXPORTER_KAFKA_SASL_JAAS_CONFIG: org.apache.kafka.common.security.scram.ScramLoginModule required username="kafka-controller" password="controller-secret";
+      KAFKA_CONFLUENT_SECURITY_EVENT_LOGGER_EXPORTER_KAFKA_SECURITY_PROTOCOL: SSL
+      KAFKA_CONFLUENT_SECURITY_EVENT_LOGGER_EXPORTER_KAFKA_SSL_KEYSTORE_LOCATION: /etc/kafka/secrets/internal.keystore.p12
+      KAFKA_CONFLUENT_SECURITY_EVENT_LOGGER_EXPORTER_KAFKA_SSL_KEYSTORE_TYPE: PKCS12
+      KAFKA_CONFLUENT_SECURITY_EVENT_LOGGER_EXPORTER_KAFKA_SSL_KEYSTORE_PASSWORD: changeit
+      KAFKA_CONFLUENT_SECURITY_EVENT_LOGGER_EXPORTER_KAFKA_SSL_KEY_PASSWORD: changeit
       KAFKA_CONFLUENT_SECURITY_EVENT_LOGGER_EXPORTER_KAFKA_SSL_TRUSTSTORE_LOCATION: /etc/kafka/secrets/truststore.p12
       KAFKA_CONFLUENT_SECURITY_EVENT_LOGGER_EXPORTER_KAFKA_SSL_TRUSTSTORE_TYPE: PKCS12
       KAFKA_CONFLUENT_SECURITY_EVENT_LOGGER_EXPORTER_KAFKA_SSL_TRUSTSTORE_PASSWORD: changeit
       KAFKA_CONFLUENT_SECURITY_EVENT_ROUTER_CONFIG: ${AUDIT_ROUTER_CONFIG}
-      KAFKA_SUPER_USERS: User:kafka-broker;User:kafka-controller;User:bootstrap
+      KAFKA_SUPER_USERS: User:kafka-internal;User:kafka-broker;User:kafka-controller;User:bootstrap
       KAFKA_ALLOW_EVERYONE_IF_NO_ACL_FOUND: "false"
-      # 啟動前預建內部通道用的 SCRAM 憑證(見 ensure-controller.sh):kafka-broker = broker↔broker;kafka-controller = controller→broker(9092)
+      # 啟動前預建 SCRAM 憑證(見 ensure-controller.sh)。內部通道已改 mTLS,不再使用;kafka-broker 仍給維運/測試用 CLIENT listener 的 SCRAM 登入
       SCRAM_BOOTSTRAP_1: "SCRAM-SHA-512=[name=kafka-broker,password=broker-secret]"
       SCRAM_BOOTSTRAP_2: "SCRAM-SHA-512=[name=kafka-controller,password=controller-secret]"
 

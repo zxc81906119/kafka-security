@@ -1,0 +1,9 @@
+# 【上線前的檢查習慣】欄位到底有沒有被加密?不看 producer 有沒有報錯,直接讀 topic 的原始位元組:yujie 用 Avro 寫一筆含卡號的訂單,再以一般 consumer 讀原始位元組——這個環境會看到明文(沒有 CSFLE 授權、規則不存在);正式環境看到明文就代表加密規則沒生效
+$ scripts/sr-raw-check.sh   # ① kafka-avro-console-producer 寫入 ② kafka-console-consumer 讀原始位元組
+① svc-orders(SCRAM)以 Avro 寫入(schema 註冊資訊用 yujie 讀) orders.events:{id:raw-7337, card_no:5500-0000-0000-0004}
+   寫入完成(producer 沒有報錯)
+② 用一般 console consumer(bootstrap 身分)讀 orders.events 的原始位元組,找這一筆:
+   0000000 001 020   r   a   w   -   7   3   3   7 364 003   &   5   5   0
+   0000020   0   -   0   0   0   0   -   0   0   0   0   -   0   0   0   4
+   0000040
+判定:topic 裡的卡號是明文(欄位沒有被加密)—— 這個環境沒有 CSFLE 授權,規則不存在;正式環境若看到明文,代表加密規則沒生效

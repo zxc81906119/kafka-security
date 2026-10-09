@@ -1,4 +1,3 @@
-# 【內部通道】INTERNAL 埠(9092)只是另一個 SASL 埠:有效的 SCRAM 帳號(svc-orders)能「認證」進去 —— 所以必須靠防火牆只開放給 broker/controller 節點
-$ kafka-topics --bootstrap-server broker1:9092 --command-config svc-orders.properties --list
-orders.events
-orders.payments
+# 【內部通道】INTERNAL 埠(9092)也是 mTLS:同一個 CA 簽的任何 client 憑證(這裡用 CN=legacy-orders)都能完成 TLS、能列出 topic —— 所以仍然要靠防火牆只開放給 broker/controller 節點
+$ kafka-topics --bootstrap-server broker1:9092 --command-config mtls-legacy-orders.properties --list
+__internal_confluent_only_broker_info

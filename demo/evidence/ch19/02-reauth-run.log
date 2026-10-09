@@ -1,9 +1,9 @@
 # 【失效 ②】實驗:停用一個「連著的」帳號(只停用 SCRAM 憑證,角色保留),看舊連線還能寫幾筆
 $ scripts/reauth-test.sh run   # 對照第 18 章:同樣只停用憑證,當時 14/14 全寫入
-起點:臨時帳號 svc-reauth(SCRAM)開長連線 producer,每 2 秒寫 1 筆、共 45 筆(約 90 秒),標記 ra23425
+起點:臨時帳號 svc-reauth(SCRAM)開長連線 producer,每 2 秒寫 1 筆、共 45 筆(約 90 秒),標記 ra21244
 第 10 秒:停用 svc-reauth(SCRAM 憑證覆寫成隨機密碼、不刪除;角色保留)— 第 18 章的做法,當時擋不住舊連線
 [scram-disable] svc-reauth 的密碼已覆寫成隨機值(憑證沒有刪除)
 結果:45 筆嘗試寫入,實際寫進 topic 29 筆(停用前約 5 筆;下一次重新認證在 60 秒內)
-producer 第一個錯誤:ERROR [Producer clientId=console-producer] Connection to node 11 (broker1/172.20.0.6:9094) failed authentication due to: Authentication failed during re-authent
+producer 第一個錯誤:ERROR [Producer clientId=console-producer] Connection to node 12 (broker2/172.20.0.6:9094) failed authentication due to: Authentication failed during re-authent
 (broker 要求重新認證時用已刪除的憑證 → 失敗 → 連線被切)
 判定:60 秒內舊連線被切斷(重新認證失敗),只寫進 29/45 筆

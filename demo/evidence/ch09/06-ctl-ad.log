@@ -1,5 +1,4 @@
-# 【內部通道】用 AD 人員帳密(yujie)連 CONTROLLER → 拒絕(controller 只認內部靜態帳號,不查 AD)
-$ kafka-broker-api-versions --bootstrap-server controller1:9093 --command-config yujie.properties
-ERROR [LegacyAdminClient clientId=admin-1] Connection to node -1 (controller1/172.20.0.2:9093) failed authentication due to: Authentication failed: Invalid username or password
-WARN [LegacyAdminClient clientId=admin-1] Bootstrap broker controller1:9093 (id: -1 rack: null isFenced: false) disconnected
-Authentication failed: Invalid username or password
+# 【內部通道】拿 SCRAM 帳密(svc-orders)連 CONTROLLER → 拒絕:這個埠根本不接受 SASL,只認憑證
+$ kafka-broker-api-versions --bootstrap-server controller1:9093 --command-config svc-orders.properties
+WARN [LegacyAdminClient clientId=admin-1] Unexpected error from controller1/172.20.0.3 (channelId=-1); closing connection
+java.lang.IllegalStateException: handshake is not completed

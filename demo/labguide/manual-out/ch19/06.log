@@ -1,7 +1,7 @@
 ① 不限速(帳號 svc-quota 被偷,攻擊者全速寫入):
-2500 records sent, 3008.423586 records/sec (2.87 MB/sec)
+2500 records sent, 2653.927813 records/sec (2.53 MB/sec)
 Completed updating config for user svc-quota.
 ② 套用 producer_byte_rate=100000(約 100 KB/s)後,同一個動作:
-2500 records sent, 166.522347 records/sec (0.16 MB/sec)
+2500 records sent, 166.311868 records/sec (0.16 MB/sec)
 配額設定:Quota configs for user-principal 'svc-quota' are producer_byte_rate=100000.0
-判定:限速後吞吐量降為原來的 1/18(3008 → 167 筆/秒)
+判定:限速後吞吐量降為原來的 1/16(2654 → 166 筆/秒)

@@ -20,8 +20,9 @@ Docker Desktop 建議記憶體 ≥ 10GB(實測全部啟動約 3.5GB;controller×
 | yujie(CN=YUJIE) | 人(AD) | yujie / yujie-pw | 組員;群組 `orders-write`(demo 示範用,正式環境人只能唯讀) |
 | ming | 人(AD) | ming / ming-pw | 新進組員,起初無群組 |
 | svc-orders | 服務(Kafka SCRAM) | svc-orders / orders-secret-v1 | 不在 AD |
-| kafka-broker | 內部(Kafka SCRAM) | kafka-broker / broker-secret | INTERNAL 埠(9092)broker↔broker;super user;防火牆限制來源 |
-| kafka-controller | 內部(Kafka SCRAM + CONTROLLER 埠 PLAIN 靜態帳號) | kafka-controller / controller-secret | controller→broker(9092):授權 provider 讀 RBAC 資料、audit 匯出;super user;與 kafka-broker 分開,audit 與撤銷才分得清 |
+| kafka-internal(憑證) | 內部通道(mTLS,憑證 CN=kafka-internal;`certs/internal.keystore.p12`,broker 與 controller 共用同一張) | — | INTERNAL 埠(9092)broker↔broker、CONTROLLER 埠(9093)broker↔controller、controller→broker(授權資料、audit);super user;防火牆限制來源。**不用 SCRAM**:刪除過 SCRAM 憑證後重啟 broker 會起不來(第 19 章) |
+| kafka-broker | 內部(Kafka SCRAM;**內部通道已不使用**,保留給維運/測試用 CLIENT 埠登入) | kafka-broker / broker-secret | super user |
+| kafka-controller | 內部(Kafka SCRAM;**內部通道已不使用**) | kafka-controller / controller-secret | controller→broker(9092):授權 provider 讀 RBAC 資料、audit 匯出;super user;與 kafka-broker 分開,audit 與撤銷才分得清 |
 | bootstrap | 平台(對 MDS 用憑證 CN=bootstrap;對 Kafka 先用同一張憑證向 MDS 換 token,以 OAUTHBEARER 連線;不另建 SCRAM 帳號,設定檔 config/clients/token-bootstrap.properties) | — | super user,MDS 初始管理員與 kafka-configs/topic 管理用,MDS 無法簽發 token 時改用內部帳號 kafka-broker(SCRAM,super user)直連 broker |
 | c3、restproxy | 平台(憑證 CN=c3 / restproxy) | — | 向 MDS 認證用,不是 AD 帳號;連 Kafka 也用憑證換 token |
 
@@ -73,7 +74,7 @@ gary 在 C3 指派 `orders-read` → DeveloperRead;LDAP 介面把 ming 從 devel
 
 ## 第 9 章(選修)輪替、內部通道、AD 故障(`./demo.sh 9`)
 - **輪替**:建立 `svc-orders-v2` 並給同樣 role → 新舊並行 → 停舊 → 舊密碼立即失效。
-- **內部通道**:CONTROLLER 埠只有 TLS 無 SASL → 拒絕;用 AD 帳密連 CONTROLLER → 拒絕(controller 只認內部靜態帳號,不查 AD)。**誠實說明**:INTERNAL 埠只是另一個 SASL 埠,任何有效 SCRAM 帳號都能「認證」進去,但授權仍生效(svc-orders 建立 topic 被拒)→ **必須以防火牆限制只有 broker/controller 節點可連 9092/9093**。
+- **內部通道(2026-10-09 改 mTLS)**:CONTROLLER 與 INTERNAL 都是 SSL + `ssl.client.auth=required`,broker 與 controller 共用一張憑證(CN=kafka-internal,`ssl.principal.mapping.rules` 取 CN,在 super.users);沒有憑證在 TLS 握手被拒,拿 SCRAM 帳密來也沒用(埠不收 SASL)。**為什麼改**:原本 INTERNAL 用 SCRAM、CONTROLLER 用 PLAIN,刪除過任何 SCRAM 帳號後重啟 broker 會起不來(第 19 章);改 mTLS 後同一個實驗重啟正常。**代價**:共用一張憑證,audit 分不出哪一台;拿到 private key 就是 super user。**誠實說明(仍然成立)**:INTERNAL 埠只是另一個 SASL 埠,任何有效 SCRAM 帳號都能「認證」進去,但授權仍生效(svc-orders 建立 topic 被拒)→ **必須以防火牆限制只有 broker/controller 節點可連 9092/9093**。
 - **AD 故障**(停 openldap):SCRAM 服務照常;人的新登入失敗;AD 恢復後恢復。
 
 ## 第 10 章 收尾:audit log(`./demo.sh 10`)
@@ -184,6 +185,7 @@ gary 在 C3 指派 `orders-read` → DeveloperRead;LDAP 介面把 ming 從 devel
 | 連線數上限 | 單一來源 IP 上限 2:開 4 條,日誌 `Rejected connection … maximum of 2.0 connections` | `kafka-configs --entity-type brokers --entity-default --add-config max.connections.per.ip=2`(動態;`--entity-type ips` 只收連線速率配額,不收這個) |
 | client quota | 同一動作(2500 筆 × 1 KB):不限速 約 2700 筆/秒;`producer_byte_rate=100000` 後 約 167 筆/秒(1/16) | `scripts/quota-test.sh`。**寫入量太小看不出效果**(400 筆不被限速) |
 | AD 帳戶鎖定 | 對 GARY 連續 6 次錯誤 → 用對的密碼也 401(MDS、Kafka PLAIN 同時失敗);bootstrap 憑證(緊急路徑)與 SCRAM 機器帳號不受影響;管理員解鎖後 200 | OpenLDAP ppolicy overlay 模擬(`ldap-config/ppolicy-*.ldif`,`up.sh` 載入,鎖定預設關);`scripts/ad-lockout.sh on / off / status / unlock` |
+| 刪除 SCRAM 帳號的 bug(KAFKA-20774) | 新建帳號再刪除 → 重啟 broker1 → svc-orders 用 SCRAM 登入 broker1 失敗(broker2 沒重啟正常)→ 重建被刪帳號再重啟 → 恢復 | `scripts/scram-delete-bug.sh`(第 19 章最後一步;內部通道為 mTLS 時 broker 起得來,改之前會直接起不來。**全新叢集 100% 重現;跑過很多章節、已有 metadata 快照的環境可能不重現(2026-10-09 實測),腳本兩種結果都會明講,沒重現不代表安全**) |
 
 **踩坑**:(1) telemetry 的 `metrics.include` 用萬用字元或沒排除 delta 型態 → Prometheus 對整批回 500(`invalid temporality and type combination`),連原本的監控指標也被丟;每個名稱後面要加 `(?!.*delta).*`。(2) `python3` 在這台 Windows 是空殼,腳本編輯改用 node / perl。
 
@@ -201,7 +203,9 @@ gary 在 C3 指派 `orders-read` → DeveloperRead;LDAP 介面把 ming 從 devel
 | 刪除後只重啟 controller | 正常 |
 | metadata 日誌撐大 6000 筆(沒有快照)再重啟 | 正常(排除「日誌太大」) |
 
-**做法(已套用在 demo)**:停用帳號 = 把 SCRAM 憑證覆寫成隨機密碼,不刪除(`scripts/scram-disable.sh`,對不存在的帳號不動作);重置、第 6、9、18、19 章與 OP menu 的「下架帳號」都改了。整條章節鏈(第 1 到 20 章、15、16)在從零重建的環境跑完後,直接重啟兩台 broker 都正常,自癒機制(`broker-heal.sh`)被用到 0 次。已經刪過的帳號,事後重新建立即可讓 broker 再啟動;`broker-heal.sh`(清空該 broker 資料目錄重建)保留為最後手段。**網路上沒有查到對應的已知 bug**(最接近的 KAFKA-17636 是格式化時的另一種觸發);原因推測是 broker 從 metadata 日誌重放時處理「已移除的 SCRAM 使用者」有問題,**未驗證**。**正式環境**:在確認 Confluent 的說法之前,不要用 `--delete-config` 刪 SCRAM 憑證;停用改用覆寫隨機密碼加解除 role binding;滾動重啟 broker 前先在測試環境確認。重現步驟:全新叢集 → `kafka-configs --alter --add-config SCRAM-SHA-512=[password=p] --entity-type users --entity-name x` → `--delete-config SCRAM-SHA-512` 同一帳號 → 重啟 broker。
+**做法(已套用在 demo)**:停用帳號 = 把 SCRAM 憑證覆寫成隨機密碼,不刪除(`scripts/scram-disable.sh`,對不存在的帳號不動作);重置、第 6、9、18、19 章與 OP menu 的「下架帳號」都改了。整條章節鏈(第 1 到 20 章、15、16)在從零重建的環境跑完後,直接重啟兩台 broker 都正常,自癒機制(`broker-heal.sh`)被用到 0 次。已經刪過的帳號,事後重新建立即可讓 broker 再啟動;`broker-heal.sh`(清空該 broker 資料目錄重建)保留為最後手段。**對應的官方 bug(2026-10-09 查到)**:[KAFKA-20774](https://issues.apache.org/jira/browse/KAFKA-20774)「ScramDelta.apply() drops SCRAM users when processing REMOVE records for absent users or multiple removals in one batch」(2026-07-06 回報、2026-09-23 修復,fix version **4.5.0,尚未發行**;PR apache/kafka#22763)。內容與實測完全吻合:broker 重放 metadata 時,REMOVE 紀錄的對象若不在目前的 image 裡(= 對不存在的帳號刪除,或重啟時從頭重放、先遇到 REMOVE),整個 SCRAM 機制的使用者表會被丟掉,連 kafka-broker 這類應該存在的帳號也消失;報告者說正式環境整組 SCRAM 使用者都不見了。demo 的 CP 8.3.2 內含 Kafka 4.3.x,在受影響範圍。**沒有 fix 之前的做法**:不要對 SCRAM 帳號用 `--delete-config`(停用改覆寫隨機密碼);已經刪過的話,重建被刪的帳號再重啟即可(讓重放時 REMOVE 之後有對應的 UPSERT)。這個 bug 與 listener 無關,內部通道改 mTLS 只解掉 broker 起不來,SCRAM 用戶端登入仍會壞(實測)。**正式環境**:在確認 Confluent 的說法之前,不要用 `--delete-config` 刪 SCRAM 憑證;停用改用覆寫隨機密碼加解除 role binding;滾動重啟 broker 前先在測試環境確認。重現步驟:全新叢集 → `kafka-configs --alter --add-config SCRAM-SHA-512=[password=p] --entity-type users --entity-name x` → `--delete-config SCRAM-SHA-512` 同一帳號 → 重啟 broker。
+
+**內部通道改 mTLS 之後(2026-10-09 實測)**:broker↔broker 與 broker↔controller 改用共用憑證 CN=kafka-internal 做 mTLS(第 9 章)後,同一個實驗(新建 SCRAM 帳號再刪除 → 重啟兩台 broker)**broker 都能正常啟動**;但重啟後 **CLIENT 埠上所有 SCRAM 帳號(svc-orders、kafka-broker)登入失敗**,把被刪的帳號重建也沒用,要重建之後再重啟 broker 才恢復。結論:壞的是 broker 重啟時重放 metadata 裡的 SCRAM 憑證,不限 listener;mTLS 只解掉「broker 起不來」這個可用性問題,**不能取代「不要刪 SCRAM 憑證」這條規則**,而且服務帳號登入失敗比 broker 起不來更隱蔽(像是密碼錯)。
 
 **註**:第 18 章「只停用憑證擋不住已連著的舊連線(14 筆全寫入)」原本是用「刪除憑證」量到的;改成「覆寫成隨機密碼」後已用同一個實驗重跑,結論相同(見第 18 章 evidence)。
 
@@ -218,6 +222,7 @@ gary 在 C3 指派 `orders-read` → DeveloperRead;LDAP 介面把 ming 從 devel
 | subject 授權 | gary(topic-admin)可註冊 payments.;yujie(orders-write)可註冊 orders.、註冊 payments. 403;yujie 列 subject 只看到 `["orders.events-value"]`;ming(無群組)看到 `[]` | `scripts/sr-setup.sh` 的 `srbind`:scope 要多 `schema-registry-cluster` |
 | KEK 授權 | gary(security 群組,ResourceOwner `Kek:*`)可建 orders-kek;yujie(DeveloperRead `Kek:orders-kek`)建別的 403、讀 200;ming 讀 403 | `dek.registry.rbac.enable=true`;資源名稱 `Kek:<名稱>` |
 | CSFLE | 註冊帶 ENCRYPT 規則的 schema → **402 需要企業版 + CSFLE 加購授權**;加密、解密、金鑰輪替**未驗證** | `RuleSetResourceExtension`(沒開時規則被默默丟掉) |
+| 讀原始位元組 | yujie 以 Avro 寫一筆含卡號的訂單,bootstrap 用一般 consumer 讀原始位元組 → 卡號是明文(這個環境沒有加密規則) | `scripts/sr-raw-check.sh`;上線前與每次改規則後的固定檢查,有授權的環境應看到密文 |
 
 **踩坑(逐一實測,都已處理在 compose 與 sr-setup.sh)**:
 1. 只開 HTTPS 時要 `SCHEMA_REGISTRY_INTER_INSTANCE_PROTOCOL=https`,否則啟動失敗(`No listener configured with requested scheme http`)。
