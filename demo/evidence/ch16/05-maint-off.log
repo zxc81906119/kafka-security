@@ -1,4 +1,4 @@
 # 【26 結束維護模式】維護做完,提前結束這個 silence(只能結束 opmenu 自己建的)
 $ ./opmenu.sh --run 26 <silence id>
   提前結束由 opmenu 建立的 silence;只能結束 createdBy 是 opmenu 的
-維護模式已結束:55b0ca1d-b81d-427a-b2ea-38d1ac984d64
+維護模式已結束:4fb930fe-0ad2-47a9-99ff-dac0eb420491

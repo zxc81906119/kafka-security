@@ -33,5 +33,5 @@ step audit "【稽核:誰做了什麼】orders.events 的 audit log(最近事件
 EV_SHOW=14 true
 # 清理反面教材
 rbac_unbind basic gary:gary-pw User:shared-ops DeveloperWrite Topic orders. PREFIXED >/dev/null
-K kafka-configs --bootstrap-server $BOOT --command-config /clients/token-bootstrap.properties --alter --delete-config SCRAM-SHA-512 --entity-type users --entity-name shared-ops >/dev/null 2>&1
+bash "$DEMO_ROOT/scripts/scram-disable.sh" shared-ops >/dev/null 2>&1
 ch_end

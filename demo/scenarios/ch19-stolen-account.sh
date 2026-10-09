@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # 第 19 章(進階):帳號被偷之後 —— 讓被偷的帳號「撐不久、灌不大、被發現、不拖垮管理員」
-# 對應第 18 章的發現(只刪 SCRAM 憑證擋不住舊連線)。六項:SASL 重新認證、認證失敗告警、TLS 套件限定、連線數上限、client quota、AD 帳號鎖定的反向影響。
+# 對應第 18 章的發現(只停用 SCRAM 憑證擋不住舊連線)。六項:SASL 重新認證、認證失敗告警、TLS 套件限定、連線數上限、client quota、AD 帳號鎖定的反向影響。
 source "$(dirname "$0")/../scripts/lib-ev.sh"
 ch_begin ch19 "帳號被偷之後:失效、告警、限速、限連線、鎖定"
 DC="$DEMO_ROOT/scripts/dcurl.sh"
@@ -12,8 +12,8 @@ step reauth-baseline "【失效 ①】基準設定:CLIENT listener 的 SASL 連�
   "docker exec broker1 grep connections.max.reauth.ms /etc/kafka/kafka.properties" \
   'docker exec broker1 grep "connections.max.reauth.ms" /etc/kafka/kafka.properties; docker exec broker2 grep "connections.max.reauth.ms" /etc/kafka/kafka.properties' '60000'
 
-step reauth-run "【失效 ②】實驗:停用一個「連著的」帳號(只刪 SCRAM 憑證,角色保留),看舊連線還能寫幾筆" \
-  "scripts/reauth-test.sh run   # 對照第 18 章:同樣只刪憑證,當時 14/14 全寫入" \
+step reauth-run "【失效 ②】實驗:停用一個「連著的」帳號(只停用 SCRAM 憑證,角色保留),看舊連線還能寫幾筆" \
+  "scripts/reauth-test.sh run   # 對照第 18 章:同樣只停用憑證,當時 14/14 全寫入" \
   'bash "$DEMO_ROOT/scripts/reauth-test.sh" run 2>&1' '判定:60 秒內舊連線被切斷'
 
 # ---------------- ② 告警 ----------------

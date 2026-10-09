@@ -3,4 +3,4 @@ $ (瀏覽器)phpLDAPadmin:rbac-admin 加入 ming
   📸 ch11/ldap-grant-ming-rbac-admin-before.png — LDAP(模擬 AD)群組 rbac-admin:加入 ming 之前
   📸 ch11/ldap-grant-ming-rbac-admin-form.png — LDAP 管理介面:新增 member 值(ming)
   📸 ch11/ldap-grant-ming-rbac-admin-after.png — LDAP(模擬 AD)群組 rbac-admin:加入 ming 之後
-[02:08:37] AD 群組異動完成
+[09:24:43] AD 群組異動完成

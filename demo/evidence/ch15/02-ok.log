@@ -1,3 +1,3 @@
 # 【收回前】拿這個 token(Bearer)寫入 → 成功(他的權限來自 AD 群組)
 $ curl -H 'Authorization: Bearer <token>' -X POST https://restproxy:8086/topics/orders.events -d '{...}'
-"offsets":[{"partition":0,"offset":5071,"error_code":null,"error":null}] [HTTP 200] 
+"offsets":[{"partition":0,"offset":5073,"error_code":null,"error":null}] [HTTP 200] 

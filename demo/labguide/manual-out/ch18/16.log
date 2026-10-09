@@ -13,33 +13,33 @@
   "demo:variable:kafka/opmenu/alertmanager-auth",
   "demo:variable:kafka/svc-orders/credential"
 ]
-讀回 topic,看每個階段寫進去幾筆(標記 oc11603):
-  共送出 14 筆;topic 裡讀到 7 筆,最大編號 7
-  producer 日誌:授權失敗 7 次、認證失敗 0 次
+讀回 topic,看每個階段寫進去幾筆(標記 oc13169):
+  共送出 14 筆;topic 裡讀到 6 筆,最大編號 6
+  producer 日誌:授權失敗 8 次、認證失敗 0 次
   隔離約在第 4–5 筆之後、停用約在第 8–9 筆之後
 判定:解除角色就切斷舊連線(連線還在,但之後每個請求都被授權擋下;停用憑證前這一步就已生效)
 結果:svc-orders 已還原;svc-orders-v2 已移除
-=== B:只刪憑證、角色保留
-讀回 topic,看每個階段寫進去幾筆(標記 oc20240):
+=== B:只停用憑證、角色保留
+讀回 topic,看每個階段寫進去幾筆(標記 oc906):
   共送出 14 筆;topic 裡讀到 14 筆,最大編號 14
   producer 日誌:授權失敗 0 次、認證失敗 0 次
   隔離約在第 4–5 筆之後、停用約在第 8–9 筆之後
-判定:只刪 SCRAM 憑證擋不住已建立的連線(它繼續寫完全部 14 筆);要切斷舊連線必須解除角色
+判定:只停用 SCRAM 憑證擋不住已建立的連線(它繼續寫完全部 14 筆);要切斷舊連線必須解除角色
 結果:svc-orders 已還原;svc-orders-v2 已移除
+ Container conjur Running 
  Container conjur-server Running 
  Container conjur-db Running 
- Container conjur Running 
  Container conjur-cli Running 
  Container conjur-db Waiting 
  Container conjur-db Healthy 
  Container conjur-server Waiting 
  Container conjur-server Healthy 
  Container conjur Waiting 
- Container conjur-cli Waiting 
  Container conjur-server Waiting 
  Container conjur-db Waiting 
- Container conjur-server Healthy 
- Container conjur-db Healthy 
- Container conjur Healthy 
+ Container conjur-cli Waiting 
  Container conjur-cli Healthy 
+ Container conjur-server Healthy 
+ Container conjur Healthy 
+ Container conjur-db Healthy 
 Loaded policy 'root'

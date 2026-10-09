@@ -5,7 +5,7 @@
 #   scripts/rotate-with-conjur.sh quarantine <舊帳號>          隔離舊帳號:先解除全部角色(可逆),SCRAM 憑證還留著;若還有人在用,audit 會出現被拒(DENIED)
 #   scripts/rotate-with-conjur.sh check <舊帳號> [分鐘]        看舊帳號的 audit:允許幾筆、被拒幾筆(隔離過就只看隔離之後;否則看最近 N 分鐘);被拒 = 還有人在用,先 rollback
 #   scripts/rotate-with-conjur.sh rollback <舊帳號>            有人還在用:把角色綁回去
-#   scripts/rotate-with-conjur.sh finish <舊帳號>              確認沒人用後停用:刪除 SCRAM 憑證(要先 quarantine)
+#   scripts/rotate-with-conjur.sh finish <舊帳號>              確認沒人用後停用:停用 SCRAM 憑證(覆寫成隨機密碼,不刪除)(要先 quarantine)
 #   scripts/rotate-with-conjur.sh restore                      demo 還原:svc-orders(原密碼與原角色)回來、Conjur 指回它、移除 svc-orders-v2
 # Conjur 的變數:kafka/<host>/credential(JSON {"u":帳號,"p":密碼};一個變數放整組,寫入與讀取都是單一操作)
 set -euo pipefail
@@ -42,7 +42,7 @@ unbind_all() { # unbind_all <user>
   done
 }
 scram_set() { K kafka-configs --bootstrap-server broker1:9094 --command-config $CFG --alter --add-config "SCRAM-SHA-512=[password=$2]" --entity-type users --entity-name "$1" 2>&1 | grep -E "Completed|Error" | sed 's/^/  /'; }
-scram_del() { K kafka-configs --bootstrap-server broker1:9094 --command-config $CFG --alter --delete-config SCRAM-SHA-512 --entity-type users --entity-name "$1" 2>&1 | grep -E "Completed|Error" | sed 's/^/  /'; }
+scram_del() { bash scripts/scram-disable.sh "$1" 2>&1 | grep -E "Completed|Error|隨機" | sed 's/^/  /'; }
 # 用某個 SCRAM 帳密列出可見的 topic(帳密由 stdin 進容器,不放環境變數);認證失敗時印 AUTH-FAILED
 list_as() { # list_as <帳號> <密碼>
   printf 'security.protocol=SASL_SSL\nsasl.mechanism=SCRAM-SHA-512\nsasl.jaas.config=org.apache.kafka.common.security.scram.ScramLoginModule required username="%s" password="%s";\nssl.truststore.location=/etc/kafka/secrets/truststore.p12\nssl.truststore.type=PKCS12\nssl.truststore.password=changeit\n' "$1" "$2" \
@@ -99,7 +99,7 @@ rollback)
   ;;
 finish)
   old="$2"; [ -s "$Q/quarantine-$old.txt" ] || { echo "✘ $old 還沒隔離(先 quarantine 並確認 check 沒有被拒),不直接停用"; exit 1; }
-  echo "⑥ 停用 $old:刪除 SCRAM 憑證"; scram_del "$old"; rm -f "$Q/quarantine-$old.txt" "$Q/quarantine-$old.since"
+  echo "⑥ 停用 $old:SCRAM 憑證覆寫成隨機密碼(不刪除)"; scram_del "$old"; rm -f "$Q/quarantine-$old.txt" "$Q/quarantine-$old.since"
   echo "結果:舊帳號 $old 已停用"
   ;;
 restore)

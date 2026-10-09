@@ -1,4 +1,4 @@
-# 【並行輪替 ③】不直接刪舊帳號,先「隔離」:解除它的全部角色(可逆)、憑證留著;再看 audit。還有人在用的話,隔離後他的請求會變成被拒(DENIED)而被看見——只看「允許」不夠,因為 audit 不記 orders.* 的讀取成功
+# 【並行輪替 ③】不直接停用舊帳號,先「隔離」:解除它的全部角色(可逆)、憑證留著;再看 audit。還有人在用的話,隔離後他的請求會變成被拒(DENIED)而被看見——只看「允許」不夠,因為 audit 不記 orders.* 的讀取成功
 $ scripts/rotate-with-conjur.sh quarantine svc-orders; scripts/rotate-with-conjur.sh check svc-orders 1
 結果:svc-orders 已隔離(角色已解除、憑證仍在);還在用它的人會被拒,audit 會看到 DENIED
 舊帳號 svc-orders 隔離( UTC)之後的 audit:允許 0 筆、被拒 0 筆

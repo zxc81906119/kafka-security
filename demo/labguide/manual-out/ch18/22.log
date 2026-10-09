@@ -13,25 +13,25 @@
   "demo:variable:kafka/opmenu/alertmanager-auth",
   "demo:variable:kafka/svc-orders/credential"
 ]
-     44 demo:host:kafka/svc-orders fetched demo:variable:kafka/svc-orders/credential
-     12 demo:host:kafka/opmenu fetched demo:variable:kafka/opmenu/alertmanager-auth
-      8 demo:host:kafka/broker fetched demo:variable:kafka/broker/master-key
-      4 demo:host:kafka/rogue-app tried to fetch demo:variable:kafka/svc-orders/credential: Forbidden
-      4 demo:host:kafka/rogue-app tried to fetch demo:variable:kafka/opmenu/alertmanager-auth: Forbidden
- Container conjur-server Running 
- Container conjur Running 
- Container conjur-cli Running 
+     22 demo:host:kafka/svc-orders fetched demo:variable:kafka/svc-orders/credential
+      6 demo:host:kafka/opmenu fetched demo:variable:kafka/opmenu/alertmanager-auth
+      4 demo:host:kafka/broker fetched demo:variable:kafka/broker/master-key
+      2 demo:host:kafka/rogue-app tried to fetch demo:variable:kafka/svc-orders/credential: Forbidden
+      2 demo:host:kafka/rogue-app tried to fetch demo:variable:kafka/opmenu/alertmanager-auth: Forbidden
  Container conjur-db Running 
+ Container conjur-server Running 
+ Container conjur-cli Running 
+ Container conjur Running 
  Container conjur-db Waiting 
  Container conjur-db Healthy 
  Container conjur-server Waiting 
  Container conjur-server Healthy 
- Container conjur-server Waiting 
  Container conjur Waiting 
- Container conjur-cli Waiting 
  Container conjur-db Waiting 
- Container conjur-cli Healthy 
+ Container conjur-server Waiting 
+ Container conjur-cli Waiting 
  Container conjur-server Healthy 
  Container conjur-db Healthy 
  Container conjur Healthy 
+ Container conjur-cli Healthy 
 Loaded policy 'root'

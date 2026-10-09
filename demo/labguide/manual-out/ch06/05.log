@@ -7,10 +7,10 @@ if echo "$OUT" | grep -q -E "Exception|authorization failed|Authentication faile
   echo "FAILED: 沒有權限(使用 $CFG)"; exit 1
 fi
 echo "OK: 已送出 heartbeat(使用 $CFG)"
-11:11:03  User:MING          kafka.Produce       DENIED   orders.events
-11:11:10  User:YUJIE         kafka.Produce       ALLOWED  orders.events
-11:11:13  User:YUJIE         kafka.Produce       ALLOWED  orders.events
-11:11:16  User:MING          kafka.Produce       DENIED   orders.events
-11:11:19  User:MING          kafka.Produce       DENIED   orders.events
-11:11:32  User:shared-ops    kafka.Produce       ALLOWED  orders.events
-11:11:34  User:shared-ops    kafka.Produce       ALLOWED  orders.events
+01:41:57  User:svc-quota     kafka.Produce       ALLOWED  orders.events
+01:41:57  User:svc-quota     kafka.Produce       ALLOWED  orders.events
+01:41:58  User:svc-quota     kafka.Produce       ALLOWED  orders.events
+01:43:47  User:YUJIE         kafka.Produce       ALLOWED  orders.events
+01:44:02  User:YUJIE         kafka.Produce       DENIED   orders.events
+01:54:37  User:shared-ops    kafka.Produce       ALLOWED  orders.events
+01:54:40  User:shared-ops    kafka.Produce       ALLOWED  orders.events

@@ -64,11 +64,11 @@ step rotate2-switch "【並行輪替 ②】應用逐批重啟:設定完全不用
   "scripts/app-with-conjur.sh svc-orders orders.events after-parallel-rotate" \
   'bash "$DEMO_ROOT/scripts/app-with-conjur.sh" svc-orders orders.events after-parallel-rotate | tail -2; echo "-- 還沒重啟的應用(舊帳號 svc-orders 的設定檔):"; K kafka-topics --bootstrap-server $BOOT --command-config /clients/scram-svc-orders.properties --list 2>&1 | grep -c "^orders" | sed "s/^/  仍可列出 orders topic:/"' '以 svc-orders-v2 身分'
 
-step rotate2-quarantine "【並行輪替 ③】不直接刪舊帳號,先「隔離」:解除它的全部角色(可逆)、憑證留著;再看 audit。還有人在用的話,隔離後他的請求會變成被拒(DENIED)而被看見——只看「允許」不夠,因為 audit 不記 orders.* 的讀取成功" \
+step rotate2-quarantine "【並行輪替 ③】不直接停用舊帳號,先「隔離」:解除它的全部角色(可逆)、憑證留著;再看 audit。還有人在用的話,隔離後他的請求會變成被拒(DENIED)而被看見——只看「允許」不夠,因為 audit 不記 orders.* 的讀取成功" \
   "scripts/rotate-with-conjur.sh quarantine svc-orders; scripts/rotate-with-conjur.sh check svc-orders 1" \
   'bash "$ROT" quarantine svc-orders | tail -1; sleep 3; bash "$ROT" check svc-orders 1' '判定:沒有人在用'
 
-step rotate2-finish "【並行輪替 ④】確認沒人用才停用(刪 SCRAM 憑證);舊設定檔認證失敗,新帳號照常" \
+step rotate2-finish "【並行輪替 ④】確認沒人用才停用(停用 SCRAM 憑證);舊設定檔認證失敗,新帳號照常" \
   "scripts/rotate-with-conjur.sh finish svc-orders" \
   'bash "$ROT" finish svc-orders | tail -1; old=$(K kafka-topics --bootstrap-server $BOOT --command-config /clients/scram-svc-orders.properties --list 2>&1 | grep -ciE "Authentication failed"); new=$(bash "$DEMO_ROOT/scripts/app-with-conjur.sh" svc-orders orders.events after-finish 2>&1 | tail -1); echo "舊帳號:$([ "$old" -gt 0 ] && echo 認證失敗 || echo 仍可用);新帳號:$new"; if [ "$old" -gt 0 ] && echo "$new" | grep -q 成功; then echo "判定:零中斷輪替完成,舊帳號已失效"; else echo "判定:不符合"; fi' '判定:零中斷輪替完成,舊帳號已失效'
 
@@ -76,17 +76,17 @@ step rotate2-restore "【還原】svc-orders(原密碼與原角色)回來、Conj
   "scripts/rotate-with-conjur.sh restore" \
   'bash "$ROT" restore | tail -1' 'svc-orders 已還原'
 
-step rotate2-inuse "【若有人還在用舊帳號】隔離後他的請求被拒,audit 看得到(DENIED)→ check 判定「還有人在用」→ rollback 把角色綁回去 → 他恢復正常。這就是不直接刪帳號的原因" \
+step rotate2-inuse "【若有人還在用舊帳號】隔離後他的請求被拒,audit 看得到(DENIED)→ check 判定「還有人在用」→ rollback 把角色綁回去 → 他恢復正常。這就是不直接停用帳號的原因" \
   "quarantine → (有人用舊帳號)→ check → rollback" \
   'bash "$ROT" quarantine svc-orders >/dev/null; sleep 4; r=$(bash "$DEMO_ROOT/scripts/app-with-conjur.sh" svc-orders orders.events still-on-old 2>&1 | tail -1); echo "隔離後還在用舊帳號的應用:$r"; sleep 5; chk=$(bash "$ROT" check svc-orders 1 | tail -2); echo "$chk"; bash "$ROT" rollback svc-orders | tail -1; sleep 5; r2=$(bash "$DEMO_ROOT/scripts/app-with-conjur.sh" svc-orders orders.events back-to-normal 2>&1 | tail -1); echo "回復後:$r2"; if echo "$r" | grep -q 被拒絕 && echo "$chk" | grep -q 還有人在用 && echo "$r2" | grep -q 成功; then echo "判定:隔離期有人還在用 → 被抓到 → rollback 後恢復正常"; else echo "判定:不符合"; fi' '判定:隔離期有人還在用 → 被抓到 → rollback 後恢復正常'
 
-step oldconn-both "【實驗:舊連線①】長連線 producer 一直在寫,中途「隔離(解除角色)」再「停用(刪 SCRAM)」:已建立的連線不會被踢,但解除角色後它的每個請求都被授權擋下" \
+step oldconn-both "【實驗:舊連線①】長連線 producer 一直在寫,中途「隔離(解除角色)」再「停用(停用 SCRAM)」:已建立的連線不會被踢,但解除角色後它的每個請求都被授權擋下" \
   "scripts/old-connection-test.sh both" \
   'bash "$DEMO_ROOT/scripts/old-connection-test.sh" both 2>&1 | tail -8; bash "$ROT" restore | tail -1' '判定:解除角色就切斷舊連線'
 
-step oldconn-scram "【實驗:舊連線②】同樣的長連線 producer,但只刪 SCRAM 憑證、角色保留:舊連線完全不受影響,繼續寫完。SCRAM 只在「建立連線」時驗證,所以只刪憑證擋不住已連著的人" \
+step oldconn-scram "【實驗:舊連線②】同樣的長連線 producer,但只停用 SCRAM 憑證、角色保留:舊連線完全不受影響,繼續寫完。SCRAM 只在「建立連線」時驗證,所以只停用憑證擋不住已連著的人" \
   "scripts/old-connection-test.sh scram-only" \
-  'bash "$DEMO_ROOT/scripts/old-connection-test.sh" scram-only 2>&1 | tail -8; bash "$ROT" restore | tail -1' '判定:只刪 SCRAM 憑證擋不住已建立的連線'
+  'bash "$DEMO_ROOT/scripts/old-connection-test.sh" scram-only 2>&1 | tail -8; bash "$ROT" restore | tail -1' '判定:只停用 SCRAM 憑證擋不住已建立的連線'
 
 # ---------------- OP menu ----------------
 step opmenu "【OP menu】維護模式的 Alertmanager 帳密改成執行時向 Conjur 取(OPMENU_ALERTMANAGER_AUTH_CMD),跳板機上不再放帳密檔;沒被授權的身分取不到就開不了" \

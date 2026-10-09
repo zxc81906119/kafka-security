@@ -14,22 +14,22 @@
   "demo:variable:kafka/svc-orders/credential"
 ]
 [secret-protection] broker2 已回到原本設定
- Container conjur-server Running 
- Container conjur-cli Running 
  Container conjur Running 
+ Container conjur-cli Running 
+ Container conjur-server Running 
  Container conjur-db Running 
  Container conjur-db Waiting 
  Container conjur-db Healthy 
  Container conjur-server Waiting 
  Container conjur-server Healthy 
  Container conjur Waiting 
- Container conjur-db Waiting 
- Container conjur-server Waiting 
  Container conjur-cli Waiting 
- Container conjur-db Healthy 
- Container conjur-server Healthy 
+ Container conjur-server Waiting 
+ Container conjur-db Waiting 
  Container conjur Healthy 
+ Container conjur-server Healthy 
  Container conjur-cli Healthy 
+ Container conjur-db Healthy 
 Loaded policy 'root'
  Container openldap Running 
  Container controller1 Running 
@@ -37,12 +37,12 @@ Loaded policy 'root'
  Container broker2 Recreated 
  Container controller1 Waiting 
  Container openldap Waiting 
- Container openldap Healthy 
  Container controller1 Healthy 
+ Container openldap Healthy 
  Container broker2 Starting 
  Container broker2 Started 
- Container openldap Waiting 
  Container broker2 Waiting 
+ Container openldap Waiting 
  Container controller1 Waiting 
  Container openldap Healthy 
  Container controller1 Healthy 

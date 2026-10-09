@@ -7,4 +7,6 @@ if echo "$OUT" | grep -q -E "Exception|authorization failed|Authentication faile
   echo "FAILED: 沒有權限(使用 $CFG)"; exit 1
 fi
 echo "OK: 已送出 heartbeat(使用 $CFG)"
-OK: 已送出 heartbeat(使用 /home/appuser/.kafka/client.properties)
+ERROR [Producer clientId=console-producer] Topic authorization failed for topics [orders.events]
+org.apache.kafka.common.errors.TopicAuthorizationException: Not authorized to access topics: [orders.events]
+FAILED: 沒有權限(使用 /home/appuser/.kafka/client.properties)

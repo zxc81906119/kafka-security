@@ -1,3 +1,4 @@
-# 【輪替 3/4】全部應用切換完成 → 停用舊帳號(刪除舊憑證)
-$ kafka-configs --alter --delete-config SCRAM-SHA-512 --entity-name svc-orders
-Completed updating config for user svc-orders.
+# 【輪替 3/4】全部應用切換完成 → 停用舊帳號(把舊憑證覆寫成隨機密碼;不刪除)
+$ scripts/scram-disable.sh svc-orders   # 覆寫成隨機密碼,不用 --delete-config
+[scram-disable] Completed updating config for user svc-orders.
+[scram-disable] svc-orders 的密碼已覆寫成隨機值(憑證沒有刪除)

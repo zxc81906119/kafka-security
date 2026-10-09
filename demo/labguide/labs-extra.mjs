@@ -178,9 +178,9 @@ bash scripts/conjur.sh set-cred svc-orders svc-orders orders-secret-v1`], ev: 'r
         manual: ['bash scripts/rotate-with-conjur.sh start svc-orders svc-orders-v2'], ev: 'rotate2-start', re: /Conjur 已指向 svc-orders-v2/, expect: '① 建立 → ② 角色 DeveloperWrite → User:svc-orders-v2 [HTTP 204] → ③ 新舊帳號看到同樣的 N 個 topic → ④ 寫進 Conjur → 結果:Conjur 已指向 svc-orders-v2;svc-orders 仍可用。' },
       { t: '18.11 零中斷輪替 ②:應用逐批重啟,設定不用改,自動改用新帳號;還沒重啟的照常', manual: ['bash scripts/app-with-conjur.sh svc-orders orders.events after-parallel-rotate | tail -2', 'kc kafka-topics --bootstrap-server $BOOT --command-config /clients/scram-svc-orders.properties --list | grep -c "^orders"   # 還沒重啟的應用(舊帳號)'],
         ev: 'rotate2-switch', re: /以 svc-orders-v2 身分[\s\S]*[1-9]/, expect: '重啟的應用:成功寫入(以 svc-orders-v2 身分);舊帳號的設定檔仍列得出 orders topic。' },
-      { t: '18.12 零中斷輪替 ③:不直接刪舊帳號,先「隔離」再看 audit', why: '隔離 = 解除舊帳號的全部角色(已存檔、可回復),SCRAM 憑證還留著。為什麼不直接刪?因為 audit 不記錄 orders.* 讀取成功(避免洗版),光看「允許」會漏掉只讀不寫的 consumer;隔離後還在用的人會變成被拒(DENIED),audit 一定記錄。check 只看隔離之後的事件。',
+      { t: '18.12 零中斷輪替 ③:不直接停用舊帳號,先「隔離」再看 audit', why: '隔離 = 解除舊帳號的全部角色(已存檔、可回復),SCRAM 憑證還留著。為什麼不直接刪?因為 audit 不記錄 orders.* 讀取成功(避免洗版),光看「允許」會漏掉只讀不寫的 consumer;隔離後還在用的人會變成被拒(DENIED),audit 一定記錄。check 只看隔離之後的事件。',
         manual: ['bash scripts/rotate-with-conjur.sh quarantine svc-orders | tail -1', 'sleep 3; bash scripts/rotate-with-conjur.sh check svc-orders 1'], ev: 'rotate2-quarantine', re: /判定:沒有人在用/, expect: '結果:svc-orders 已隔離;「隔離之後的 audit:允許 0 筆、被拒 0 筆」→ 判定:沒有人在用。' },
-      { t: '18.13 零中斷輪替 ④:確認沒人用才停用(刪 SCRAM 憑證)', manual: ['bash scripts/rotate-with-conjur.sh finish svc-orders | tail -1', 'kc kafka-topics --bootstrap-server $BOOT --command-config /clients/scram-svc-orders.properties --list 2>&1 | grep -m1 "Authentication failed"', 'bash scripts/app-with-conjur.sh svc-orders orders.events after-finish | tail -1'],
+      { t: '18.13 零中斷輪替 ④:確認沒人用才停用(停用 SCRAM 憑證)', manual: ['bash scripts/rotate-with-conjur.sh finish svc-orders | tail -1', 'kc kafka-topics --bootstrap-server $BOOT --command-config /clients/scram-svc-orders.properties --list 2>&1 | grep -m1 "Authentication failed"', 'bash scripts/app-with-conjur.sh svc-orders orders.events after-finish | tail -1'],
         ev: 'rotate2-finish', re: /已停用[\s\S]*(Authentication failed|認證失敗)[\s\S]*成功寫入/, expect: '舊帳號 svc-orders 已停用 → 舊設定檔 Authentication failed → 新帳號成功寫入。' },
       { t: '18.14 還原:svc-orders 回來、Conjur 指回它、移除 svc-orders-v2', manual: ['bash scripts/rotate-with-conjur.sh restore | tail -1'], ev: 'rotate2-restore', re: /svc-orders 已還原/, expect: '結果:svc-orders 已還原;svc-orders-v2 已移除。' },
       { t: '18.15 如果有人還在用舊帳號:隔離後被抓到,rollback 後恢復', why: '模擬「有一個你不知道的應用還在用舊帳號」:隔離後它的請求被拒,audit 記下 DENIED,check 判定「還有人在用」,你 rollback 把角色綁回去,它就恢復了——沒有任何人被誤傷太久。',
@@ -190,14 +190,14 @@ sleep 5; bash scripts/rotate-with-conjur.sh check svc-orders 1 | tail -2
 bash scripts/rotate-with-conjur.sh rollback svc-orders | tail -1
 sleep 5; bash scripts/app-with-conjur.sh svc-orders orders.events back-to-normal | tail -1`],
         ev: 'rotate2-inuse', re: /被拒絕[\s\S]*還有人在用[\s\S]*已回復[\s\S]*成功寫入/, expect: '隔離後應用:結果:被拒絕 → check:被拒 N 筆、判定:還有人在用 → rollback:角色已回復 → 應用:成功寫入。' },
-      { t: '18.16 實驗:只刪 SCRAM 憑證,擋得住已經連著的舊連線嗎?', why: '長連線 producer(svc-orders,每 2 秒寫一筆,共 14 筆)寫到一半,對舊帳號做事。這個實驗回答「為什麼一定要先解除角色」。下面跑兩次:A 先解除角色再刪憑證;B 只刪憑證、角色保留。每次約 50 秒。',
+      { t: '18.16 實驗:只停用 SCRAM 憑證,擋得住已經連著的舊連線嗎?', why: '長連線 producer(svc-orders,每 2 秒寫一筆,共 14 筆)寫到一半,對舊帳號做事。這個實驗回答「為什麼一定要先解除角色」。下面跑兩次:A 先解除角色再停用憑證;B 只停用憑證、角色保留。每次約 50 秒。',
         manual: [R`bash scripts/old-connection-test.sh both | tail -5
 bash scripts/rotate-with-conjur.sh restore | tail -1
-echo "=== B:只刪憑證、角色保留"
+echo "=== B:只停用憑證、角色保留"
 bash scripts/old-connection-test.sh scram-only | tail -5
 bash scripts/rotate-with-conjur.sh restore | tail -1`],
-        ev: 'oldconn-both', evb: 'oldconn-scram', re: /判定:解除角色就切斷舊連線[\s\S]*判定:只刪 SCRAM 憑證擋不住/, expect: 'A:只寫進約 6 筆,之後都是授權失敗、認證失敗 0 次 → 判定:解除角色就切斷舊連線;B:14 筆全部寫入 → 判定:只刪 SCRAM 憑證擋不住已建立的連線。',
-        warn: '重點:SCRAM 只在「建立連線」時驗證(connections.max.reauth.ms 預設 0 = 不重新驗證),所以刪掉憑證只擋得住新連線。要切斷已連著的舊連線,必須解除角色;所以輪替流程一律是「先隔離(解除角色)→ 看 audit → 才刪憑證」。長連線的應用也要在認證或授權失敗時重新向 Conjur 取帳密並重建連線,不能只在啟動時取一次。' },
+        ev: 'oldconn-both', evb: 'oldconn-scram', re: /判定:解除角色就切斷舊連線[\s\S]*判定:只停用 SCRAM 憑證擋不住/, expect: 'A:只寫進約 6 筆,之後都是授權失敗、認證失敗 0 次 → 判定:解除角色就切斷舊連線;B:14 筆全部寫入 → 判定:只停用 SCRAM 憑證擋不住已建立的連線。',
+        warn: '重點:SCRAM 只在「建立連線」時驗證(connections.max.reauth.ms 預設 0 = 不重新驗證),所以停用憑證只擋得住新連線。要切斷已連著的舊連線,必須解除角色;所以輪替流程一律是「先隔離(解除角色)→ 看 audit → 才停用憑證」。長連線的應用也要在認證或授權失敗時重新向 Conjur 取帳密並重建連線,不能只在啟動時取一次。' },
       { t: '18.17 OP menu:維護模式的帳密改成執行時向 Conjur 取,跳板機上不放帳密檔', why: '設定 OPMENU_ALERTMANAGER_AUTH_CMD(優先於檔案):任何會印出「帳號:密碼」的指令都可以,這裡接 Conjur。沒被授權的身分取不到,維護模式就開不了。',
         manual: [R`cd opmenu
 export OPMENU_USER=gary OPMENU_PASS=gary-pw OPMENU_YES=1 OPMENU_TICKET=CHG-2026-0400
@@ -229,7 +229,7 @@ hc -o /dev/null -u gary:gary-pw https://broker2:8092/security/1.0/authenticate`]
   },
   {
     id: 'ch19', n: 19, title: '(進階)帳號被偷之後:失效、告警、限速、限連線、鎖定', time: '20 分',
-    goal: '第 18 章發現「只刪 SCRAM 憑證,已連著的舊連線不會斷」。這個 Lab 假設一個帳號已經被偷,逐項證明平台怎麼讓它撐不久、灌不大、被發現、而且不會連累管理員:① SASL 重新認證讓被停用的帳號在固定時間內被切斷;② 認證失敗暴增會觸發告警並送到 Alertmanager;③ TLS 只收 1.2/1.3 與 AEAD 套件;④ 單一來源的連線數上限;⑤ client quota 限制吞吐量;⑥ AD 的帳戶鎖定原則是雙面刃(攻擊者可以故意把管理員鎖住),以及緊急路徑不受影響。',
+    goal: '第 18 章發現「只停用 SCRAM 憑證,已連著的舊連線不會斷」。這個 Lab 假設一個帳號已經被偷,逐項證明平台怎麼讓它撐不久、灌不大、被發現、而且不會連累管理員:① SASL 重新認證讓被停用的帳號在固定時間內被切斷;② 認證失敗暴增會觸發告警並送到 Alertmanager;③ TLS 只收 1.2/1.3 與 AEAD 套件;④ 單一來源的連線數上限;⑤ client quota 限制吞吐量;⑥ AD 的帳戶鎖定原則是雙面刃(攻擊者可以故意把管理員鎖住),以及緊急路徑不受影響。',
     pre: ['Lab 0 完成(含 Control Center 與 Prometheus / Alertmanager:docker compose --profile c3 …)。', '重新認證間隔(60 秒)、TLS 套件限定、telemetry 的認證失敗指標、Prometheus 規則 config/c3/security_rules.yml、AD 的密碼政策(ppolicy)都已經在 compose 與 config 裡(demo 已套用);鎖定預設關閉,第 19.7 才打開、19.8 關回去。'],
     autoAll: ['./demo.sh 19', './scenarios/ch19-stolen-account.sh'],
     steps: [
@@ -238,10 +238,10 @@ hc -o /dev/null -u gary:gary-pw https://broker2:8092/security/1.0/authenticate`]
 docker exec broker2 grep connections.max.reauth.ms /etc/kafka/kafka.properties`],
         ev: 'reauth-baseline', re: /reauth\.ms=60000[\s\S]*reauth\.ms=60000/, expect: '兩台 broker 都是 listener.name.client.connections.max.reauth.ms=60000。',
         warn: '這個設定不能動態改:kafka-configs 對 connections.max.reauth.ms 回 Cannot update these configs dynamically;per-listener 的寫法(listener.name.client.…)會被接受,但實測對連線不生效。要改只能改 compose / server.properties 再滾動重啟 broker。' },
-      { t: '19.2 失效 ②:停用一個「連著的」帳號,舊連線還能寫幾筆?', why: '對照第 18 章:當時只刪 SCRAM 憑證,舊連線 14 筆全寫入。現在同樣的動作(角色保留、只刪憑證),在下一次重新認證時失敗,連線被切斷。腳本用臨時帳號 svc-reauth,每 2 秒寫 1 筆、共 45 筆,第 10 秒刪它的憑證。',
+      { t: '19.2 失效 ②:停用一個「連著的」帳號,舊連線還能寫幾筆?', why: '對照第 18 章:當時只停用 SCRAM 憑證,舊連線 14 筆全寫入。現在同樣的動作(角色保留、只停用憑證),在下一次重新認證時失敗,連線被切斷。腳本用臨時帳號 svc-reauth,每 2 秒寫 1 筆、共 45 筆,第 10 秒刪它的憑證。',
         manual: ['bash scripts/reauth-test.sh run'],
         ev: 'reauth-run', re: /判定:60 秒內舊連線被切斷/, expect: '寫進 topic 的筆數少於 45;producer 的第一個錯誤是 Authentication failed during re-authentication;判定:60 秒內舊連線被切斷。',
-        warn: '重新認證只擋「憑證」。這是第二道防線:要立刻切斷,仍然是解除角色(第 18 章的隔離流程);重新認證確保即使忘了,最慢也在設定的間隔內失效。' },
+        warn: '為什麼「停用」是覆寫成隨機密碼、不是刪除憑證:實測(CP 8.3.2、KRaft)刪除 SCRAM 憑證之後,下一次重啟 broker 會失敗(broker 啟動時向自己做 SCRAM 認證被拒);全新叢集可 100% 重現,改成覆寫隨機密碼就正常。已經刪過的帳號,事後重新建立即可救回。正式環境在確認 Confluent 的說法前,不要用 --delete-config 刪 SCRAM 憑證(RUNBOOK 第 19 章有重現步驟與對照表)。 重新認證只擋「憑證」。這是第二道防線:要立刻切斷,仍然是解除角色(第 18 章的隔離流程);重新認證確保即使忘了,最慢也在設定的間隔內失效。' },
       { t: '19.3 發現:連續認證失敗 → 告警送到 Alertmanager', why: 'broker 的 telemetry 會送 failed_authentication_total 到 Prometheus(docker-compose.yml 的 metrics.include 已加這個指標)。規則 KafkaAuthFailuresBurst:5 分鐘內失敗超過 3 次就觸發。這裡故意製造 5 次錯誤登入(SCRAM 錯誤密碼 3 次、PLAIN 錯誤密碼 2 次),等規則評估(每 60 秒一次)。',
         manual: [R`for i in 1 2 3; do kc kafka-topics --bootstrap-server $BOOT --command-config /clients/scram-svc-orders-wrong.properties --list >/dev/null 2>&1; done
 for i in 1 2; do kc kafka-topics --bootstrap-server $BOOT --command-config /clients/plain-yujie-wrong.properties --list >/dev/null 2>&1; done

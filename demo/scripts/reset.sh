@@ -1,5 +1,5 @@
  >/dev/null 2>&1 || true
-./scripts/k.sh kafka-configs --bootstrap-server broker1:9094 --command-config /clients/token-bootstrap.properties --alter --delete-config SCRAM-SHA-512 --entity-type users --entity-name shared-ops >/dev/null 2>&1 || true
+bash scripts/scram-disable.sh shared-ops >/dev/null 2>&1 || true   # 不用 --delete-config:刪除 SCRAM 憑證會讓之後重啟 broker 失敗(見 scram-disable.sh)
 #!/usr/bin/env bash
 # 把 demo 重置回「第 0 章」起始狀態(AD 群組/RBAC/服務帳號),不重建整個叢集:
 #  1) LDAP:GARY 在 cluster-admin、topic-admin、rbac-admin、security;YUJIE 在 orders-write;MING 不在任何群組
@@ -27,6 +27,6 @@ rbac_unbind cert bootstrap User:svc-orders-v2 DeveloperWrite Topic orders. PREFI
 rbac_unbind basic gary:gary-pw User:shared-ops DeveloperWrite Topic orders. PREFIXED   # 第 6 章反例殘留(中途失敗時)
 echo "[reset] 服務帳號"
 bash scripts/create-service-account.sh svc-orders orders-secret-v1
-./scripts/k.sh kafka-configs --bootstrap-server broker1:9094 --command-config /clients/token-bootstrap.properties --alter --delete-config SCRAM-SHA-512 --entity-type users --entity-name svc-orders-v2 2>/dev/null || true
+bash scripts/scram-disable.sh svc-orders-v2 >/dev/null 2>&1 || true
 rm -f config/clients/scram-svc-orders-v2.properties   # 第 9 章產生的暫存設定檔
 echo "[reset] 完成"

@@ -16,19 +16,19 @@
 Completed updating config for user svc-orders.
 [conjur] 已寫入 kafka/svc-orders/credential(帳號 svc-orders)
  Container conjur Running 
- Container conjur-db Running 
  Container conjur-cli Running 
+ Container conjur-db Running 
  Container conjur-server Running 
  Container conjur-db Waiting 
  Container conjur-db Healthy 
  Container conjur-server Waiting 
  Container conjur-server Healthy 
  Container conjur Waiting 
- Container conjur-db Waiting 
  Container conjur-cli Waiting 
+ Container conjur-db Waiting 
  Container conjur-server Waiting 
+ Container conjur-cli Healthy 
+ Container conjur-db Healthy 
  Container conjur-server Healthy 
  Container conjur Healthy 
- Container conjur-db Healthy 
- Container conjur-cli Healthy 
 Loaded policy 'root'

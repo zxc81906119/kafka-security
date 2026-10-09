@@ -1,4 +1,4 @@
-# 【若有人還在用舊帳號】隔離後他的請求被拒,audit 看得到(DENIED)→ check 判定「還有人在用」→ rollback 把角色綁回去 → 他恢復正常。這就是不直接刪帳號的原因
+# 【若有人還在用舊帳號】隔離後他的請求被拒,audit 看得到(DENIED)→ check 判定「還有人在用」→ rollback 把角色綁回去 → 他恢復正常。這就是不直接停用帳號的原因
 $ quarantine → (有人用舊帳號)→ check → rollback
 隔離後還在用舊帳號的應用:結果:被拒絕
 舊帳號 svc-orders 隔離( UTC)之後的 audit:允許 0 筆、被拒 1 筆

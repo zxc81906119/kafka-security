@@ -1,6 +1,6 @@
 # 【限連線】單一來源 IP 最多 2 條連線(動態設定 max.connections.per.ip):同一來源開 4 條,後面的被 broker 拒絕;做完移除
 $ kafka-configs --alter --entity-type brokers --entity-default --add-config max.connections.per.ip=2
 Completed updating default config for brokers in the cluster.
-broker1 日誌:被拒絕的連線 12 條
+broker1 日誌:被拒絕的連線 4 條
 Completed updating default config for brokers in the cluster.
 判定:超過上限的連線被拒絕
