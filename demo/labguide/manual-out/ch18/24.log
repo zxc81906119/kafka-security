@@ -1,0 +1,40 @@
+[conjur] policy 已載入;host:svc-orders legacy-orders rogue-app opmenu broker
+[conjur] 完成:https://conjur(容器網路內);policy 已載入,host API key 在 config/conjur/keys/
+[
+  "demo:host:kafka/broker",
+  "demo:host:kafka/legacy-orders",
+  "demo:host:kafka/opmenu",
+  "demo:host:kafka/rogue-app",
+  "demo:host:kafka/svc-orders"
+]
+[
+  "demo:variable:kafka/broker/master-key",
+  "demo:variable:kafka/broker/master-key-passphrase",
+  "demo:variable:kafka/broker/master-key-previous",
+  "demo:variable:kafka/legacy-orders/key",
+  "demo:variable:kafka/opmenu/alertmanager-auth",
+  "demo:variable:kafka/svc-orders/credential"
+]
+[secret-protection] 輪替資料金鑰:值的密文與資料金鑰都換了;主金鑰與 Conjur 不用動
+   新檔變動行數:4
+   新檔 + 原本的主金鑰 → 解得開
+[secret-protection] 重啟 broker1 → 健康;gary 經 broker1 登入 → [HTTP 200]
+[secret-protection] 重啟 broker2 → 健康;gary 經 broker2 登入 → [HTTP 200]
+判定:資料金鑰已輪替——所有值重新加密、主金鑰不變、Conjur 不用動,broker2 重啟後正常
+ Container conjur Running 
+ Container conjur-cli Running 
+ Container conjur-server Running 
+ Container conjur-db Running 
+ Container conjur-db Waiting 
+ Container conjur-db Healthy 
+ Container conjur-server Waiting 
+ Container conjur-server Healthy 
+ Container conjur-db Waiting 
+ Container conjur Waiting 
+ Container conjur-cli Waiting 
+ Container conjur-server Waiting 
+ Container conjur-db Healthy 
+ Container conjur Healthy 
+ Container conjur-cli Healthy 
+ Container conjur-server Healthy 
+Loaded policy 'root'

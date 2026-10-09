@@ -9,29 +9,38 @@
 ]
 [
   "demo:variable:kafka/broker/master-key",
+  "demo:variable:kafka/broker/master-key-passphrase",
+  "demo:variable:kafka/broker/master-key-previous",
   "demo:variable:kafka/legacy-orders/key",
   "demo:variable:kafka/opmenu/alertmanager-auth",
   "demo:variable:kafka/svc-orders/credential"
 ]
-     22 demo:host:kafka/svc-orders fetched demo:variable:kafka/svc-orders/credential
-      6 demo:host:kafka/opmenu fetched demo:variable:kafka/opmenu/alertmanager-auth
-      4 demo:host:kafka/broker fetched demo:variable:kafka/broker/master-key
-      2 demo:host:kafka/rogue-app tried to fetch demo:variable:kafka/svc-orders/credential: Forbidden
-      2 demo:host:kafka/rogue-app tried to fetch demo:variable:kafka/opmenu/alertmanager-auth: Forbidden
- Container conjur-db Running 
+[secret-protection] ① 新檔(security.properties.new)只有主金鑰那一層被重包,值的密文沒有變:
+   資料金鑰以外的行(各個值的密文)完全相同
+[secret-protection] ② 檔與金鑰必須成對——交叉驗證:
+   新檔 + 新主金鑰 → 解得開
+   Error: failed to unwrap the data key: invalid master key or corrupted data key
+   新檔 + 舊主金鑰 → 解不開(預期)
+   Error: failed to unwrap the data key: invalid master key or corrupted data key
+   舊檔 + 新主金鑰 → 解不開(預期)
+[secret-protection] ③ 切換:先保存舊主金鑰(退回用)→ 換檔 → 更新 Conjur 的主金鑰與 passphrase → 重啟 broker2
+[secret-protection] 重啟 broker1 → 健康;gary 經 broker1 登入 → [HTTP 200]
+[secret-protection] 重啟 broker2 → 健康;gary 經 broker2 登入 → [HTTP 200]
+判定:主金鑰已輪替——檔與新主金鑰成對,broker2 重啟後正常(值的密文沒變,只有資料金鑰被重包)
  Container conjur-server Running 
- Container conjur-cli Running 
+ Container conjur-db Running 
  Container conjur Running 
+ Container conjur-cli Running 
  Container conjur-db Waiting 
  Container conjur-db Healthy 
  Container conjur-server Waiting 
  Container conjur-server Healthy 
+ Container conjur-db Waiting 
  Container conjur Waiting 
- Container conjur-db Waiting 
- Container conjur-server Waiting 
  Container conjur-cli Waiting 
- Container conjur-server Healthy 
+ Container conjur-server Waiting 
  Container conjur-db Healthy 
- Container conjur Healthy 
  Container conjur-cli Healthy 
+ Container conjur Healthy 
+ Container conjur-server Healthy 
 Loaded policy 'root'

@@ -22,7 +22,7 @@ sleep 9; echo "約第 8 筆:停用(SCRAM 憑證覆寫成隨機密碼,不刪除)"
 if [ "$MODE" = both ]; then bash scripts/rotate-with-conjur.sh finish svc-orders >/dev/null 2>&1; else bash scripts/scram-disable.sh svc-orders >/dev/null 2>&1; fi
 wait "$BG" || true
 echo "讀回 topic,看每個階段寫進去幾筆(標記 $RID):"
-got=$(./scripts/k.sh kafka-console-consumer --bootstrap-server broker1:9094 --command-config /clients/token-bootstrap.properties --topic orders.events --group "ocread-$RID" --from-beginning --timeout-ms 15000 2>/dev/null | grep -o "$RID-[0-9]*" | sed "s/$RID-//" | sort -n | uniq)
+got=$(./scripts/k.sh kafka-console-consumer --bootstrap-server broker1:9094 --command-config /clients/token-bootstrap.properties --topic orders.events --group "ocread-$RID" --from-beginning --timeout-ms 15000 2>/dev/null | grep -a -o "$RID-[0-9]*" | sed "s/$RID-//" | sort -n | uniq)
 max=$(echo "$got" | tail -1); cnt=$(echo "$got" | grep -c . || true)
 auth=$(grep -ciE "SaslAuthenticationException|Authentication failed" "$LOG" || true); az=$(grep -ciE "TOPIC_AUTHORIZATION_FAILED|Topic authorization failed|Not authorized" "$LOG" || true)
 echo "  共送出 $N 筆;topic 裡讀到 ${cnt:-0} 筆,最大編號 ${max:-無}"

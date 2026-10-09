@@ -9,21 +9,23 @@
 ]
 [
   "demo:variable:kafka/broker/master-key",
+  "demo:variable:kafka/broker/master-key-passphrase",
+  "demo:variable:kafka/broker/master-key-previous",
   "demo:variable:kafka/legacy-orders/key",
   "demo:variable:kafka/opmenu/alertmanager-auth",
   "demo:variable:kafka/svc-orders/credential"
 ]
 [secret-protection] 主金鑰已存入 Conjur(kafka/broker/master-key),不在任何檔案裡
 [secret-protection] certs/security.properties(加密後的密碼):
-server.properties/ldap.java.naming.security.credentials = ENC[AES/GCM/NoPadding,data:AYzd9VEtFG3SXdW9lW/TP3+5E
-_metadata.master_key.0.salt = d0wxlQKt6ZZqpIXz7zdemh8nIOnAyzOPXGSuvuY7+g8=
-_metadata.symmetric_key.0.created_at = 2026-10-09 02:03:25.192757913 +0000 UTC m=+0.075609790
+server.properties/ldap.java.naming.security.credentials = ENC[AES/GCM/NoPadding,data:aoq+BWNLz1P4GG6eUT84/YU3I
+_metadata.master_key.0.salt = jWUB6bKWddKHTBNAt2670JMEPMAX97lwtGsKg0xFQMY=
+_metadata.symmetric_key.0.created_at = 2026-10-09 11:40:53.565433225 +0000 UTC m=+0.105537644
 _metadata.symmetric_key.0.envvar = CONFLUENT_SECURITY_MASTER_KEY
 _metadata.symmetric_key.0.length = 32
 _metadata.symmetric_key.0.iterations = 10000
-_metadata.symmetric_key.0.salt = BhzOowmSPSqjj+8qcvuURxWLpn1h/PDv+h9Ea0Rc/b8=
-_metadata.symmetric_key.0.enc = ENC[AES/GCM/NoPadding,data:kFry1rNbU/x6tNs2hoHJlNDW0T5qwKYVJdkDE+TCK7MZErut3+T
-server.properties/ldap.java.naming.security.credentials = ENC[AES/GCM/NoPadding,data:AYzd9VEtFG3SXdW9lW/TP3+5E
+_metadata.symmetric_key.0.salt = /jiFXcB7orEwRygp3wkoxBBheDEc/LmSXbcnZRyfw+o=
+_metadata.symmetric_key.0.enc = ENC[AES/GCM/NoPadding,data:2uN5Sx7BNk/dN3QZmeUifkrTk5ibTRZ7NvkW1KnCFWJc/PgvmbT
+server.properties/ldap.java.naming.security.credentials = ENC[AES/GCM/NoPadding,data:aoq+BWNLz1P4GG6eUT84/YU3I
  Container conjur-server Running 
  Container conjur Running 
  Container conjur-cli Running 
@@ -32,12 +34,12 @@ server.properties/ldap.java.naming.security.credentials = ENC[AES/GCM/NoPadding,
  Container conjur-db Healthy 
  Container conjur-server Waiting 
  Container conjur-server Healthy 
+ Container conjur-cli Waiting 
  Container conjur-db Waiting 
  Container conjur-server Waiting 
  Container conjur Waiting 
- Container conjur-cli Waiting 
- Container conjur-db Healthy 
- Container conjur Healthy 
  Container conjur-cli Healthy 
+ Container conjur Healthy 
+ Container conjur-db Healthy 
  Container conjur-server Healthy 
 Loaded policy 'root'

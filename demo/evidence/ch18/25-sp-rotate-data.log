@@ -1,0 +1,8 @@
+# 【輪替 ③:資料金鑰】只需要目前的 passphrase;所有值的密文都重新加密;主金鑰不變 → Conjur 完全不用動,但 security.properties 要換、要重啟
+$ confluent secret file rotate --data-key --passphrase <目前>;換 security.properties;重啟 broker2
+[secret-protection] 輪替資料金鑰:值的密文與資料金鑰都換了;主金鑰與 Conjur 不用動
+   新檔變動行數:4
+   新檔 + 原本的主金鑰 → 解得開
+[secret-protection] 重啟 broker1 → 健康;gary 經 broker1 登入 → [HTTP 200]
+[secret-protection] 重啟 broker2 → 健康;gary 經 broker2 登入 → [HTTP 200]
+判定:資料金鑰已輪替——所有值重新加密、主金鑰不變、Conjur 不用動,broker2 重啟後正常

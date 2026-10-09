@@ -8,6 +8,8 @@ $ conjur list -k host; conjur list -k variable   # 來自 config/conjur/policy/k
   demo:host:kafka/svc-orders
 -- variable(秘密)
   demo:variable:kafka/broker/master-key
+  demo:variable:kafka/broker/master-key-passphrase
+  demo:variable:kafka/broker/master-key-previous
   demo:variable:kafka/legacy-orders/key
   demo:variable:kafka/opmenu/alertmanager-auth
   demo:variable:kafka/svc-orders/credential

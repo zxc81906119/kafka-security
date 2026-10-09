@@ -9,6 +9,8 @@
 ]
 [
   "demo:variable:kafka/broker/master-key",
+  "demo:variable:kafka/broker/master-key-passphrase",
+  "demo:variable:kafka/broker/master-key-previous",
   "demo:variable:kafka/legacy-orders/key",
   "demo:variable:kafka/opmenu/alertmanager-auth",
   "demo:variable:kafka/svc-orders/credential"
@@ -25,12 +27,12 @@
  Container conjur-db Healthy 
  Container conjur-server Waiting 
  Container conjur-server Healthy 
+ Container conjur-cli Waiting 
  Container conjur Waiting 
  Container conjur-db Waiting 
  Container conjur-server Waiting 
- Container conjur-cli Waiting 
- Container conjur-cli Healthy 
  Container conjur Healthy 
- Container conjur-server Healthy 
  Container conjur-db Healthy 
+ Container conjur-server Healthy 
+ Container conjur-cli Healthy 
 Loaded policy 'root'

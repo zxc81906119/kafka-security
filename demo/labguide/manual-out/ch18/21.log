@@ -9,11 +9,14 @@
 ]
 [
   "demo:variable:kafka/broker/master-key",
+  "demo:variable:kafka/broker/master-key-passphrase",
+  "demo:variable:kafka/broker/master-key-previous",
   "demo:variable:kafka/legacy-orders/key",
   "demo:variable:kafka/opmenu/alertmanager-auth",
   "demo:variable:kafka/svc-orders/credential"
 ]
-[secret-protection] broker2 已回到原本設定
+[secret-protection] broker1 已用加密設定重啟(與 broker2 同一把主金鑰、同一份檔);gary 經 broker1 登入 → [HTTP 200]
+判定:broker1 與 broker2 共用同一把主金鑰、同一份 security.properties
  Container conjur Running 
  Container conjur-cli Running 
  Container conjur-server Running 
@@ -22,28 +25,28 @@
  Container conjur-db Healthy 
  Container conjur-server Waiting 
  Container conjur-server Healthy 
+ Container conjur-db Waiting 
  Container conjur Waiting 
  Container conjur-cli Waiting 
  Container conjur-server Waiting 
- Container conjur-db Waiting 
- Container conjur Healthy 
  Container conjur-server Healthy 
  Container conjur-cli Healthy 
+ Container conjur Healthy 
  Container conjur-db Healthy 
 Loaded policy 'root'
- Container openldap Running 
  Container controller1 Running 
- Container broker2 Recreate 
- Container broker2 Recreated 
+ Container openldap Running 
+ Container broker1 Recreate 
+ Container broker1 Recreated 
  Container controller1 Waiting 
  Container openldap Waiting 
- Container controller1 Healthy 
  Container openldap Healthy 
- Container broker2 Starting 
- Container broker2 Started 
- Container broker2 Waiting 
+ Container controller1 Healthy 
+ Container broker1 Starting 
+ Container broker1 Started 
  Container openldap Waiting 
+ Container broker1 Waiting 
  Container controller1 Waiting 
  Container openldap Healthy 
  Container controller1 Healthy 
- Container broker2 Healthy
+ Container broker1 Healthy

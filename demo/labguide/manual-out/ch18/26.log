@@ -1,0 +1,61 @@
+[conjur] policy 已載入;host:svc-orders legacy-orders rogue-app opmenu broker
+[conjur] 完成:https://conjur(容器網路內);policy 已載入,host API key 在 config/conjur/keys/
+[
+  "demo:host:kafka/broker",
+  "demo:host:kafka/legacy-orders",
+  "demo:host:kafka/opmenu",
+  "demo:host:kafka/rogue-app",
+  "demo:host:kafka/svc-orders"
+]
+[
+  "demo:variable:kafka/broker/master-key",
+  "demo:variable:kafka/broker/master-key-passphrase",
+  "demo:variable:kafka/broker/master-key-previous",
+  "demo:variable:kafka/legacy-orders/key",
+  "demo:variable:kafka/opmenu/alertmanager-auth",
+  "demo:variable:kafka/svc-orders/credential"
+]
+[secret-protection] broker1、broker2 已回到原本設定
+ Container conjur-server Running 
+ Container conjur-cli Running 
+ Container conjur-db Running 
+ Container conjur Running 
+ Container conjur-db Waiting 
+ Container conjur-db Healthy 
+ Container conjur-server Waiting 
+ Container conjur-server Healthy 
+ Container conjur-db Waiting 
+ Container conjur Waiting 
+ Container conjur-server Waiting 
+ Container conjur-cli Waiting 
+ Container conjur-server Healthy 
+ Container conjur-cli Healthy 
+ Container conjur-db Healthy 
+ Container conjur Healthy 
+Loaded policy 'root'
+ Container controller1 Running 
+ Container openldap Running 
+ Container broker2 Recreate 
+ Container broker1 Recreate 
+ Container broker2 Recreated 
+ Container broker1 Recreated 
+ Container openldap Waiting 
+ Container controller1 Waiting 
+ Container openldap Waiting 
+ Container controller1 Waiting 
+ Container openldap Healthy 
+ Container openldap Healthy 
+ Container controller1 Healthy 
+ Container broker2 Starting 
+ Container controller1 Healthy 
+ Container broker1 Starting 
+ Container broker2 Started 
+ Container broker1 Started 
+ Container broker2 Waiting 
+ Container openldap Waiting 
+ Container broker1 Waiting 
+ Container controller1 Waiting 
+ Container controller1 Healthy 
+ Container openldap Healthy 
+ Container broker2 Healthy 
+ Container broker1 Healthy

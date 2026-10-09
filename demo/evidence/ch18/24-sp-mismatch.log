@@ -1,0 +1,9 @@
+# 【輪替 ②:順序做錯會怎樣】檔與主金鑰不成對(換回輪替前的舊檔、Conjur 已是新主金鑰)→ broker2 重啟失敗(Failed to unwrap the data key);換回成對的檔就恢復。多台主機時,每一台都要「檔 + 金鑰」一起換
+$ scripts/secret-protection.sh mismatch-demo   # 換回舊檔 → docker restart broker2 → Exited → 換回新檔 → 恢復
+[secret-protection] 已把 certs/security.properties 換回「輪替前的舊檔」,但 Conjur 的主金鑰是新的 → 檔與金鑰不成對,重啟 broker2:
+   broker2 狀態:Exited (1) 3 seconds ago
+   ERROR Failed to unwrap the data key (io.confluent.kafka.security.config.provider.DecryptionEngine) javax.crypto.AEADBadTagException: Tag mismatch at j
+[secret-protection] 換回成對的檔(新檔 + 新主金鑰)後重啟 broker2:
+[secret-protection] 重啟 broker1 → 健康;gary 經 broker1 登入 → [HTTP 200]
+[secret-protection] 重啟 broker2 → 健康;gary 經 broker2 登入 → [HTTP 200]
+判定:檔與主金鑰不成對時 broker2 起不來(Failed to unwrap the data key);換回成對的檔就恢復

@@ -392,7 +392,7 @@ add(...table([
   ['demo/scripts/up.sh、reset.sh、bootstrap-rbac.sh', '一鍵建置、重置、第一批授權'],
   ['demo/scripts/k.sh、rp.sh、mds.sh、ldap-group.sh、create-service-account.sh、as-user.sh', '包好的單項指令(對應手動的 kc、hc、ldapmodify…)'],
   ['demo/scenarios/ch01…ch20-*.sh', '各 Lab 的整章腳本(含自動驗證);ch15 人員異動、ch16 OP menu、ch17 傳輸加密補強、ch18 CyberArk 整合、ch19 帳號被偷之後、ch20 Schema Registry'],
-  ['demo/config/conjur/、scripts/conjur.sh、scripts/app-with-conjur.sh、scripts/secret-protection.sh、docker-compose.cyberark.yml、docker-compose.cyberark-summon.yml', 'Lab 18:Conjur 的 policy、TLS 入口、取秘密腳本、應用啟動示範、Secret Protection 與 broker2 覆蓋設定(自寫腳本版與 summon 版)'],
+  ['demo/config/conjur/、scripts/conjur.sh、scripts/app-with-conjur.sh、scripts/secret-protection.sh、scripts/rolling-rotate-test.sh、docker-compose.cyberark.yml、docker-compose.cyberark-summon.yml', 'Lab 18:Conjur 的 policy、TLS 入口、取秘密腳本、應用啟動示範、Secret Protection 與 broker2 覆蓋設定(自寫腳本版與 summon 版)'],
   ['demo/scripts/reauth-test.sh、quota-test.sh、ad-lockout.sh、config/c3/security_rules.yml、ldap-config/ppolicy-*.ldif', 'Lab 19:重新認證、配額、AD 鎖定實驗與認證失敗告警規則'],
   ['demo/scripts/sr-setup.sh、scenarios/ch20-schema-registry.sh', 'Lab 20:Schema Registry(profile sr)的啟動與授權'],
   ['demo/opmenu/', 'OP menu 程式(README.md 說明項目、設定與限制;test-*.sh 回歸測試)'],
@@ -441,6 +441,10 @@ add(...table([
   ['輪替腳本複製角色失敗時若繼續往下做,應用會全部拿到沒權限的帳號', '腳本逐筆檢查、驗證新帳號連得上且看到同樣的 topic,才寫 Conjur;失敗回滾新帳號'],
   ['Conjur 對沒被授權的身分回 404,不是 403', '不透露秘密是否存在;錯的 API key 在認證就被擋(401)'],
   ['設定檔密碼加密後,取不到主金鑰 broker 就不啟動', '刻意的;所以 Conjur 的可用性要和 broker 同級'],
+  ['confluent secret 的 --passphrase 不會讀檔:--passphrase @/路徑 會把 @/路徑 這串字當成密碼(用另一個檔案內容去解會失敗)', 'passphrase 只能直接放在指令列,輪替要在受控的管理主機上做;不要以為 @檔案 在讀檔'],
+  ['主金鑰輪替只重包資料金鑰,值的密文不變;新檔必須和新主金鑰成對(新檔配舊金鑰、舊檔配新金鑰都解不開)', '成對才能啟動:不成對時 broker 起不來(Failed to unwrap the data key)。輪替前先備好舊檔與舊主金鑰,以便退回'],
+  ['輪替主金鑰需要「目前的 passphrase」與「新的 passphrase」,新主金鑰只印一次', 'passphrase 也要保存(demo 放 Conjur 只有管理員能讀的變數,broker 讀不到),新主金鑰要立刻寫進 Conjur'],
+  ['兩台 broker 滾動重啟(依序一台一台)期間,背景 producer(acks=all、冪等)送出 1200 筆 = topic 1200 筆,零送出失敗', '重啟不等於停機。只證明這個條件:2 台 broker、副本 2、min.isr 1;正式環境副本 3、min.isr 2,controller 也要一台一台重啟'],
   ['CyberArk 官方 summon + summon-conjur 對開源版 Conjur 可用:主金鑰只在 java 程序的環境(容器環境、/tmp 都沒有),錯 API key 回 401、啟動程式不執行', '正式環境 systemd 只要 ExecStart=summon -p summon-conjur -f secrets.yml kafka-server-start … 一行;不要用 ExecStartPre 取秘密(它設的環境變數不會傳給 ExecStart)'],
 ], [4600, 4426], { size: 17 }));
 add(H2('沒有示範的限制(要在客戶環境處理)'));

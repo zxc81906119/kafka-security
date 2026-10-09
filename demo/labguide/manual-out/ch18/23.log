@@ -1,0 +1,41 @@
+[conjur] policy 已載入;host:svc-orders legacy-orders rogue-app opmenu broker
+[conjur] 完成:https://conjur(容器網路內);policy 已載入,host API key 在 config/conjur/keys/
+[
+  "demo:host:kafka/broker",
+  "demo:host:kafka/legacy-orders",
+  "demo:host:kafka/opmenu",
+  "demo:host:kafka/rogue-app",
+  "demo:host:kafka/svc-orders"
+]
+[
+  "demo:variable:kafka/broker/master-key",
+  "demo:variable:kafka/broker/master-key-passphrase",
+  "demo:variable:kafka/broker/master-key-previous",
+  "demo:variable:kafka/legacy-orders/key",
+  "demo:variable:kafka/opmenu/alertmanager-auth",
+  "demo:variable:kafka/svc-orders/credential"
+]
+[secret-protection] 已把 certs/security.properties 換回「輪替前的舊檔」,但 Conjur 的主金鑰是新的 → 檔與金鑰不成對,重啟 broker2:
+   broker2 狀態:Exited (1) 3 seconds ago
+   ERROR Failed to unwrap the data key (io.confluent.kafka.security.config.provider.DecryptionEngine) javax.crypto.AEADBadTagException: Tag mismatch at j
+[secret-protection] 換回成對的檔(新檔 + 新主金鑰)後重啟 broker2:
+[secret-protection] 重啟 broker1 → 健康;gary 經 broker1 登入 → [HTTP 200]
+[secret-protection] 重啟 broker2 → 健康;gary 經 broker2 登入 → [HTTP 200]
+判定:檔與主金鑰不成對時 broker2 起不來(Failed to unwrap the data key);換回成對的檔就恢復
+ Container conjur Running 
+ Container conjur-db Running 
+ Container conjur-cli Running 
+ Container conjur-server Running 
+ Container conjur-db Waiting 
+ Container conjur-db Healthy 
+ Container conjur-server Waiting 
+ Container conjur-server Healthy 
+ Container conjur Waiting 
+ Container conjur-db Waiting 
+ Container conjur-cli Waiting 
+ Container conjur-server Waiting 
+ Container conjur Healthy 
+ Container conjur-db Healthy 
+ Container conjur-cli Healthy 
+ Container conjur-server Healthy 
+Loaded policy 'root'

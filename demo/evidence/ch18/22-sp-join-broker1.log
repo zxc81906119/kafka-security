@@ -1,0 +1,4 @@
+# 【多台共用】broker1 也改用 summon + 加密設定:兩台 broker 取同一把主金鑰(Conjur 的 broker/master-key)、讀同一份 security.properties——這才是叢集的實際樣子,不是每台各一組
+$ scripts/secret-protection.sh join-broker1   # broker1 套用 docker-compose.cyberark-summon.yml
+[secret-protection] broker1 已用加密設定重啟(與 broker2 同一把主金鑰、同一份檔);gary 經 broker1 登入 → [HTTP 200]
+判定:broker1 與 broker2 共用同一把主金鑰、同一份 security.properties

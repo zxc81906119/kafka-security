@@ -9,27 +9,29 @@
 ]
 [
   "demo:variable:kafka/broker/master-key",
+  "demo:variable:kafka/broker/master-key-passphrase",
+  "demo:variable:kafka/broker/master-key-previous",
   "demo:variable:kafka/legacy-orders/key",
   "demo:variable:kafka/opmenu/alertmanager-auth",
   "demo:variable:kafka/svc-orders/credential"
 ]
-維護模式已開始:broker1,到 2026-10-09T02:05:01Z(UTC);silence id=f568a432-9e42-4a43-b089-e0ef1d7f5974(用項目 26 提前結束)
-維護模式已結束:f568a432-9e42-4a43-b089-e0ef1d7f5974
+維護模式已開始:broker1,到 2026-10-09T11:42:29Z(UTC);silence id=3a9655f6-5454-4475-b2a2-861285311e56(用項目 26 提前結束)
+維護模式已結束:3a9655f6-5454-4475-b2a2-861285311e56
 建立 silence 失敗:Unauthorized
- Container conjur-server Running 
  Container conjur Running 
  Container conjur-cli Running 
  Container conjur-db Running 
+ Container conjur-server Running 
  Container conjur-db Waiting 
  Container conjur-db Healthy 
  Container conjur-server Waiting 
  Container conjur-server Healthy 
- Container conjur-cli Waiting 
- Container conjur-db Waiting 
  Container conjur-server Waiting 
  Container conjur Waiting 
- Container conjur-server Healthy 
+ Container conjur-cli Waiting 
+ Container conjur-db Waiting 
+ Container conjur Healthy 
  Container conjur-db Healthy 
  Container conjur-cli Healthy 
- Container conjur Healthy 
+ Container conjur-server Healthy 
 Loaded policy 'root'
