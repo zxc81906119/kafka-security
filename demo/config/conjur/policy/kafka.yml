@@ -12,7 +12,9 @@
     - !variable svc-orders/credential        # 現在該用的 SCRAM 帳號與密碼,放在同一個變數(JSON:{"u":帳號,"p":密碼});輪替一次寫入、應用一次取得,不會取到不配對的帳密
     - !variable legacy-orders/key            # client 憑證私鑰
     - !variable opmenu/alertmanager-auth     # 維護模式用的 Alertmanager 帳密
-    - !variable broker/master-key            # Confluent Secret Protection 主金鑰
+    - !variable broker/master-key            # Confluent Secret Protection 主金鑰(broker 啟動時取)
+    - !variable broker/master-key-passphrase # 主金鑰的 passphrase:輪替主金鑰時需要「目前的」;只有管理員能讀,broker 不能
+    - !variable broker/master-key-previous   # 輪替前的主金鑰:只為了退回;只有管理員能讀,確認穩定後清掉
 
     - !permit
       role: !host svc-orders
