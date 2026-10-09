@@ -29,7 +29,7 @@ Lab 18 用 CyberArk 的開源版 Conjur,要多下載約 1.2 GB 映像;第一步 
 
 - Lab 19(帳號被偷之後)不用多下載東西,但會暫時改 AD 的鎖定原則(做完自動關回去)、並在 Prometheus 載入一組告警規則。
 - Lab 20(Schema Registry)第一步 `bash scripts/sr-setup.sh` 會啟動 profile `sr` 的 Schema Registry,第一次要多下載約 1.5 GB 映像。欄位級加密(CSFLE)需要企業版加購授權,Lab 20 只驗證到授權為止,手冊有說明。
-- **已知問題**:較久的環境重啟 broker 偶爾會起不來(broker 啟動時向自己做 SCRAM 認證被拒,根因未查明)。Lab 16(OP menu 滾動重啟)與 Lab 18(broker2 重啟)已自動處理:起不來就清空該 broker 的資料目錄重建(`scripts/broker-heal.sh`),資料會從另一台補回來。如果自己手動重啟 broker 遇到,執行 `bash scripts/broker-heal.sh broker1`(或 broker2)。
+- **已知問題(已查明)**:刪除 SCRAM 憑證(`kafka-configs --delete-config SCRAM-SHA-512`)之後,下一次重啟 broker 會失敗。這個 demo 的腳本已改成「把憑證覆寫成隨機密碼」來停用帳號(`scripts/scram-disable.sh`),請不要自己用 `--delete-config` 刪 SCRAM 憑證。如果已經刪了、broker 起不來:把被刪的帳號重新建立(任何密碼)再啟動;不行時用 `bash scripts/broker-heal.sh broker1`(或 broker2)清空該 broker 的資料目錄重建。
 
 ## 練習時
 

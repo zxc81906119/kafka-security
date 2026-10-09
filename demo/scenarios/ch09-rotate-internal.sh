@@ -14,9 +14,9 @@ sleep 5
 step rot-both "【輪替 2/4】新舊帳號同時可用(應用逐步切換到新帳號)" \
   "producer(svc-orders)  與  producer(svc-orders-v2)" \
   'send_result svc_produce scram-svc-orders orders.events old-pw; send_result svc_produce scram-svc-orders-v2 orders.events new-pw' '結果:成功'
-step rot-stop-old "【輪替 3/4】全部應用切換完成 → 停用舊帳號(刪除舊憑證)" \
-  "kafka-configs --alter --delete-config SCRAM-SHA-512 --entity-name svc-orders" \
-  'K kafka-configs --bootstrap-server $BOOT --command-config /clients/token-bootstrap.properties --alter --delete-config SCRAM-SHA-512 --entity-type users --entity-name svc-orders' 'Completed updating config'
+step rot-stop-old "【輪替 3/4】全部應用切換完成 → 停用舊帳號(把舊憑證覆寫成隨機密碼;不刪除)" \
+  "scripts/scram-disable.sh svc-orders   # 覆寫成隨機密碼,不用 --delete-config" \
+  'bash "$DEMO_ROOT/scripts/scram-disable.sh" svc-orders' 'Completed updating config'
 step rot-old-dead "【輪替 4/4】舊密碼立刻失效;新帳號照常" \
   "producer(舊密碼)  /  producer(svc-orders-v2)" \
   'send_result svc_produce scram-svc-orders orders.events old-pw | tail -2; send_result svc_produce scram-svc-orders-v2 orders.events new-pw | tail -1' '結果:被拒絕'
@@ -46,5 +46,5 @@ step ad-up "【AD 恢復】人的登入恢復" \
   "(openldap 已啟動)  producer(yujie)" \
   'for i in $(seq 1 8); do r=$(send_result as_produce yujie orders.events after-ad-recovery | tail -1); echo "$r" | grep -q "成功" && break; sleep 4; done; echo "$r"' '結果:成功'
 rbac_unbind cert bootstrap User:svc-orders-v2 DeveloperWrite Topic orders. PREFIXED >/dev/null
-K kafka-configs --bootstrap-server $BOOT --command-config /clients/token-bootstrap.properties --alter --delete-config SCRAM-SHA-512 --entity-type users --entity-name svc-orders-v2 >/dev/null 2>&1
+bash "$DEMO_ROOT/scripts/scram-disable.sh" svc-orders-v2 >/dev/null 2>&1
 ch_end

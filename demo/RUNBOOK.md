@@ -187,7 +187,23 @@ gary 在 C3 指派 `orders-read` → DeveloperRead;LDAP 介面把 ming 從 devel
 
 **踩坑**:(1) telemetry 的 `metrics.include` 用萬用字元或沒排除 delta 型態 → Prometheus 對整批回 500(`invalid temporality and type combination`),連原本的監控指標也被丟;每個名稱後面要加 `(?!.*delta).*`。(2) `python3` 在這台 Windows 是空殼,腳本編輯改用 node / perl。
 
-**未解的問題(重要,待查)**:使用了一段時間、做過很多實驗的叢集,**重啟 broker 會失敗**:broker 啟動時 authorizer 的 client(`_confluent-metadata-coordinator`、cluster-link admin、telemetry producer)連自己的 INTERNAL listener(`broker1:9092`),被自己拒絕 `invalid credentials with SASL mechanism SCRAM-SHA-512`,broker 以 fatal exit 結束,重試與清掉本機 metadata 都沒用。重現 3 次;全新叢集連續重啟 5 次都正常;逐項排除:SCRAM 帳號新增與刪除、user quota、max.connections.per.ip、AD 鎖定、role binding、consumer group 讀取、連著的帳號被刪憑證、metadata 快照存在、metadata 日誌膨脹到 11000 筆。**尚未找到觸發條件**。推測與「inter-broker listener 用存在 metadata 裡的 SCRAM 憑證,啟動時自我認證要等 metadata 載入」有關,**未驗證**。正式環境的含意:在客戶環境滾動重啟 broker 前要在測試環境確認;inter-broker 認證考慮改用不依賴 metadata 的方式(例如 mTLS),需另外驗證。
+**已查明:刪除 SCRAM 憑證會讓之後重啟 broker 失敗(重要,2026-10-09)**:對 SCRAM 帳號執行 `kafka-configs --delete-config SCRAM-SHA-512` 之後,下一次重啟任何一台 broker 都會失敗——broker 啟動時 authorizer 的 client 連自己的 INTERNAL listener(`broker1:9092`),被拒 `Invalid user credentials with SASL mechanism SCRAM-SHA-512`,broker 以 fatal exit 結束。**可在全新叢集 100% 重現**:新建一個 SCRAM 帳號再刪掉 → 重啟 broker 失敗;對「根本不存在的帳號」執行刪除也算(`reset.sh` 以前每次重置都會這樣做,所以跑過整條章節鏈的環境一定會中)。
+
+| 動作(全新叢集,之後重啟 broker) | 結果 |
+|---|---|
+| 新建帳號,不刪除(4 個) | 正常 |
+| 對既有帳號改密碼(4 次) | 正常 |
+| 對既有帳號 刪除→重建(4 輪,最後帳號仍存在) | 正常 |
+| 新建帳號再刪除(1 個,最後帳號不存在) | **失敗** |
+| 上一項之後,把 kafka-broker / kafka-controller 的憑證重寫一次 | 仍失敗 |
+| 上一項之後,把被刪的帳號重新建立(任何密碼) | **恢復正常**(不必清資料) |
+| 新建帳號後不刪,改成覆寫成隨機密碼 | 正常 |
+| 刪除後只重啟 controller | 正常 |
+| metadata 日誌撐大 6000 筆(沒有快照)再重啟 | 正常(排除「日誌太大」) |
+
+**做法(已套用在 demo)**:停用帳號 = 把 SCRAM 憑證覆寫成隨機密碼,不刪除(`scripts/scram-disable.sh`,對不存在的帳號不動作);重置、第 6、9、18、19 章與 OP menu 的「下架帳號」都改了。整條章節鏈(第 1 到 20 章、15、16)在從零重建的環境跑完後,直接重啟兩台 broker 都正常,自癒機制(`broker-heal.sh`)被用到 0 次。已經刪過的帳號,事後重新建立即可讓 broker 再啟動;`broker-heal.sh`(清空該 broker 資料目錄重建)保留為最後手段。**網路上沒有查到對應的已知 bug**(最接近的 KAFKA-17636 是格式化時的另一種觸發);原因推測是 broker 從 metadata 日誌重放時處理「已移除的 SCRAM 使用者」有問題,**未驗證**。**正式環境**:在確認 Confluent 的說法之前,不要用 `--delete-config` 刪 SCRAM 憑證;停用改用覆寫隨機密碼加解除 role binding;滾動重啟 broker 前先在測試環境確認。重現步驟:全新叢集 → `kafka-configs --alter --add-config SCRAM-SHA-512=[password=p] --entity-type users --entity-name x` → `--delete-config SCRAM-SHA-512` 同一帳號 → 重啟 broker。
+
+**註**:第 18 章「只停用憑證擋不住已連著的舊連線(14 筆全寫入)」原本是用「刪除憑證」量到的;改成「覆寫成隨機密碼」後已用同一個實驗重跑,結論相同(見第 18 章 evidence)。
 
 ## 第 20 章(進階)Schema Registry 與欄位級加密(CSFLE):同一套授權,與授權限制(`./demo.sh 20`)
 

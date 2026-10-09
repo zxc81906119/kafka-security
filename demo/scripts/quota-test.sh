@@ -9,7 +9,7 @@ RATE="${1:-100000}"; U=svc-quota; PW="quota-$RANDOM"
 K="./scripts/k.sh kafka-configs --bootstrap-server broker1:9094 --command-config /clients/token-bootstrap.properties"
 source scripts/rbac-lib.sh
 cleanup() { $K --alter --entity-type users --entity-name "$U" --delete-config producer_byte_rate >/dev/null 2>&1 || true
-            $K --alter --entity-type users --entity-name "$U" --delete-config SCRAM-SHA-512 >/dev/null 2>&1 || true
+            bash scripts/scram-disable.sh "$U" >/dev/null 2>&1 || true   # 不刪除:停用 SCRAM 憑證(覆寫成隨機密碼,不刪除)會讓之後重啟 broker 失敗(見 scram-disable.sh)
             rbac_unbind cert bootstrap "User:$U" DeveloperWrite Topic orders.events LITERAL >/dev/null 2>&1 || true; }
 trap cleanup EXIT
 cleanup   # 先清掉上次中斷留下的配額 / 帳號(否則第一次測量就已經被限速)
