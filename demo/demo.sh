@@ -25,6 +25,7 @@ declare -A CH=(
   [18]="ch18-cyberark.sh|(進階)與行內 CyberArk 整合:應用程式取密碼、輪替、OP menu 取帳密、設定檔密碼不落地(Conjur)"
   [19]="ch19-stolen-account.sh|(進階)帳號被偷之後:限速、失效、告警(重新認證、連線上限、配額、認證失敗告警、AD 鎖定)"
   [20]="ch20-schema-registry.sh|(進階)Schema Registry 納入同一套授權:subject 與 KEK 的權限;欄位級加密(CSFLE)的授權前提與授權限制"
+  [21]="ch21-ha.sh|(進階)HA 叢集:3 controller、3 broker 的停機行為與滾動重啟(需先 scripts/ha.sh on;不在 all 內)"
 )
 run_ch() {
   local n="$1"; local f="${CH[$n]%%|*}"
@@ -37,13 +38,13 @@ run_ch() {
 case "${1:-menu}" in
   reset) ./scripts/reset.sh ;;
   all) for n in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 17 18 19 20; do run_ch "$n"; done ;;
-  [0-9]|1[0-9]|20) run_ch "$1" ;;
+  [0-9]|1[0-9]|2[01]) run_ch "$1" ;;
   *)
     while true; do
       echo; echo "═══ Confluent 安全方案 Demo ═══"
-      for n in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 17 18 19 20; do printf "  %2s) %s\n" "$n" "${CH[$n]#*|}"; done
+      for n in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 17 18 19 20 21; do printf "  %2s) %s\n" "$n" "${CH[$n]#*|}"; done
       echo "   r) 重置   q) 離開"
       read -r -p "選擇章節: " c
-      case "$c" in q) break ;; r) ./scripts/reset.sh ;; [0-9]|1[0-9]|20) run_ch "$c" ;; esac
+      case "$c" in q) break ;; r) ./scripts/reset.sh ;; [0-9]|1[0-9]|2[01]) run_ch "$c" ;; esac
     done ;;
 esac

@@ -24,8 +24,19 @@ if [ -f certs/.done ]; then
   fi
   # 已有 CA:補產內部通道共用憑證(CN=kafka-internal,mTLS;broker↔broker 與 broker↔controller 共用)
   if [ ! -f certs/internal.keystore.p12 ]; then
-    docker run --rm -v "$OUT:/certs" --entrypoint sh alpine/openssl -c "cd /certs; printf '[req]\ndistinguished_name=dn\nreq_extensions=v3\nprompt=no\n[dn]\nCN=kafka-internal\nO=Demo\n[v3]\nsubjectAltName=DNS:broker1,DNS:broker2,DNS:controller1,DNS:localhost\nextendedKeyUsage=serverAuth,clientAuth\n' > internal.cnf; openssl genrsa -out internal.key 2048 2>/dev/null; openssl req -new -key internal.key -out internal.csr -config internal.cnf; openssl x509 -req -in internal.csr -CA ca.pem -CAkey ca.key -CAcreateserial -out internal.pem -days 825 -sha256 -extfile internal.cnf -extensions v3 2>/dev/null; openssl pkcs12 -export -in internal.pem -inkey internal.key -certfile ca.pem -name internal -out internal.keystore.p12 -passout pass:$PASS; chmod 644 internal.* "
+    docker run --rm -v "$OUT:/certs" --entrypoint sh alpine/openssl -c "cd /certs; printf '[req]\ndistinguished_name=dn\nreq_extensions=v3\nprompt=no\n[dn]\nCN=kafka-internal\nO=Demo\n[v3]\nsubjectAltName=DNS:broker1,DNS:broker2,DNS:broker3,DNS:controller1,DNS:controller2,DNS:controller3,DNS:localhost\nextendedKeyUsage=serverAuth,clientAuth\n' > internal.cnf; openssl genrsa -out internal.key 2048 2>/dev/null; openssl req -new -key internal.key -out internal.csr -config internal.cnf; openssl x509 -req -in internal.csr -CA ca.pem -CAkey ca.key -CAcreateserial -out internal.pem -days 825 -sha256 -extfile internal.cnf -extensions v3 2>/dev/null; openssl pkcs12 -export -in internal.pem -inkey internal.key -certfile ca.pem -name internal -out internal.keystore.p12 -passout pass:$PASS; chmod 644 internal.* "
     echo "補產內部通道共用憑證: internal(CN=kafka-internal)"
+  fi
+  # 已有 CA:HA 環境(第 21 章:broker3、controller2、controller3)需要的 SAN,同一把 key、同一個 CA 重簽
+  if ! grep -q "DNS:broker3" certs/san.cnf 2>/dev/null; then
+    sed -i "s/DNS:broker2,/DNS:broker2,DNS:broker3,DNS:controller2,DNS:controller3,/" certs/san.cnf
+    docker run --rm -v "$OUT:/certs" --entrypoint sh alpine/openssl -c "cd /certs; openssl x509 -req -in server.csr -CA ca.pem -CAkey ca.key -CAcreateserial -out server.pem -days 825 -sha256 -extfile san.cnf -extensions v3 2>/dev/null; openssl pkcs12 -export -in server.pem -inkey server.key -certfile ca.pem -name server -out server.keystore.p12 -passout pass:$PASS; chmod 644 server.pem server.keystore.p12"
+    echo "server 憑證 SAN 已補 broker3 / controller2 / controller3(同 key、同 CA)"
+  fi
+  if [ -f certs/internal.cnf ] && ! grep -q "DNS:broker3" certs/internal.cnf 2>/dev/null; then
+    sed -i "s/DNS:broker2,DNS:controller1,/DNS:broker2,DNS:broker3,DNS:controller1,DNS:controller2,DNS:controller3,/" certs/internal.cnf
+    docker run --rm -v "$OUT:/certs" --entrypoint sh alpine/openssl -c "cd /certs; openssl x509 -req -in internal.csr -CA ca.pem -CAkey ca.key -CAcreateserial -out internal.pem -days 825 -sha256 -extfile internal.cnf -extensions v3 2>/dev/null; openssl pkcs12 -export -in internal.pem -inkey internal.key -certfile ca.pem -name internal -out internal.keystore.p12 -passout pass:$PASS; chmod 644 internal.*"
+    echo "內部憑證 SAN 已補 broker3 / controller2 / controller3(同 key、同 CA)"
   fi
   # 已有 CA:僅補產缺少的 client 憑證
   for n in c3 restproxy bootstrap legacy-orders schema-registry; do
@@ -54,7 +65,7 @@ prompt=no
 CN=kafka.demo.local
 O=Demo
 [v3]
-subjectAltName=DNS:kafka.demo.local,DNS:localhost,DNS:controller1,DNS:broker1,DNS:broker2,DNS:restproxy,DNS:control-center,DNS:openldap,DNS:prometheus,DNS:alertmanager,DNS:conjur,DNS:schema-registry,IP:127.0.0.1
+subjectAltName=DNS:kafka.demo.local,DNS:localhost,DNS:controller1,DNS:controller2,DNS:controller3,DNS:broker1,DNS:broker2,DNS:broker3,DNS:restproxy,DNS:control-center,DNS:openldap,DNS:prometheus,DNS:alertmanager,DNS:conjur,DNS:schema-registry,IP:127.0.0.1
 extendedKeyUsage=serverAuth,clientAuth
 EOF
 openssl genrsa -out server.key 2048 2>/dev/null
@@ -69,7 +80,7 @@ for n in c3 restproxy bootstrap legacy-orders schema-registry; do
   openssl pkcs12 -export -in client-$n.pem -inkey client-$n.key -certfile ca.pem -name $n -out client-$n.keystore.p12 -passout pass:'"$PASS"'
 done
 # --- 內部通道共用憑證:broker↔broker(INTERNAL)與 broker↔controller(CONTROLLER)都用這一張,做 mTLS 身分 ---
-# CN=kafka-internal;SAN 含 broker1、broker2、controller1(同一張同時當 server 與 client 憑證,所以 EKU 兩個都要)
+# CN=kafka-internal;SAN 含 broker1、broker2、broker3、controller1、controller2、controller3(HA 環境用,第 21 章)(同一張同時當 server 與 client 憑證,所以 EKU 兩個都要)
 cat > internal.cnf <<EOF2
 [req]
 distinguished_name=dn
@@ -79,7 +90,7 @@ prompt=no
 CN=kafka-internal
 O=Demo
 [v3]
-subjectAltName=DNS:broker1,DNS:broker2,DNS:controller1,DNS:localhost
+subjectAltName=DNS:broker1,DNS:broker2,DNS:broker3,DNS:controller1,DNS:controller2,DNS:controller3,DNS:localhost
 extendedKeyUsage=serverAuth,clientAuth
 EOF2
 openssl genrsa -out internal.key 2048 2>/dev/null

@@ -1,0 +1,77 @@
+# 第 21 章(HA):3 台 controller + 3 台 broker,副本 3、min.insync.replicas 2——與手冊第 1 章「正式環境至少 3 台 controller、副本 3」對應。
+# 用法:scripts/ha.sh on   (會清掉資料、以 HA 設定重建;scripts/ha.sh off 回到基礎環境)
+# 與基礎環境的差異(只有這些):
+#   - controller2、controller3、broker3(設定沿用 controller1 / broker2,只改節點名稱與編號)
+#   - quorum 為 3 個 voter(靜態 controller.quorum.voters;正式環境依官方建議用動態 quorum,這裡為了簡化用靜態)
+#   - 內部 topic 與預設副本數 3、min.insync.replicas 2
+# 注意:HA 模式不要同時開 cyberark、sr 這類額外 profile(記憶體);用完 scripts/ha.sh off。
+x-ha-rf: &ha-rf
+  KAFKA_CONTROLLER_QUORUM_VOTERS: 1@controller1:9093,2@controller2:9093,3@controller3:9093
+  KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 3
+  KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 3
+  KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 2
+  KAFKA_DEFAULT_REPLICATION_FACTOR: 3
+  KAFKA_MIN_INSYNC_REPLICAS: 2
+  KAFKA_CONFLUENT_LICENSE_TOPIC_REPLICATION_FACTOR: 3
+  KAFKA_CONFLUENT_METADATA_TOPIC_REPLICATION_FACTOR: 3
+  KAFKA_CONFLUENT_SECURITY_EVENT_LOGGER_EXPORTER_KAFKA_TOPIC_REPLICAS: 3
+  KAFKA_CONFLUENT_BALANCER_TOPIC_REPLICATION_FACTOR: 3
+  KAFKA_CONFLUENT_CLUSTER_LINK_METADATA_TOPIC_REPLICATION_FACTOR: 3
+
+x-ha-ctrl: &ha-ctrl
+  <<: *ha-rf
+  KAFKA_CONFLUENT_METADATA_BOOTSTRAP_SERVERS: broker1:9092,broker2:9092,broker3:9092
+  KAFKA_CONFLUENT_SECURITY_EVENT_LOGGER_EXPORTER_KAFKA_BOOTSTRAP_SERVERS: broker1:9092,broker2:9092,broker3:9092
+
+services:
+  controller1:
+    environment:
+      <<: *ha-ctrl
+  controller2:
+    extends: { file: docker-compose.yml, service: controller1 }
+    container_name: controller2
+    hostname: controller2
+    healthcheck:
+      test: ["CMD-SHELL", "timeout 3 bash -c 'exec 3<>/dev/tcp/controller2/9093'"]
+    environment:
+      <<: *ha-ctrl
+      KAFKA_NODE_ID: 2
+      KAFKA_LISTENERS: CONTROLLER://controller2:9093
+  controller3:
+    extends: { file: docker-compose.yml, service: controller1 }
+    container_name: controller3
+    hostname: controller3
+    healthcheck:
+      test: ["CMD-SHELL", "timeout 3 bash -c 'exec 3<>/dev/tcp/controller3/9093'"]
+    environment:
+      <<: *ha-ctrl
+      KAFKA_NODE_ID: 3
+      KAFKA_LISTENERS: CONTROLLER://controller3:9093
+
+  broker1:
+    environment:
+      <<: *ha-rf
+  broker2:
+    environment:
+      <<: *ha-rf
+  broker3:
+    extends: { file: docker-compose.yml, service: broker2 }
+    container_name: broker3
+    hostname: broker3
+    depends_on:
+      controller1: { condition: service_healthy }
+      controller2: { condition: service_healthy }
+      controller3: { condition: service_healthy }
+      openldap: { condition: service_healthy }
+    healthcheck:
+      test: ["CMD-SHELL", "timeout 3 bash -c 'exec 3<>/dev/tcp/localhost/9094 && exec 3<>/dev/tcp/localhost/8093'"]
+    ports: !override
+      - "${HOST_PORT_MDS3:-8093}:8093"
+      - "${HOST_PORT_BROKER3:-19294}:9094"
+    environment:
+      <<: *ha-rf
+      KAFKA_NODE_ID: 13
+      KAFKA_LISTENERS: INTERNAL://broker3:9092,CLIENT://0.0.0.0:9094
+      KAFKA_ADVERTISED_LISTENERS: INTERNAL://broker3:9092,CLIENT://broker3:9094
+      KAFKA_CONFLUENT_METADATA_SERVER_LISTENERS: https://0.0.0.0:8093
+      KAFKA_CONFLUENT_METADATA_SERVER_ADVERTISED_LISTENERS: https://broker3:8093
