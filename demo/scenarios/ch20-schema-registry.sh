@@ -34,4 +34,8 @@ step sr-csfle "【CSFLE】註冊帶 ENCRYPT 規則的 schema:試用授權回 402
   "POST /subjects/orders.events-value/versions   # body 帶 ruleSet(ENCRYPT)" \
   'bash "$DC" -u gary:gary-pw -X POST -H "$J" -d "$ORDER_ENC_BODY" $SR/subjects/orders.events-value/versions' 'add-on CSFLE licenses are required'
 
+step sr-raw "【上線前的檢查習慣】欄位到底有沒有被加密?不看 producer 有沒有報錯,直接讀 topic 的原始位元組:yujie 用 Avro 寫一筆含卡號的訂單,再以一般 consumer 讀原始位元組——這個環境會看到明文(沒有 CSFLE 授權、規則不存在);正式環境看到明文就代表加密規則沒生效" \
+  "scripts/sr-raw-check.sh   # ① kafka-avro-console-producer 寫入 ② kafka-console-consumer 讀原始位元組" \
+  'bash "$DEMO_ROOT/scripts/sr-raw-check.sh" 2>&1' '判定:topic 裡的卡號是明文'
+
 ch_end

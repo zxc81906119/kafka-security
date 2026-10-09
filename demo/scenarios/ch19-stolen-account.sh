@@ -45,4 +45,9 @@ step lockout-recover "【鎖定 ②】恢復:管理員解鎖(對應 AD 的「解
   "scripts/ad-lockout.sh unlock GARY;  scripts/ad-lockout.sh off" \
   'bash "$DEMO_ROOT/scripts/ad-lockout.sh" unlock GARY; echo "GARY 用對的密碼 → $(bash "$DC" -o /dev/null -u gary:gary-pw https://broker1:8091/security/1.0/authenticate | tail -1)"; bash "$DEMO_ROOT/scripts/ad-lockout.sh" off; bash "$DEMO_ROOT/scripts/ad-lockout.sh" status GARY' 'HTTP 200'
 
+# ---------------- ⑦ 刪除 SCRAM 帳號的坑(KAFKA-20774) ----------------
+step scram-bug "【已知 bug】刪除 SCRAM 帳號(--delete-config)後重啟 broker:重放 metadata 時整組 SCRAM 使用者被丟掉,所有 SCRAM 登入失敗(KAFKA-20774,fix 在 Kafka 4.5.0 未發行;CP 8.3.2 受影響)。救回:重建被刪帳號再重啟。所以這個 demo 停用帳號一律覆寫隨機密碼、不刪除" \
+  "scripts/scram-delete-bug.sh   # 新建→刪除→重啟 broker1→SCRAM 登入失敗→重建帳號→重啟→恢復" \
+  'bash "$DEMO_ROOT/scripts/scram-delete-bug.sh" 2>&1' '判定:(已重現 KAFKA-20774|這次沒有重現)'
+
 ch_end

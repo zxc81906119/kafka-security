@@ -2,7 +2,7 @@
 # 停用一個 SCRAM 帳號——不刪除憑證,改成覆寫成隨機密碼(沒人知道,等於不能再登入)。帳號本來就沒有 SCRAM 憑證時什麼都不做。
 # 為什麼不刪:實測(2026-10-09,CP 8.3.2、KRaft)刪除 SCRAM 憑證後,下一次重啟 broker 會失敗——broker 啟動時 authorizer 的 client 連自己的 INTERNAL
 #   listener 被拒 "Invalid user credentials with SASL mechanism SCRAM-SHA-512"。只建不刪、改密碼、controller 重啟都正常;刪除過的帳號事後重建也能救回。
-#   刪一個「對不存在的帳號」也算(reset.sh 以前每次都這樣做)。詳見 RUNBOOK 第 19 章。
+#   刪一個「對不存在的帳號」也算(reset.sh 以前每次都這樣做)。官方 bug:KAFKA-20774(fix 4.5.0 未發行;CP 8.3.2 的 Kafka 4.3.x 受影響)。詳見 RUNBOOK 第 19 章。
 # 用法: scripts/scram-disable.sh <帳號>
 set -euo pipefail
 cd "$(dirname "$0")/.."
