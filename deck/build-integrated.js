@@ -36,8 +36,8 @@ add({ title: '整體架構', sub: '正式環境的元件與主要連線;內部�
   tint(6.2, 1.55, 4.0, 5.2, MDS, { round: 0.06 }),
   text(6.3, 1.6, 3.8, 0.4, [P('Kafka 叢集', { sz: 15, b: true, c: MDS, algn: 'ctr' })]),
   ...node(6.4, 2.05, 3.6, 1.6, { icon: 'FaDatabase', title: 'broker ×N(內建 MDS)', sub: '對外埠:AD 帳密、SCRAM、token', col: MDS, tsz: 13, ssz: 10.5 }),
-  ...node(6.4, 3.8, 3.6, 1.6, { icon: 'FaCogs', title: 'controller ×3', sub: '內部帳號;只接 broker', col: MDS, tsz: 13, ssz: 10.5 }),
-  text(6.4, 5.5, 3.6, 1.15, [P('內部連線:內部帳號(super user);全部 TLS,共用 server 憑證;MDS 負責驗證、授權、簽 token', { sz: 10.5, algn: 'ctr', c: MDS })], { anchor: 'ctr' }),
+  ...node(6.4, 3.8, 3.6, 1.6, { icon: 'FaCogs', title: 'controller ×3', sub: '內部憑證(mTLS);只接 broker', col: MDS, tsz: 13, ssz: 10.5 }),
+  text(6.4, 5.5, 3.6, 1.15, [P('內部連線:mTLS,broker 與 controller 共用一張內部憑證(身分是 super user);MDS 負責驗證、授權、簽 token', { sz: 10.5, algn: 'ctr', c: MDS })], { anchor: 'ctr' }),
   ...node(10.6, 1.55, 2.13, 1.6, { icon: 'FaAddressBook', title: 'AD', sub: '使用者與群組;加密連線', col: HUM, ssz: 10.5 }),
   ...node(10.6, 3.3, 2.13, 1.6, { icon: 'FaShieldAlt', title: 'CyberArk', sub: 'PSM、CPM、CCP', col: RISK, ssz: 10.5 }),
   ...node(10.6, 5.05, 2.13, 1.6, { icon: 'FaNetworkWired', title: '防火牆', sub: '內部埠只開給叢集', col: PLT, ssz: 10.5 }),
@@ -115,16 +115,17 @@ add({ title: '應用系統:兩種連線方式', sub: '能用 Kafka 用戶端的�
   note('REST Proxy 的憑證可以代任何不在受保護清單的身分,所以清單要列入所有特權身分,寫法要與 AD 記錄一致', 6.2, RISK),
 ] });
 
-add({ title: '平台元件與憑證', sub: '憑證總數:一張共用 server 憑證 + 各元件一張 client 憑證 + 經 REST Proxy 的系統各一張', items: [
+add({ title: '平台元件與憑證', sub: '憑證總數:一張共用 server 憑證 + 一張內部憑證 + 各元件一張 client 憑證 + 經 REST Proxy 的系統各一張', items: [
   { ...table(0.6, 1.5, [3.0, 4.6, 4.53], [
     ['憑證', '用途', '要注意'],
     ['共用 server 憑證(1 張)', '所有元件的 TLS 加密;名稱要涵蓋所有主機與 F5 的名稱', '只做加密、不當身分、不綁任何角色;不要收斂憑證用途(C3 內部會出示它)'],
     ['C3 的 client 憑證', 'C3 自身向 MDS 認證;該身分必須是 SystemAdmin(官方要求)', '拿到私鑰等於管理員:檔案權限、不入版本庫、列入受保護清單'],
     ['REST Proxy 的 client 憑證', '代應用系統向 MDS 申請 token', '同上;受保護清單擋特權身分'],
+    ['內部憑證(1 張,broker 與 controller 共用)', '內部埠與 controller 埠的 mTLS;身分是 super user', '拿到私鑰等於叢集管理員:每台 0600、不入版本庫;稽核分不出是哪一台'],
     ['bootstrap 的 client 憑證', '初始化第一批授權;平常不用', '封存,建議由 CyberArk 保管、依單借出'],
     ['只能 HTTP 的系統各一張', '該系統的身分', '隨系統數增加;命名規範先定'],
-  ], { rowH: 0.64, hdrH: 0.44, sz: 12, col: PLT }), rowCols: [PLT, RISK, RISK, RISK, SVC] },
-  note('CA 可用行內既有的 AD CS;若 CyberArk 含 Certificate Manager 也可由它簽發與續期(選配)', 5.95, PLT),
+  ], { rowH: 0.58, hdrH: 0.44, sz: 12, col: PLT }), rowCols: [PLT, RISK, RISK, RISK, RISK, SVC] },
+  note('CA 可用行內既有的 AD CS;若 CyberArk 含 Certificate Manager 也可由它簽發與續期(選配)', 6.2, PLT),
 ] });
 
 add({ title: '負載平衡(F5)', sub: '只放在 REST Proxy 前面;其他連線不需要', items: [
@@ -147,9 +148,45 @@ add({ title: '傳輸加密與入口保護', sub: '每一條線都加密;每一�
     ['使用者 → C3', '只開 HTTPS', '使用者端要信任行內 CA'],
     ['Prometheus、Alertmanager', 'TLS + 帳密;C3 與 broker 推送指標都帶帳密', '沒有細部授權:帳密依用途分開;日誌會印出帳密標頭,要保護'],
     ['broker 內建 Admin REST', '依官方設定安全擴充:匿名擋下、依使用者角色', '未設定時完全沒有認證;與 MDS 共用埠,不能靠防火牆擋'],
-    ['內部埠(broker 互連、controller)', '防火牆只開給叢集節點', '內部帳號是 super user'],
+    ['內部埠(broker 互連、controller)', 'mTLS:broker 與 controller 共用一張內部憑證;防火牆只開給叢集節點', '憑證身分是 super user,私鑰要保護;稽核分不出是哪一台'],
     ['應用與工具 → broker', 'TLS;人用 AD 帳密、服務用 SCRAM、元件用 token', '同一個對外埠'],
   ], { rowH: 0.62, hdrH: 0.44, sz: 12, col: PLT }), rowCols: [HUM, HUM, PLT, RISK, MDS, SVC] },
+] });
+
+add({ title: '帳號被偷之後:六道防線', sub: '假設某個帳密外洩,多久被發現、能做多少事、多久失效', items: [
+  { ...table(0.6, 1.5, [2.3, 3.7, 3.3, 2.83], [
+    ['機制', '設定', '效果', '測試環境結果'],
+    ['重新認證', 'SASL re-authentication:長連線每隔一段時間重新驗證(建議 1 小時)', '帳號被停用或改密碼後,既有長連線在期限內被切斷', '改密碼後舊連線被切斷(測試值 60 秒)'],
+    ['認證失敗告警', '認證失敗次數的告警規則(Prometheus)', '密碼被猜、被撞庫時能發現', '連續失敗觸發告警'],
+    ['TLS 版本與套件', '只開 TLS 1.3 / 1.2 與 AEAD 套件', '擋掉老舊、較弱的套件', '設定前 broker 接受舊的 CBC 套件;設定後被拒'],
+    ['單一來源連線上限', '每個來源 IP 的連線數上限', '一個來源不能開無限條連線', '超過上限的連線被拒'],
+    ['流量配額', 'client quota(位元組/秒)', '被偷的帳號最多能灌多少', '超過配額即被限速'],
+    ['AD 帳戶鎖定', 'AD 的鎖定原則', '擋暴力猜密碼;但鎖定也能被拿來鎖別人的帳號(雙面刃)', '鎖定後 MDS 與 Kafka 同時失敗;緊急路徑與機器帳號不受影響;解鎖即恢復'],
+  ], { rowH: 0.78, hdrH: 0.44, sz: 11.5, col: RISK }), rowCols: [PLT, MDS, PLT, SVC, SVC, HUM] },
+] });
+
+add({ title: 'SCRAM 帳號:停用,不要刪除', sub: 'Apache Kafka 已知問題;影響 Confluent Platform 8.3.x', items: [
+  { ...table(0.6, 1.5, [2.4, 9.73], [
+    ['項目', '說明'],
+    ['已知問題', '刪除 SCRAM 憑證後,broker 重放 metadata 時會丟掉整組 SCRAM 使用者(KAFKA-20774);修復在 Kafka 4.5.0(尚未發行),Confluent Platform 8.3.x 內含 Kafka 4.3.x,受影響'],
+    ['症狀', '內部通道用 SCRAM:broker 重啟後起不來。內部通道用 mTLS:broker 起得來,但對外埠所有 SCRAM 登入失敗'],
+    ['何時發生', '全新叢集刪除一個 SCRAM 帳號後重啟 broker 即重現;跑很久、已有 metadata 快照的叢集不一定重現——沒重現不代表安全'],
+    ['本方案的做法', '停用 = 覆寫成隨機密碼 + 解除角色,一律不刪除;內部通道採 mTLS,降低 broker 起不來的風險'],
+    ['已經刪過', '重建被刪的同名帳號(任何密碼),再滾動重啟 broker 即恢復;不必清資料'],
+  ], { rowH: 0.8, hdrH: 0.44, sz: 12.5, col: RISK }), rowCols: [RISK, MDS, PLT, SVC, HUM] },
+] });
+
+add({ title: 'Schema Registry 與欄位級加密(CSFLE)', sub: '授權沿用同一套身分與群組;欄位加密本身需要加購授權', items: [
+  { ...table(0.6, 1.5, [2.3, 7.13, 2.7], [
+    ['項目', '做法與結果', '狀態'],
+    ['認證', 'REST 要帳密:不帶或密碼錯 401', '測試環境已驗證'],
+    ['subject 授權', '跟 AD 群組走:訂單群組只能碰 orders. 開頭的 subject,其他被拒;列出 subject 只看到有權限的', '測試環境已驗證'],
+    ['金鑰加密金鑰(KEK)管理', '只有 security 群組能建;應用群組只被授權讀;無角色者被拒', '測試環境已驗證'],
+    ['Schema Registry 自身', '以 client 憑證向 MDS 換 token 連 Kafka,不佔 AD 帳號', '測試環境已驗證'],
+    ['規則沒生效的風險', '沒開規則 extension 時,加密規則被默默丟掉、資料以明文寫入;上線前與每次改規則後,要讀 topic 原始位元組確認', '測試環境已驗證'],
+    ['欄位實際加密與解密', '註冊帶加密規則的 schema 需要企業版加 CSFLE 加購授權,否則回 402;加密、解密、金鑰輪替', '未驗證(待授權)'],
+    ['解密權限與 KMS', '由 KMS 控制,不是 Kafka 的 RBAC;內建支援 AWS、Azure、GCP、HashiCorp Vault;地端 HSM 需自訂 Java 驅動', '依官方文件'],
+  ], { rowH: 0.62, hdrH: 0.44, sz: 12, col: MDS }), rowCols: [SVC, SVC, SVC, SVC, RISK, RISK, PLT] },
 ] });
 
 add({ title: '監控、告警與稽核', sub: '看得到、告得了、查得到', items: [
@@ -256,6 +293,19 @@ add({ title: '應用程式取密碼與輪替', sub: '密碼不落地;換密碼�
   arrow(3.4, 5.4, 3.6, 5.4, 'text1'), arrow(6.4, 5.4, 6.6, 5.4, 'text1'), arrow(9.4, 5.4, 9.6, 5.4, 'text1'),
 ] });
 
+add({ title: '設定檔密碼加密:輪替與重啟', sub: 'Confluent Secret Protection;主金鑰由 CyberArk 保管', items: [
+  { ...table(0.6, 1.5, [2.5, 9.63], [
+    ['項目', '做法與結果(測試環境實測)'],
+    ['兩層金鑰', '主金鑰(CyberArk 保管,啟動時取)加密資料金鑰;資料金鑰加密設定檔裡的密碼。叢集共用同一把主金鑰、同一份密文檔'],
+    ['輪替主金鑰', '只重包資料金鑰,值的密文不變;需要「目前的」與「新的」passphrase(也要保管,只讓管理員讀);新主金鑰只顯示一次,要立刻寫回 CyberArk'],
+    ['輪替資料金鑰', '只需要目前的 passphrase;所有值重新加密;主金鑰不變,CyberArk 不用動'],
+    ['檔與主金鑰要成對', '新檔配舊金鑰、舊檔配新金鑰都解不開;不成對時 broker 起不來。輪替前先備好舊檔與舊主金鑰以便退回'],
+    ['一定要重啟', '啟動時才讀。維護窗口內一台一台做:換檔 → 取新主金鑰 → 重啟 → 確認健康 → 下一台'],
+    ['重啟期間服務', '測試環境 2 台 broker、副本 2:輪替並滾動重啟期間持續寫入 1200 筆,全部寫入、零遺失;正式環境建議副本 3、最小同步副本 2,controller 也逐台重啟'],
+    ['注意', 'passphrase 在這個版本的指令只能直接放在指令列(不讀檔),輪替要在受控的管理主機上做'],
+  ], { rowH: 0.66, hdrH: 0.44, sz: 11.5, col: PLT }), rowCols: [PLT, PLT, SVC, PLT, RISK, HUM, RISK] },
+] });
+
 // ───────────────── 6. 收尾
 sec('六、待確認、限制與導入順序', '');
 add({ title: '要向客戶確認的事項', sub: '答案會決定幾個分支的做法', items: [
@@ -267,7 +317,8 @@ add({ title: '要向客戶確認的事項', sub: '答案會決定幾個分支的
     ['F5', '虛擬伺服器類型(L4)、後端 TLS session 復用、persistence、idle timeout、SNAT;REST Proxy 幾台', '憑證名稱、sticky 設定'],
     ['變更管理', '變更核准方式;維運作業項目清單;現有 OP menu 樣貌', 'OP menu 的核准檢查與項目'],
     ['憑證', 'CA 由誰簽(AD CS 或 Certificate Manager);有效期政策', '憑證生命週期'],
-  ], { rowH: 0.74, hdrH: 0.44, sz: 12, col: HUM }), rowCols: [HUM, PLT, RISK, PLT, MDS, PLT] },
+    ['資料保護', '是否需要欄位級加密(CSFLE);取得加購授權的方式;地端 KMS 或 HSM 的型號與是否有 Java 驅動;重新認證間隔、連線上限與配額的政策', 'CSFLE 能否導入、金鑰放哪'],
+  ], { rowH: 0.66, hdrH: 0.44, sz: 12, col: HUM }), rowCols: [HUM, PLT, RISK, PLT, MDS, PLT, RISK] },
 ] });
 
 add({ title: '未驗證與限制(如實說明)', sub: '已實測的以外,這些尚未在客戶環境驗證', items: [
@@ -279,10 +330,22 @@ add({ title: '未驗證與限制(如實說明)', sub: '已實測的以外,這些
     ['F5', '以同類負載平衡器實測 L4 透傳可行、L7 終止不可;F5 本身的行為要以客戶設定驗證'],
     ['多 controller 與 RHEL 部署', '設計依官方文件;以本方案的測試環境為準,未在客戶 VM 驗證'],
     ['C3 經 F5', '未驗證;建議 C3 不經 F5'],
-    ['SCRAM 密碼輪替', '已實測新舊並行流程(建新帳號、驗證、隔離、看 audit、才刪);由 CPM 自訂平台或排程觸發同一支腳本,需在客戶環境確認'],
-    ['停用帳號對已連線的影響', '實測:只刪 SCRAM 憑證擋不住已連著的連線,必須先解除角色;長連線的應用要能在失敗時重新取帳密'],
+    ['SCRAM 密碼輪替', '已實測新舊並行流程(建新帳號、驗證、隔離、看 audit、才停用舊帳號,停用是覆寫成隨機密碼、不刪除);由 CPM 自訂平台或排程觸發同一支腳本,需在客戶環境確認'],
+    ['停用帳號對已連線的影響', '實測:只停用 SCRAM 憑證擋不住已連著的連線,必須先解除角色;長連線的應用要能在失敗時重新取帳密'],
     ['Conjur 可用性與根的秘密', '取不到帳密應用與 broker 起不來,要規劃高可用與重試;機器 API key(secret zero)的保護與輪替未示範'],
-  ], { rowH: 0.62, hdrH: 0.44, sz: 12.5, col: RISK }) },
+  ], { rowH: 0.58, hdrH: 0.44, sz: 12.5, col: RISK }) },
+] });
+
+add({ title: '未驗證與限制(續)', sub: '資料保護、金鑰管理與參數值', items: [
+  { ...table(0.6, 1.5, [3.4, 8.73], [
+    ['項目', '狀態'],
+    ['欄位級加密(CSFLE)', '需要企業版加 CSFLE 加購授權;測試環境的試用授權註冊加密規則會被拒(HTTP 402),所以加密、解密、金鑰輪替都未驗證'],
+    ['地端 KMS 與 HSM', '內建只支援 AWS、Azure、GCP、HashiCorp Vault;HSM 需自訂 Java 驅動(官方有介面說明,未見 HSM 範例);廠商是否有現成驅動未確認'],
+    ['CyberArk 能否當 KMS', '開源版 Conjur 是秘密管理,不是 KMS(它把秘密交出去,不代為加解密);PAM 等其他模組是否提供 KMS 式服務未確認,要問客戶的 CyberArk 窗口'],
+    ['主金鑰輪替', '已實測單台與兩台共用同一把金鑰的逐台重啟;更多台與 controller 的流程依官方文件與同樣原則,正式環境要在維護窗口內演練'],
+    ['SCRAM 刪除問題', '依 Apache Kafka 回報與測試環境實測;升級到含修復的版本(4.5.0 以上)前維持「停用不刪除」'],
+    ['防線參數', '重新認證 60 秒、連線上限 2、配額等是測試值;正式值要依客戶的應用特性與容量評估'],
+  ], { rowH: 0.78, hdrH: 0.44, sz: 12.5, col: RISK }) },
 ] });
 
 add({ title: '導入順序建議', sub: '先把身分與授權做對,再接 CyberArk', items: [
