@@ -1,13 +1,18 @@
 # 【停 2 台 broker】只剩 1 台:ISR 1 < min.isr 2。acks=all 被擋;acks=1 producer 回報成功,但 consumer 讀不到(高水位沒前進),恢復後才出現;consumer group 也加入不了
 $ docker stop broker2 broker3;acks=all 與 acks=1 各寫 50 筆;比對 consumer 看得到的筆數
+▶ 停 2 台 broker(只剩 broker1):ISR 剩 1,低於 min.insync.replicas 2,看 acks=all 與 acks=1 的差別
 目前 topic 筆數:500
 停 broker2、broker3(只剩 broker1)
- Topic: ha.test Partition: 0 Leader: 11 Replicas: 12,13,11 Isr: 11 Offline: 12,13 Elr: 12 LastKnownElr: 
- Topic: ha.test Partition: 1 Leader: 11 Replicas: 13,11,12 Isr: 11 Offline: 12,13 Elr: 12 LastKnownElr: 
- Topic: ha.test Partition: 2 Leader: 11 Replicas: 11,12,13 Isr: 11 Offline: 12,13 Elr: 12 LastKnownElr: 
+ Topic: ha.test Partition: 0 Leader: 11 Replicas: 11,12,13 Isr: 11 Offline: 12,13 Elr: 13 LastKnownElr: 
+ Topic: ha.test Partition: 1 Leader: 11 Replicas: 12,13,11 Isr: 11 Offline: 12,13 Elr: 13 LastKnownElr: 
+ Topic: ha.test Partition: 2 Leader: 11 Replicas: 13,11,12 Isr: 11 Offline: 12,13 Elr: 13 LastKnownElr: 
+▶ acks=all 寫 50 筆:應該被拒絕,producer 重試到逾時
 acks=all 寫入 50 筆:成功 0 筆(ISR 1 < min.isr 2,被拒絕,producer 重試到逾時)
         50 TimeoutException: Expiring 50 record
+▶ acks=1 寫 50 筆:producer 會回報成功,但資料還沒被確認(高水位不前進),consumer 讀不到
 acks=1 寫入 50 筆:producer 回報成功 50 筆;但 consumer 看得到的筆數仍是 500(原本 500)——高水位沒有前進,這 50 筆讀不到
+▶ 用 consumer group 讀:連 __consumer_offsets 的 ISR 也不足,會加入不了群組
 用 consumer group 讀取: 逾時(內部 topic __consumer_offsets 的 min.isr 也不足,加入不了群組)
+▶ 把 broker2、broker3 啟動回來:那 50 筆(acks=1)恢復後才會出現
 恢復後 topic 筆數:550
 判定:ISR 低於 min.isr 時,acks=all 被擋,acks=1 看似成功卻讀不到(恢復後才出現)——這就是要用 acks=all 加 min.isr 的理由

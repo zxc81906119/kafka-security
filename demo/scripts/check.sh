@@ -27,7 +27,7 @@ note "已檢查 $n 個檔案"
 
 if [ "${1:-}" != "--no-lint" ]; then
   # 新風格的檔案(有 lib/ 與標頭樣板)用 shellcheck 掃;舊腳本寫法較舊,先不掃,避免產生一堆不相干的警告
-  NEW="scripts/lib/common.sh scripts/lib/prom.sh scripts/lib/kafka.sh scripts/check.sh"
+  NEW="scripts/lib/common.sh scripts/lib/prom.sh scripts/lib/kafka.sh scripts/check.sh scripts/ha-lab.sh scripts/monitor-lab.sh scripts/cert-lab.sh scripts/ha.sh scripts/jmx-setup.sh"
   say "用 shellcheck 掃新風格的檔案:$NEW"
   if command -v docker >/dev/null 2>&1; then
     out=$(docker run --rm -v "$DEMO_DIR:/mnt" -w /mnt koalaman/shellcheck:stable -S warning -x $NEW 2>&1) || { echo "$out" | head -30; bad=1; }

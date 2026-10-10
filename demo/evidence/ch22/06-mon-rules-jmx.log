@@ -1,5 +1,6 @@
 # 【B】同一組 7 條告警,指標換成 JMX 的名稱(config/c3/ops_rules_jmx.yml);另加「監控的監控」KafkaJmxScrapeDown(抓不到 exporter)。每 15 秒抓、每 15 秒評估
 $ GET /api/v1/rules(kafka-platform-jmx)
+▶ 等 Prometheus 載入並評估 7 條平台告警規則(最多 240 秒),再確認目前沒有任何告警在響
   KafkaJmxUnderReplicatedPartitions   ok    inactive
   KafkaJmxUnderMinIsrPartitions       ok    inactive
   KafkaJmxOfflinePartitions           ok    inactive

@@ -9,6 +9,9 @@
 
 # 本專案根目錄(demo/);不管從哪個目錄執行腳本,都以它為基準
 DEMO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+# 給 node 用的 lib 目錄路徑(Windows 的 node 讀不懂 /c/… 這種路徑,要轉成 C:/…;Linux/RHEL 上 cygpath 不存在,原樣使用)
+# shellcheck disable=SC2034  # 其他腳本會用到
+LIB_DIR="$(cygpath -m "$DEMO_DIR/scripts/lib" 2>/dev/null || echo "$DEMO_DIR/scripts/lib")"
 # Windows 的 Git Bash 會把 /xxx 路徑自作聰明改寫,傳給 docker 的路徑會壞掉;關掉它
 export MSYS_NO_PATHCONV=1
 # 白話說明模式:EXPLAIN=1(預設)每個動作前先印一句中文說明;EXPLAIN=0 關閉(只留結果)
@@ -43,7 +46,7 @@ need_container() {
 # wait_until <描述> <最多等幾秒> <指令...>:每 5 秒執行一次指令,成功(回傳 0)就結束;逾時回傳 1。
 # 所有「等某件事發生」都用它,保證不會無限等下去。成功時印出等了幾秒。
 wait_until() {
-  local desc="$1" max="$2" t0 i; shift 2; t0=$(date +%s)
+  local desc="$1" max="$2" t0; shift 2; t0=$(date +%s)
   while [ $(( $(date +%s) - t0 )) -lt "$max" ]; do
     if "$@" >/dev/null 2>&1; then note "$(( $(date +%s) - t0 )) 秒後:$desc"; return 0; fi
     sleep 5

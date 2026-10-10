@@ -1,5 +1,6 @@
 # 【現況】各端點「實際送出」的憑證 vs 磁碟檔案;OP menu 第 17 項(檔案巡檢)現在會顯示剩餘時間分級(已過期 / 不到 7 天 / 不到 30 天 / 不到 90 天)
 $ openssl s_client -connect <端點>;openssl x509 -noout -serial -enddate;opmenu.sh --run 17
+▶ 看各端點『實際送出』的憑證序號,和磁碟上 certs/server.pem 比對——監控要看實際送出的,不是只看檔案
 各端點「實際送出」的憑證(TLS 握手收到的):
   broker1:9094 → 4474B9BA75C8AEC73D198B55BD22276108461BA0 到期 Jan 12 03:10:37 2029 GMT 
   broker2:9094 → 4474B9BA75C8AEC73D198B55BD22276108461BA0 到期 Jan 12 03:10:37 2029 GMT 
