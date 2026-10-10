@@ -302,6 +302,20 @@ gary 在 C3 指派 `orders-read` → DeveloperRead;LDAP 介面把 ming 從 devel
 
 **踩坑**:`kafka-reassign-partitions` 讀容器內的檔案,`scripts/k.sh bash -c 'cat > /tmp/plan.json; kafka-reassign-partitions …' < 本機檔` 以標準輸入送進去;`kafka-topics --describe` 欄位以 Tab 分隔,比對前先把空白正規化。**沒測**:Self-Balancing(授權待確認)、Tiered Storage、大資料量(數百 GB)的搬家時間與對服務延遲的影響、新增第 4 台 broker 後的搬家。
 
+## 第 25 章(進階)應用程式端的可靠性(`./demo.sh 25`,需 HA 模式;約 8 分鐘)
+
+**準備**:`scripts/ha.sh on`。第一次會下載 JDK 映像 `eclipse-temurin:21-jdk`(約 740 MB)並把 Kafka jar 從 cp-server 映像複製到 Docker volume `cpsec-kafka-jars`(cp-server 的 Java 是精簡版,沒有編譯器,不能 `java Foo.java`)。程式在 `apps/`,由 `scripts/lib/apps.sh` 的 `run_app` 執行,以 super user 的 token 連線(專注行為)。
+
+| 實驗 | 實測結果 |
+|---|---|
+| 冪等 | leader 暫停 5 秒造成逾時重送:關閉冪等 1500 → 1505(5 筆重複,次數隨在途請求數變動);開啟冪等 0 重複 |
+| at-least-once | 處理 100 筆後提交前 halt:重啟後同一批 id-0 到 id-99 再處理;提交後下一次從 id-100 起 |
+| rebalance | c2 加入時 eager(Range)c1 收回 [0..5] 再拿回 [0,1,2];cooperative 只收回 [3,4,5] |
+| 靜態成員 | c2 滾動重啟:動態成員讓 c1 多 2 次 rebalance;靜態(group.instance.id)0 次 |
+| 交易 | commit 10 + abort 10:read_committed 讀 10、read_uncommitted 讀 20 |
+
+**踩坑**:abortTransaction 前沒 `flush()`,緩衝區的訊息被直接丟掉(abort 的訊息根本沒寫進 log);`grep -o '重複='` 會先匹配到「不重複=」;`group.protocol=classic` 才能比較兩種 assignor。**沒測**:新 consumer protocol(KIP-848)、consume-transform-produce 的 exactly-once、Streams、僵屍 producer 隔離。
+
 ## 對應到客戶 RHEL 9 VM 的位置與步驟(手動部署)
 | demo | RHEL 9 VM |
 |---|---|
