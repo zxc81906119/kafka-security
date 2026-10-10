@@ -1,5 +1,20 @@
 #!/usr/bin/env bash
-# 第 13 章(進階):Control Center(C3)身分盤點 —— 人(瀏覽器登入者)與機器(C3 自己、自動化、Prometheus/Alertmanager)各走哪條路
+# ============================================================================
+# ch13-c3-inventory.sh — 第 13 章:Control Center(C3)身分盤點:人與機器各走哪條路
+# ----------------------------------------------------------------------------
+# 白話:盤點 C3 周邊每一種呼叫用什麼身分、什麼認證方式:瀏覽器登入的人、C3 自己、自動化(CI)、Prometheus、Alertmanager。
+#   重點是人的操作在 MDS 與 audit log 裡是本人(ming、gary),不是 c3;而 c3 的憑證換到的 token 是管理員,要小心保管。
+# 前置條件:環境已建好(C3 走 HTTPS、Prometheus、Alertmanager 已啟用);用瀏覽器自動化(e2e/probe-c3-api.mjs)模擬登入
+# 用法:
+#   ./demo.sh 13                  經由講解控制台跑這一章
+#   ./scenarios/ch13-c3-inventory.sh      直接跑(DEMO_PAUSE=0 不暫停)
+# 會改動什麼:以唯讀檢查為主。c3-admin 那步對 User:probe-user 建立再刪除 DeveloperRead 的 role binding(c3-admin-proof.sh);alertmanager 那步建立再清除一個靜音(alertmanager-probe.sh)。
+# 怎麼判斷成功:每一步印『✔ 符合預期』,最後一行『第 13 章完成(失敗 0 項)』
+# 實測結果摘要:人:第一個呼叫帶 Basic(AD 帳密,經 C3 轉給 MDS 換 token),之後全是 Bearer;MDS 日誌的呼叫主體是登入者本人;audit log 中來自 C3 的使用者操作主體是使用者,c3 自己的背景操作不在預設 audit 範圍
+#   機器:C3 用 client 憑證(CN=c3)換 token,sub = c3;此 token 就是管理員,能建立/刪除 role binding(官方要求 C3 主體必須是 SystemAdmin)
+#   自動化用憑證換 token 後帶 Bearer 得 200,沒 token 401
+#   Prometheus、Alertmanager:HTTPS + Basic,不帶帳密 401;沒保護的 Alertmanager 攻擊者能靜音告警(詳見第 17 章)
+# ============================================================================
 source "$(dirname "$0")/../scripts/lib-ev.sh"
 ch_begin ch13 "Control Center 身分盤點:人與機器各走哪條路"
 DC="$DEMO_ROOT/scripts/dcurl.sh"

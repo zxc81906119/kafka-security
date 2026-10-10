@@ -1,8 +1,21 @@
 #!/usr/bin/env bash
-# 滾動輪替期間 producer 有沒有受影響:背景持續寫入(acks=all,冪等),同時執行資料金鑰輪替 → 兩台 broker 依序一台一台重啟。
-#   比對「producer 回報送出幾筆」與「topic 實際有幾筆」,並看 producer 有沒有報錯。
-#   條件:兩台 broker 都已套用 Secret Protection(scripts/secret-protection.sh join-broker1);topic 副本數 2、min.insync.replicas=1(demo 預設)。
-# 用法: scripts/rolling-rotate-test.sh [筆數,預設 1200;每秒 5 筆]
+# ============================================================================
+# rolling-rotate-test.sh — 測試「滾動輪替」期間 producer 有沒有受影響
+# ----------------------------------------------------------------------------
+# 白話:Secret Protection 輪替資料金鑰後,兩台 broker 要依序一台一台重啟。這支腳本在背景持續寫入(acks=all、冪等)的同時
+#   執行輪替與滾動重啟,比對「producer 回報送出幾筆」與「topic 實際有幾筆」,並看 producer 有沒有報錯,
+#   證明滾動重啟期間零中斷、零遺失。
+# 前置條件:兩台 broker 都已套用 Secret Protection(scripts/secret-protection.sh join-broker1);
+#   topic 副本數 2、min.insync.replicas=1(demo 預設)。
+# 用法:
+#   scripts/rolling-rotate-test.sh [筆數]    預設 1200,每秒 5 筆
+# 會改動什麼:建立 topic zdt.test(3 分區、副本 2;開始前先刪掉舊的),寫入測試資料,結束時刪除該 topic;
+#   並執行 scripts/secret-protection.sh rotate-data(資料金鑰重新輪替、certs/security.properties 被換成新檔、
+#   broker1、broker2 依序重啟)。輪替本身不會還原。
+# 怎麼判斷成功:最後一行「判定:滾動重啟期間 producer 零送出失敗、零遺失」;
+#   印「判定:不符合(送出 …、topic …、送出失敗 …)」代表有遺失或失敗。
+#   producer 的警告(重試、換 leader、斷線重連)屬正常,不代表失敗。
+# ============================================================================
 set -uo pipefail
 cd "$(dirname "$0")/.."
 export MSYS_NO_PATHCONV=1

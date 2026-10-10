@@ -1,8 +1,18 @@
 #!/usr/bin/env bash
-# 為「無法使用 Kafka client 的 legacy app」發一張 client 憑證(由 demo CA 簽發;CN = app 名稱 = RBAC 主體)。
-# 用法: scripts/make-client-cert.sh <name>            例: scripts/make-client-cert.sh legacy-orders
-#       scripts/make-client-cert.sh <name> --self-signed   產生「非本 CA 簽發」的憑證(對照用:應被拒絕)
-# 產出: certs/client-<name>.{key,pem}
+# ============================================================================
+# make-client-cert.sh — 為 legacy app 發一張 client 憑證
+# ----------------------------------------------------------------------------
+# 白話:無法使用 Kafka client 的 legacy app 改用 client 憑證(mTLS)證明身分。憑證由 demo CA 簽發,
+#   CN = app 名稱 = RBAC 主體。加 --self-signed 會產生「非本 CA 簽發」的憑證,供對照(應被拒絕)。
+# 前置條件:certs/ 內有 ca.pem 與 ca.key(demo CA);Docker 可用
+# 用法:
+#   scripts/make-client-cert.sh <name>                 例: scripts/make-client-cert.sh legacy-orders
+#   scripts/make-client-cert.sh <name> --self-signed   產生「非本 CA 簽發」的憑證(對照用:應被拒絕)
+#   產出: certs/client-<name>.{key,pem}
+# 會改動什麼:在 certs/ 建立 client-<name>.key 與 client-<name>.pem(CA 簽發版若 .pem 已存在就不重發,效期 825 天;
+#   自簽版每次覆寫,效期 2 天)。不會自動刪除。
+# 怎麼判斷成功:最後印出憑證的 subject、issuer(CA 簽發版另印 dates);CA 簽發版 issuer 應是 demo CA,自簽版 subject 與 issuer 相同。
+# ============================================================================
 set -euo pipefail
 cd "$(dirname "$0")/.."
 export MSYS_NO_PATHCONV=1

@@ -1,7 +1,22 @@
 #!/usr/bin/env bash
-# 取證與講解共用函式庫:每一步執行指令 → 顯示 → 存成 evidence/<章>/NN-xxx.log(之後轉成終端風格截圖)。
-# 每個 step 可附上「預期」(expect),preflight 會檢查實際輸出是否符合預期。
-# 環境變數 DEMO_PAUSE=1 時,每步執行前顯示講稿並等待 Enter(現場講解用)。
+# ============================================================================
+# lib-ev.sh — 取證與講解共用函式庫(由 scenarios/ch*.sh 以 source 載入,不要直接執行)
+# ----------------------------------------------------------------------------
+# 白話:每一章的示範都是「執行指令 → 顯示結果 → 存成證據檔」。這個函式庫提供統一的 step 函式和各種包裝(以誰的身分寫/讀 topic、
+#   呼叫 REST Proxy / MDS 等),讓章節腳本只需列出步驟。
+#   每步執行指令 → 顯示 → 存成 evidence/<章>/NN-xxx.log(之後轉成終端風格截圖)。
+#   每個 step 可附上「預期」(expect),preflight 會檢查實際輸出是否符合預期。
+#   環境變數 DEMO_PAUSE=1 時,每步執行前顯示講稿並等待 Enter(現場講解用)。
+# 用法(在章節腳本裡):
+#   source scripts/lib-ev.sh
+#   ch_begin <章編號> "<章標題>"    開始一章(會清空該章的 evidence 目錄)
+#   step <slug> "<標題/講稿>" "<顯示用指令>" "<實際執行的 shell 字串>" [expect-regex]
+#   ch_end                           印結果,回傳不符合預期的步驟數(0 = 全部符合)
+#   其他:as_produce / as_consume / as_list(人,SASL/PLAIN + AD 帳密)、svc_produce(服務,SCRAM)、rp、mds、ldapg、
+#   as_script、audit_events、send_result、wait_group_effect。EV_SHOW 可調整每步顯示的輸出行數(預設 12)。
+# 會改動什麼:重建 evidence/<章>/ 目錄並寫入證據檔;其餘取決於各章節執行的指令。
+# 怎麼判斷成功:每個有 expect 的步驟印「✔ 符合預期」或「✘ 不符合預期」;ch_end 印「(失敗 N 項)」。
+# ============================================================================
 DEMO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 DEMO_ROOT_W="$(cd "$DEMO_ROOT" && pwd -W 2>/dev/null || echo "$DEMO_ROOT")"
 EV_ROOT="$DEMO_ROOT/evidence"

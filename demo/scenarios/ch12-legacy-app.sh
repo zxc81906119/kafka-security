@@ -1,5 +1,23 @@
 #!/usr/bin/env bash
-# 第 12 章(進階):legacy app 只能用 HTTP → 經 REST Proxy 丟資料;人(Basic)與機器(client 憑證)並存,身分一路傳到 broker
+# ============================================================================
+# ch12-legacy-app.sh — 第 12 章:legacy app 只能用 HTTP,經 REST Proxy 丟資料;機器用 client 憑證、人用 Basic 並存
+# ----------------------------------------------------------------------------
+# 白話:無法使用 Kafka client 的舊系統,改用 client 憑證呼叫 REST Proxy;憑證的 CN 就是 RBAC 主體,身分一路傳到 broker 做授權。
+#   同一個 REST Proxy 上,人照常用 Basic(AD 帳密),兩種身分並存。
+#   也示範偽造憑證、無憑證、沒授權的憑證各被擋在哪一層,以及 REST Proxy 能代誰申請 token 的範圍。
+# 前置條件:環境已建好(REST Proxy、MDS、C3);用瀏覽器自動化(e2e/ch12-ui.mjs)在 C3 指派角色
+# 用法:
+#   ./demo.sh 12                  經由講解控制台跑這一章
+#   ./scenarios/ch12-legacy-app.sh      直接跑(DEMO_PAUSE=0 不暫停)
+# 會改動什麼:產生 client 憑證 legacy-orders、legacy-other、rogue(自簽);在 C3 把 orders. 的 DeveloperWrite 綁給 User:legacy-orders;暫時綁 Group:orders-write 的 DeveloperWrite。
+#   開頭與結尾都會解除這兩條 role binding(結束前有還原)。
+# 怎麼判斷成功:每一步印『✔ 符合預期』,最後一行『第 12 章完成(失敗 0 項)』
+# 實測結果摘要:授權前憑證通過認證但寫入 403;授權後 200;寫別的 topic 403;無憑證無帳密 401;同 CA 簽發但沒授權的另一張憑證 403;自簽憑證在 TLS 握手就被拒(HTTP 000)
+#   audit log 的主體是 User:legacy-orders(不是 restproxy),人是 User:YUJIE
+#   MDS 日誌:人走 /authenticate,機器走 /impersonate(restproxy 代 legacy-orders 申請,token 的 sub 是 legacy-orders、cp_proxy 記錄代理者、效期 1 小時)
+#   憑證身分只能綁 User:,不支援群組
+#   impersonate 的範圍:一般使用者可代;受保護清單內的特權身分(GARY、c3、bootstrap)不行;不是 impersonation 超級使用者的憑證(c3)也不行。清單區分大小寫,要寫 AD 記錄的 User:GARY,寫成 User:gary 擋不住 GARY(實測踩過)
+# ============================================================================
 source "$(dirname "$0")/../scripts/lib-ev.sh"
 ch_begin ch12 "legacy app 經 REST Proxy:機器用 client 憑證,人用 Basic,並存"
 source "$DEMO_ROOT/scripts/rbac-lib.sh"

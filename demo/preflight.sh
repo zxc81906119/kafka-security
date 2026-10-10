@@ -1,5 +1,18 @@
 #!/usr/bin/env bash
-# 開場前自檢:容器、端點、登入、記憶體;可加 --full 跑完所有章節(含 newman)確認「全部符合預期」。
+# ============================================================================
+# preflight.sh — 開場前自檢:容器、端點、登入、記憶體;可加 --full 跑完所有章節(含 newman)確認「全部符合預期」
+# ----------------------------------------------------------------------------
+# 白話:示範前先跑一次,確認環境真的可用,避免在客戶面前才發現容器沒起來或登入失敗。
+# 前置條件:demo 環境已啟動(scripts/up.sh --with-restproxy --with-c3,並已啟動 Prometheus 與 Alertmanager)。
+# 用法:
+#   ./preflight.sh           檢查容器是否執行中、MDS/REST Proxy/C3/Prometheus 端點與登入、AD 連線是否走 LDAPS、
+#                            LDAP 管理介面、瀏覽器自動化是否可用,並顯示 Docker 可用記憶體(建議 >= 10GB)
+#   ./preflight.sh --full    除上述自檢外,先執行 scripts/reset.sh,再實跑第 1~14、17~20 章(結果寫入 evidence/)
+# 會改動什麼:基本自檢只查詢;--full 會先重置環境(scripts/reset.sh)再跑各章,各章會改動環境並寫入 evidence/。
+# 怎麼判斷成功:每項印「✔」或「✘」,最後「── 結果:通過 N / 失敗 M ──」;結束碼 0 = 全部通過
+#   (--full 另印「章節失敗數: N」,N 不為 0 則結束碼 1)。
+# 常見失敗:「✘ 瀏覽器自動化可用」→ 缺 Playwright chromium → 執行 scripts/setup-e2e.sh。
+# ============================================================================
 cd "$(dirname "$0")"
 export MSYS_NO_PATHCONV=1
 hp() { local v; v=$(sed -n "s/^HOST_PORT_$1=//p" .env 2>/dev/null | tail -1); echo "${v:-$2}"; }   # 主機埠:.env 的 HOST_PORT_* 覆蓋,預設同 docker-compose.yml

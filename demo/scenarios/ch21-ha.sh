@@ -1,10 +1,19 @@
 #!/usr/bin/env bash
-# 第 21 章(進階):HA 叢集——3 台 controller、3 台 broker、副本 3、min.insync.replicas 2 的停機行為與滾動重啟
-# 需要 HA 模式:scripts/ha.sh on(會清資料重建);做完用 scripts/ha.sh off 回到基礎環境。不在 `demo.sh all` 與 preflight 的基礎鏈內。
+# ============================================================================
+# ch21-ha.sh — 第 21 章:HA 叢集——3 台 controller、3 台 broker、副本 3、min.insync.replicas 2 的停機行為與滾動重啟
+# ----------------------------------------------------------------------------
+# 白話:停掉 broker 或 controller 看叢集怎麼反應,最後做不停機的滾動重啟。銀行要的是「壞一兩台,服務照常」,這一章用實測回答「壞幾台還撐得住、哪些操作會先卡住」。
+# 前置條件:需要 HA 模式:scripts/ha.sh on(會清資料重建);做完用 scripts/ha.sh off 回到基礎環境。不在 `demo.sh all` 與 preflight 的基礎鏈內。
+# 用法:
+#   ./demo.sh 21                  經由講解控制台跑這一章(DEMO_PAUSE=0 不暫停)
+#   ./scenarios/ch21-ha.sh    直接跑
+# 會改動什麼:暫時停止 broker 或 controller 容器(每個實驗結束前一律啟動回來);建立 topic ha.test、ha.c1、ha.c2、ha.roll(每次先刪再建)。
+# 怎麼判斷成功:每一步印「✔ 符合預期」,最後一行「第 21 章完成(失敗 0 項)」
 # 實測結果摘要(測試環境:副本 3、min.isr 2):
 #   停 1 台 broker:寫入不中斷;停 2 台:acks=all 被擋,acks=1 看似成功但讀不到(高水位不前進);
 #   停 1 台 controller:正常;停 2 台(失去多數):不能建 topic 與 describe,既有 topic 的讀寫仍可;
 #   滾動重啟 3 broker + 3 controller(active 最後):背景寫入零失敗、零遺失。
+# ============================================================================
 source "$(dirname "$0")/../scripts/lib-ev.sh"
 ch_begin ch21 "HA 叢集:3 controller、3 broker 的停機行為與滾動重啟"
 HA="$DEMO_ROOT/scripts/ha-lab.sh"

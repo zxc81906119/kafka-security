@@ -1,13 +1,32 @@
 #!/usr/bin/env bash
-# 服務帳號的「新舊並行」輪替,帳密由 CyberArk(Conjur)交付:零中斷、失敗可回滾。正式環境由 CPM 自訂平台或排程呼叫同樣的步驟。
+# ============================================================================
+# rotate-with-conjur.sh — 服務帳號的「新舊並行」輪替,帳密由 CyberArk(Conjur)交付:零中斷、失敗可回滾
+# ----------------------------------------------------------------------------
+# 白話:服務帳號換密碼最怕「換了但應用程式還拿舊的」造成中斷。這支腳本先建好新帳號、驗證能用,才把新帳密交給 Conjur,
+#   舊帳號先隔離再停用,有人還在用就能隨時回滾。正式環境由 CPM 自訂平台或排程呼叫同樣的步驟。
+# 前置條件:demo 環境與 CyberArk(Conjur)已啟動(scripts/up.sh、scripts/conjur.sh up)。
 # 用法:
 #   scripts/rotate-with-conjur.sh start <舊帳號> <新帳號>      建新帳號 → 複製角色(逐筆檢查)→ 驗證新帳號真的連得上且看得到同樣的 topic → 才把新帳密寫進 Conjur;任何一步失敗就回滾新帳號、Conjur 不動
 #   scripts/rotate-with-conjur.sh quarantine <舊帳號>          隔離舊帳號:先解除全部角色(可逆),SCRAM 憑證還留著;若還有人在用,audit 會出現被拒(DENIED)
-#   scripts/rotate-with-conjur.sh check <舊帳號> [分鐘]        看舊帳號的 audit:允許幾筆、被拒幾筆(隔離過就只看隔離之後;否則看最近 N 分鐘);被拒 = 還有人在用,先 rollback
+#   scripts/rotate-with-conjur.sh check <舊帳號> [分鐘]        看舊帳號的 audit:允許幾筆、被拒幾筆(隔離過就只看隔離之後;否則看最近 N 分鐘,預設 5);被拒 = 還有人在用,先 rollback
 #   scripts/rotate-with-conjur.sh rollback <舊帳號>            有人還在用:把角色綁回去
 #   scripts/rotate-with-conjur.sh finish <舊帳號>              確認沒人用後停用:停用 SCRAM 憑證(覆寫成隨機密碼,不刪除)(要先 quarantine)
 #   scripts/rotate-with-conjur.sh restore                      demo 還原:svc-orders(原密碼與原角色)回來、Conjur 指回它、移除 svc-orders-v2
-# Conjur 的變數:kafka/<host>/credential(JSON {"u":帳號,"p":密碼};一個變數放整組,寫入與讀取都是單一操作)
+# Conjur 的變數:kafka/<host>/credential(JSON {"u":帳號,"p":密碼};一個變數放整組,寫入與讀取都是單一操作);
+#   應用的機器身分固定是 svc-orders(HOST),換的是背後的 Kafka 帳號。
+# 會改動什麼:
+#   start       新增 SCRAM 帳號與角色綁定,並改寫 Conjur 的 kafka/svc-orders/credential(舊帳號不動)
+#   quarantine  解除舊帳號全部角色,並把角色清單與時間存到 config/conjur/quarantine-<帳號>.txt / .since(忽略檔,rollback 用)
+#   rollback    依存檔把角色綁回去
+#   finish      舊帳號 SCRAM 憑證覆寫成隨機密碼(不刪除:刪除會讓 broker 重啟失敗,見 scram-disable.sh),並刪除隔離存檔
+#   restore     svc-orders 密碼與角色還原、Conjur 指回它、svc-orders-v2 的角色解除並停用
+#   check       只查詢(讀 audit log),什麼都不改
+# 怎麼判斷成功:start 最後印「結果:<新> 已建立並綁定相同角色;Conjur 已指向 <新>」,失敗印「✘ …」並自動回滾;
+#   check 印「判定:沒有人在用 → 可以 finish」或「判定:還有人在用 …」;其餘子命令印「結果:…」。
+# 常見失敗:start 印「✘ 舊帳號 … 沒有任何角色」→ 舊帳號名稱錯或已被隔離 → 先確認帳號;
+#   finish 印「✘ … 還沒隔離」→ 要先 quarantine 並用 check 確認沒有被拒;
+#   check 看不到使用者:audit 不記錄 orders.* 讀取成功,所以要先 quarantine 讓還在用的人變成被拒,才看得到。
+# ============================================================================
 set -euo pipefail
 cd "$(dirname "$0")/.."
 export MSYS_NO_PATHCONV=1
@@ -111,5 +130,5 @@ restore)
   rm -f "$Q"/quarantine-svc-orders*
   echo "結果:svc-orders 已還原;svc-orders-v2 已移除"
   ;;
-*) sed -n 2,11p "$0"; exit 1 ;;
+*) sed -nE '2,/^# ={20,}$/p' "$0" | sed -E '1d;$d; s/^# ?//'; exit 1 ;;
 esac

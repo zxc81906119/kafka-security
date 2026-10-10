@@ -1,8 +1,27 @@
 #!/usr/bin/env bash
-# 實驗:停用一個 SCRAM 帳號時,「已經連著的」舊連線會怎樣?(SCRAM 只在建立連線時驗證;connections.max.reauth.ms 預設 0 = 不重新驗證)
-# 流程:一個長連線 producer 每 2 秒用 svc-orders 寫一筆 → 約 8 秒後隔離(解除角色)→ 約 8 秒後停用(停用 SCRAM)→ 結束後讀回 topic,看每個階段寫進去幾筆。
-# 用法:scripts/old-connection-test.sh [both|scram-only]   (Conjur 的 svc-orders/credential 要是 svc-orders;做完請執行 rotate-with-conjur.sh restore)
-#   both(預設)= 先隔離(解除角色)再停用(停用 SCRAM);scram-only = 只停用 SCRAM、角色保留(看「只停用憑證」能不能切斷舊連線)
+# ============================================================================
+# old-connection-test.sh — 實驗:停用 SCRAM 帳號時,「已經連著的」舊連線會怎樣?
+# ----------------------------------------------------------------------------
+# 白話:SCRAM 只在「建立連線」時驗證密碼,connections.max.reauth.ms 預設 0(不重新驗證),所以帳號停用了,
+#   已經連著的舊連線可能照樣能寫。這支腳本用實驗證明:只停用憑證擋不擋得住舊連線?解除角色擋不擋得住?
+#   答案決定了「帳號被偷時」該先做哪一步。
+# 前置條件:demo 環境已啟動(scripts/up.sh)、CyberArk(Conjur)已啟動(scripts/conjur.sh up),
+#   且 Conjur 的 svc-orders/credential 內容必須是 svc-orders 的帳密。
+# 用法:
+#   scripts/old-connection-test.sh [both|scram-only]
+#     both(預設)   先隔離(解除角色),再停用(停用 SCRAM)
+#     scram-only    只停用 SCRAM、角色保留(看「只停用憑證」能不能切斷舊連線)
+# 流程:一個長連線 producer 每 2 秒用 svc-orders 寫一筆(共 14 筆,每筆帶隨機標記)→ 約 8 秒後隔離
+#   (解除角色)→ 約 8 秒後停用(停用 SCRAM)→ 結束後讀回 topic,看每個階段寫進去幾筆。
+# 會改動什麼:啟動一個臨時 producer 容器(結束即移除),寫入約 14 筆到 orders.events;
+#   svc-orders 的角色被解除(both 模式)、SCRAM 憑證被覆寫成隨機密碼(不刪除)。**做完不會還原**,
+#   請執行 scripts/rotate-with-conjur.sh restore 把 svc-orders 的原密碼與角色還原。
+# 怎麼判斷成功:看最後的「判定:…」。both 預期「解除角色就切斷舊連線」(授權失敗次數 > 0、寫入少於 14 筆);
+#   scram-only 預期「只停用 SCRAM 憑證擋不住已建立的連線」(14 筆全寫完);
+#   出現「判定:非預期」代表結果與預期相反。
+# 常見失敗:Conjur 的 svc-orders/credential 不是 svc-orders(例如上次輪替後沒還原)→ 實驗的帳號不對
+#   → 先執行 scripts/rotate-with-conjur.sh restore。
+# ============================================================================
 set -euo pipefail
 cd "$(dirname "$0")/.."
 export MSYS_NO_PATHCONV=1

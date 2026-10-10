@@ -1,5 +1,27 @@
 #!/usr/bin/env bash
-# 第 9 章(選修):服務密碼輪替(新帳號並行再停舊)、內部通道(CONTROLLER / INTERNAL)、AD 故障時的行為
+# ============================================================================
+# ch09-rotate-internal.sh — 第 9 章(選修):服務密碼輪替(新帳號並行再停舊)、內部通道(CONTROLLER / INTERNAL)、AD 故障時的行為
+# ----------------------------------------------------------------------------
+# 白話:三個維運演練。A 服務密碼輪替:先建新帳號並行、切換完再停舊,不中斷服務。
+#       B 內部通道:CONTROLLER / INTERNAL 埠只認 mTLS 憑證,帳密與沒憑證的連線都進不去,連上也沒有超級權限。
+#       C AD 故障:AD 掛了時服務(SCRAM)照常運作,但人的新登入失敗,AD 恢復後即恢復。
+# 前置條件:需先跑過第 7 章(svc-orders 帳號與寫入權限已存在);Docker 可用(會停止 / 啟動 openldap 容器);config/clients/ 需有 mtls-legacy-orders.properties 等設定檔
+# 用法:
+#   ./demo.sh 9                            經由講解控制台跑這一章
+#   ./scenarios/ch09-rotate-internal.sh    直接跑(DEMO_PAUSE=0 不暫停)
+# 會改動什麼:
+#   建立 svc-orders-v2(SCRAM 帳號 + User:svc-orders-v2 對 orders. 的 DeveloperWrite 綁定),並產生 config/clients/scram-svc-orders-v2.properties
+#   停用 svc-orders(覆寫成隨機密碼),隨後以 create-service-account.sh 還原成 orders-secret-v1
+#   docker stop openldap 後再 docker start openldap(等 12 秒);往 orders.events 寫入數則測試訊息
+#   結束前還原:解除 svc-orders-v2 的綁定並停用該帳號(scram-disable.sh)
+# 怎麼判斷成功:每一步印『✔ 符合預期』,最後一行『第 09 章完成(失敗 0 項)』
+# 實測結果摘要:
+#   輪替:新舊帳號並行都可寫;停舊後舊密碼立刻失效、新帳號照常;停用是覆寫成隨機密碼,不用 --delete-config
+#   CONTROLLER 埠(9093)是 mTLS:無憑證在 TLS 握手就被拒;SCRAM 帳密也被拒(此埠不接受 SASL,只認憑證)
+#   INTERNAL 埠(9092)也是 mTLS:同一個 CA 簽的任何 client 憑證(如 CN=legacy-orders)都能完成 TLS 並列出 topic,所以仍要靠防火牆只開放給 broker / controller 節點
+#   授權仍生效:CN=legacy-orders 不是 super user,連上 INTERNAL 埠也不能建立 topic;只有 CN=kafka-internal(broker 與 controller 共用)是 super user
+#   AD 掛掉:服務(SCRAM)照常寫入,人的新登入失敗;AD 恢復後人的登入恢復
+# ============================================================================
 source "$(dirname "$0")/../scripts/lib-ev.sh"
 ch_begin ch09 "輪替、內部通道、AD 故障"
 source "$DEMO_ROOT/scripts/rbac-lib.sh"

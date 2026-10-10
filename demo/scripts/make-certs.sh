@@ -1,7 +1,24 @@
 #!/usr/bin/env bash
-# 產生 demo 用 CA、「單一共用 server 憑證」、MDS token 金鑰。
+# ============================================================================
+# make-certs.sh — 產生 demo 用 CA、「單一共用 server 憑證」、MDS token 金鑰,以及各元件的 client 與內部通道憑證
+# ----------------------------------------------------------------------------
+# 白話:demo 的 TLS、mTLS 與 MDS token 都需要憑證與金鑰。這支腳本一次產生全部;已存在就只「補」缺的部分,不會換掉已發出的身分。
 # 客戶情境:所有元件共用同一張 server 憑證(同一把 private key、同一個 DN),憑證只做傳輸加密。
 # 另外為「對照章節(第 8 章)」產生兩張不同 DN 的 client 憑證,用來示範:共用 DN 無法區分元件。
+# 產生的東西(皆在 demo/certs/):
+#   CA(Demo Private CA)、共用 server 憑證(CN=kafka.demo.local,SAN 涵蓋各元件名稱)、truststore.p12、
+#   client 憑證 c3 restproxy bootstrap legacy-orders schema-registry monitor connect、
+#   內部通道共用憑證 internal(CN=kafka-internal,broker↔broker 與 broker↔controller 做 mTLS,同時當 server 與 client 所以 EKU 兩個都要)、
+#   MDS token 金鑰(keypair.pem / public.pem)、密碼檔 keystore_creds / sslkey_creds / truststore_creds(cp 映像以 *_CREDENTIALS 讀檔,沒有這三個檔 controller / broker 會啟動失敗)。
+# 前置條件:Docker 已啟動(用 alpine/openssl 與 cp-server 映像的 keytool)。
+# 用法:
+#   scripts/make-certs.sh        通常由 scripts/up.sh 與 scripts/sr-setup.sh 自動呼叫,可重複執行
+# 會改動什麼:在 demo/certs/ 建立或補產上述檔案,最後建立 certs/.done。
+#   已有 certs/.done 時:若 SAN 缺 prometheus / alertmanager / conjur / schema-registry / blackbox-exporter / grafana / node-exporter /
+#   kafka-exporter / loki / tempo / connect / broker3 / controller2 / controller3,就改 san.cnf(內部憑證則改 internal.cnf),
+#   用同一把 key、同一個 CA 重簽 server 憑證(不換身分、不用重發 client 憑證);缺的 client 憑證與內部通道憑證也補產;其餘略過。
+# 怎麼判斷成功:全新建立最後印「OK: certs 完成 → demo/certs」;已存在則印「certs 已存在,略過其餘」。
+# ============================================================================
 set -euo pipefail
 cd "$(dirname "$0")/.."
 export MSYS_NO_PATHCONV=1

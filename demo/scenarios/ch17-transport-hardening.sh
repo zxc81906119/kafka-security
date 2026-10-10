@@ -1,5 +1,19 @@
 #!/usr/bin/env bash
-# 第 17 章(進階):傳輸加密補強 —— AD 連線走 LDAPS、監控元件(Prometheus / Alertmanager)走 HTTPS + Basic、C3 走 HTTPS
+# ============================================================================
+# ch17-transport-hardening.sh — 第 17 章:傳輸加密補強:LDAPS、監控 HTTPS + Basic、C3 HTTPS
+# ----------------------------------------------------------------------------
+# 白話:把還在走明文或沒有認證的連線補起來:broker 連 AD 走 LDAPS(636)、Prometheus 與 Alertmanager 走 HTTPS + Basic、C3 走 HTTPS。
+#   每一項都用對照(通過/不通過)證明,不只是設定了。
+# 前置條件:環境已建好(C3、Prometheus、Alertmanager 已啟用);步驟會用 docker 讀日誌、起臨時容器(curl、ldapsearch 檢查)
+# 用法:
+#   ./demo.sh 17                  經由講解控制台跑這一章
+#   ./scenarios/ch17-transport-hardening.sh      直接跑(DEMO_PAUSE=0 不暫停)
+# 會改動什麼:唯讀檢查,不改設定。c3-badca 那步用 docker run --rm 起一個臨時 curl 容器,用完即刪。
+# 怎麼判斷成功:每一步印『✔ 符合預期』,最後一行『第 17 章完成(失敗 0 項)』
+# 實測結果摘要:AD:openldap 日誌裡來自 broker1、broker2 的連線全在 636,389 沒有;信任 demo CA 才連得上 LDAPS(所以連 AD 的 JVM 需要 ldap.ssl.truststore);LDAPS 下人登入不受影響(正確 200、錯誤密碼 401、Kafka PLAIN 列 topic 成功)
+#   監控:Prometheus 無帳密與錯密碼 401、正確 200、明文 HTTP 400;Alertmanager 要帳密才能用;broker 推送指標也走 HTTPS + Basic(api.key/api.secret 就是 Basic 帳密),最新一筆指標在 2 分鐘內;C3 到兩者的連線狀態都是 ONLINE
+#   C3:HTTPS(9022)憑證由 demo CA 驗證通過;不帶 CA 連線會失敗(curl 錯誤 60),所以正式環境要把內部 CA 發給使用者端
+# ============================================================================
 source "$(dirname "$0")/../scripts/lib-ev.sh"
 ch_begin ch17 "傳輸加密補強:LDAPS、監控 HTTPS + Basic、C3 HTTPS"
 DC="$DEMO_ROOT/scripts/dcurl.sh"

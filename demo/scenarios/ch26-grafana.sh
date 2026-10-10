@@ -1,10 +1,19 @@
 #!/usr/bin/env bash
-# 第 26 章(進階):Grafana 全元件監控——官方儀表板、node_exporter(主機)、kafka_exporter(consumer lag)、AD 登入
-# 需要 HA 模式與 Prometheus、Alertmanager:scripts/ha.sh on;docker compose --profile c3 up -d prometheus alertmanager blackbox-exporter
+# ============================================================================
+# ch26-grafana.sh — 第 26 章:Grafana 全元件監控——官方儀表板、node_exporter(主機)、kafka_exporter(consumer lag)、AD 登入
+# ----------------------------------------------------------------------------
+# 白話:Control Center 只看得到 broker 與 controller。這一章接上 Grafana 看全部:官方儀表板、主機磁碟(node_exporter)、consumer lag(kafka_exporter),並讓這些元件自己也受保護(HTTPS、AD 登入、mTLS、最小權限帳號)。
+# 前置條件:需要 HA 模式與 Prometheus、Alertmanager:scripts/ha.sh on;docker compose --profile c3 up -d prometheus alertmanager blackbox-exporter
+# 用法:
+#   ./demo.sh 26                  經由講解控制台跑這一章(DEMO_PAUSE=0 不暫停)
+#   ./scenarios/ch26-grafana.sh    直接跑
+# 會改動什麼:產生密碼檔、下載官方儀表板、在模擬 AD 新增唯讀查詢帳號、在 Kafka 建立 SCRAM 帳號 kafka-exporter 與 ACL、啟動 grafana / node-exporter / kafka-exporter 容器、重啟 prometheus;建立並刪除 topic mon.lag。
+# 怎麼判斷成功:每一步印「✔ 符合預期」,最後一行「第 26 章完成(失敗 0 項)」
 # 實測結果摘要:
 #   Grafana 只收 HTTPS、AD(LDAPS)登入並依群組對映角色;資料來源用只讀的 grafana 帳號連 Prometheus
 #   官方 jmx-monitoring-stacks 的 5 個 KRaft 儀表板不改一個字匯入(為此把抓取 job 改成官方慣例的 kafka-broker / kafka-controller + env 標籤):150 個查詢約 108 個有資料(107 到 108,隨環境略有出入)
 #   node_exporter、kafka_exporter 走 mTLS;kafka_exporter 的 Kafka 帳號只有 Describe(讀不到訊息);lag 告警實測觸發與解除
+# ============================================================================
 source "$(dirname "$0")/../scripts/lib-ev.sh"
 ch_begin ch26 "Grafana 全元件監控:官方儀表板、主機指標、consumer lag"
 GS="$DEMO_ROOT/scripts/grafana.sh"

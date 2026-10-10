@@ -1,5 +1,22 @@
 #!/usr/bin/env bash
-# 第 4 章:生產環境「人只能唯讀」—— 開發者要看資料,但不能寫、不能改設定
+# ============================================================================
+# ch04-readonly.sh — 第 4 章:生產環境「人只能唯讀」—— 開發者要看資料,但不能寫、不能改設定
+# ----------------------------------------------------------------------------
+# 白話:示範「只讀」的授權:把 ming 從寫入群組(orders-write)改放到唯讀群組(orders-read,角色 DeveloperRead)。
+#       他仍能讀資料、在 C3 看 topic,但寫入與建立 topic 都被拒;同時 yujie 的寫入權限不受影響。
+# 前置條件:需先跑過第 3 章(ming 在 orders-write、orders.events 內有 order-A-1001);需要 e2e/ 的 Playwright
+# 用法:
+#   ./demo.sh 4                      經由講解控制台跑這一章
+#   ./scenarios/ch04-readonly.sh     直接跑(DEMO_PAUSE=0 不暫停)
+# 會改動什麼:
+#   在 C3 新增 Group:orders-read 的 DeveloperRead 綁定
+#   在 AD(LDAP)把 ming 從 orders-write 移到 orders-read;往 orders.events 寫入一則 still-ok(yujie)
+#   結束前不還原(scripts/reset.sh 可還原)
+# 怎麼判斷成功:每一步印『✔ 符合預期』,最後一行『第 04 章完成(失敗 0 項)』
+# 實測結果摘要:
+#   AD 群組異動後等 10 秒(MDS 讀 LDAP 的更新間隔),ming 可讀 orders.events
+#   ming 寫入、建立 topic 都被拒;yujie 仍在 orders-write,寫入照常成功
+# ============================================================================
 source "$(dirname "$0")/../scripts/lib-ev.sh"
 ch_begin ch04 "生產環境人只能唯讀"
 UI() { (cd "$DEMO_ROOT/e2e" && node ch04-ui.mjs "$1" 2>&1 | grep -v '^$'); }

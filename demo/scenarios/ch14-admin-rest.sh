@@ -1,5 +1,20 @@
 #!/usr/bin/env bash
-# 第 14 章(進階):broker 內建 Admin REST(/kafka/v3)的保護 —— 未設定時完全無認證;依官方 kafka.rest. 設定後依使用者身分授權
+# ============================================================================
+# ch14-admin-rest.sh — 第 14 章:broker 內建 Admin REST(/kafka/v3)的保護:匿名擋下、依使用者授權
+# ----------------------------------------------------------------------------
+# 白話:broker 內建的 Admin REST 在沒設定時完全無認證,任何人都能呼叫(曾讓 broker 記憶體耗盡而崩潰)。
+#   依官方 kafka.rest. 設定後,改成要帶 AD 帳密並依使用者身分授權:管理員看得到全部,沒有 role 的人看到空清單。
+# 前置條件:環境已建好(broker 已套用 Admin REST 保護設定)
+# 用法:
+#   ./demo.sh 14                  經由講解控制台跑這一章
+#   ./scenarios/ch14-admin-rest.sh      直接跑(DEMO_PAUSE=0 不暫停)
+# 會改動什麼:只有 gary 那步透過 Admin REST 對 orders.events 寫入一筆測試訊息;其餘唯讀,沒有需要還原的設定。
+# 怎麼判斷成功:每一步印『✔ 符合預期』,最後一行『第 14 章完成(失敗 0 項)』
+# 實測結果摘要:匿名與錯誤密碼都是 401
+#   gary 列 topic 200;ming(無 role)200 但清單為空(只回有權看的資源)
+#   ming produce 回 40301 Not authorized,但 HTTP 狀態碼仍是 200、錯誤在內容裡,所以監控要看 error_code
+#   gary produce 成功並回傳 offset
+# ============================================================================
 source "$(dirname "$0")/../scripts/lib-ev.sh"
 ch_begin ch14 "broker 內建 Admin REST 的保護(匿名擋下、依使用者授權)"
 DC="$DEMO_ROOT/scripts/dcurl.sh"
