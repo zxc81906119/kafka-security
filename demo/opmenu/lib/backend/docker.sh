@@ -55,7 +55,8 @@ be_disk_usage() { for c in $OPMENU_HOSTS; do printf '%-16s ' "$c"; docker exec "
 be_cert_list() {
   docker run --rm -v "$OPMENU_CERTS_HOST_DIR:/certs:ro" --entrypoint sh "$OPMENU_DOCKER_OPENSSL_IMAGE" -c '
     for f in /certs/*.pem; do [ -f "$f" ] || continue; openssl x509 -in "$f" -noout >/dev/null 2>&1 || continue
-      printf "%-32s %s\n" "$(basename $f)" "$(openssl x509 -in $f -noout -enddate | cut -d= -f2)"; done'
+      if ! openssl x509 -in "$f" -noout -checkend 0 >/dev/null; then st="已過期"; elif ! openssl x509 -in "$f" -noout -checkend 604800 >/dev/null; then st="剩不到 7 天 ⚠⚠"; elif ! openssl x509 -in "$f" -noout -checkend 2592000 >/dev/null; then st="剩不到 30 天 ⚠"; elif ! openssl x509 -in "$f" -noout -checkend 7776000 >/dev/null; then st="剩不到 90 天"; else st="90 天以上"; fi
+      printf "%-32s %-26s %s\n" "$(basename $f)" "$(openssl x509 -in $f -noout -enddate | cut -d= -f2)" "$st"; done'
 }
 be_hosts() { echo "$OPMENU_HOSTS"; }
 be_collect_diag() { local d="$1"; mkdir -p "$d"; for c in $OPMENU_HOSTS; do docker logs --tail 500 "$c" > "$d/$c.log" 2>&1; done; docker ps --format '{{.Names}} {{.Status}}' > "$d/containers.txt"; }

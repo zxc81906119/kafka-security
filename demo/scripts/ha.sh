@@ -14,8 +14,10 @@ case "${1:-status}" in
   on|off)
     want=$([ "$1" = on ] && echo ha || echo base)
     echo "[ha] 目前 $(mode) → 切到 $want(會清除所有資料)"
+    if [ "$want" = ha ]; then bash scripts/jmx-setup.sh; fi
     docker compose --profile c3 --profile restproxy --profile cyberark --profile sr down -v >/dev/null 2>&1 || true
     sed -i '/^COMPOSE_PATH_SEPARATOR=/d;/^COMPOSE_FILE=/d' .env
+    if [ "$want" = ha ]; then cp config/c3/jmx-scrape.ha.tpl config/c3/jmx_scrape.yml; else rm -f config/c3/jmx_scrape.yml; fi   # Prometheus 抓 JMX exporter 的設定只在 HA 模式存在
     if [ "$want" = ha ]; then printf 'COMPOSE_PATH_SEPARATOR=,\nCOMPOSE_FILE=docker-compose.yml,docker-compose.ha.yml\n' >> .env; fi
     shift; bash scripts/up.sh "$@"
     echo "[ha] 已切換為 $(mode)";;

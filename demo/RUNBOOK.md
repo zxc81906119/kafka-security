@@ -252,6 +252,28 @@ gary 在 C3 指派 `orders-read` → DeveloperRead;LDAP 介面把 ming 從 devel
 
 **踩坑**:perf 的 sticky partitioner 會把一批資料放在同一分區,檢查「讀得到」要加總全部分區,不能只看分區 0;`kafka-producer-perf-test --producer.config` 已棄用,改 `--command-config`。
 
+## 第 22 章(進階)平台監控與告警:URP、離線分區、active controller(`./demo.sh 22`,需 HA 模式與 Prometheus;約 45 分鐘)
+
+**準備**:`scripts/ha.sh on`(會自動下載 JMX exporter agent 並以 Maven Central 的 .sha1 校驗,放 `config/jmx/`,不進版本庫)→ `docker compose --profile c3 up -d prometheus alertmanager`。controller 也送 telemetry(KRaft 下 ActiveControllerCount、OfflinePartitionsCount 只有 controller 有),見 `docker-compose.ha.yml`。
+
+| 項目 | 路徑 A:telemetry → Prometheus | 路徑 B:JMX exporter → Prometheus |
+|---|---|---|
+| 規則檔 | `config/c3/ops_rules.yml`(7 條) | `config/c3/ops_rules_jmx.yml`(7 條,含「監控的監控」KafkaJmxScrapeDown) |
+| 抓取 | broker 與 controller 每 60 秒推送 | Prometheus 每 15 秒抓 7778 埠(`config/c3/jmx_scrape.yml`,HA 模式才有) |
+| URP 偵測(停 1 台 broker) | 約 150 秒觸發、約 100 秒解除 | 約 35 秒觸發、約 35 秒解除 |
+| 離線分區(單副本 topic 所在 broker 掉線) | 約 160 秒 | 約 35 秒 |
+| controller 掉線 | ControllerMissing 約 250 秒;失去多數時 active controller 數 0 → 約 125 秒 | 約 37 秒;失去多數約 24 秒 |
+| 依賴 | 為 C3 設計;告警與 C3 的 telemetry 綁在一起 | 獨立於 C3;銀行既有 Prometheus、Grafana 能直接用 |
+| 建議 | C3 的資料來源,保留 | **銀行自有監控的告警走這條**(偵測快 4 到 5 倍、不依賴 C3) |
+
+**監控端點的保護(22.10,實測)**:6 個節點的 JMX exporter 一律 HTTPS + Basic 帳密(JMX exporter 1.0.1 不支援 mTLS;密碼 PBKDF2-HMAC-SHA512 雜湊、隨機產生存 `config/c3/jmx_exporter.pw`,Prometheus 以 `password_file` 讀取,不進版本庫);blackbox exporter 一律 HTTPS + mTLS(`config/blackbox/web-config.yml`:`client_auth_type: RequireAndVerifyClientCert`;Prometheus 帶 `client-monitor` 憑證)。負面測試:不帶帳密與錯密碼 401、明文 http 無回應、不帶或不被信任的 client 憑證握手被拒;Prometheus 18 個目標 up=1。依據:Prometheus 官方安全文件(exporter 支援 TLS 與 client 憑證驗證;blackbox 與 SNMP exporter 依 URL 參數替人連任意位址,要特別限制存取)、官方 jmx-monitoring-stacks 的 ssl_basic_auth 做法。**未實測**:網路層防火牆、client_allowed_sans、密碼輪替。
+
+**官方設定檔**:各元件的 exporter 設定直接用 Confluent 官方 jmx-monitoring-stacks(`kafka_broker.yml`、`kafka_controller.yml`,釘定 commit `f376263` 並校驗 SHA-256,由 `scripts/jmx-setup.sh` 下載,不進版本庫)。取捨:官方檔每台 broker 約 12,000 個時間序列,startDelaySeconds 120(啟動後 2 分鐘才開始匯出,重啟後指標會有 2 分鐘空窗)。官方 broker-alerts.yml 的五條告警與本 Lab 規則一致。
+
+**沒觸發的告警**:KafkaUncleanLeaderElection(正常操作不會發生;要製造需刻意開 unclean election 並讓所有同步副本掉線,風險高,沒做)。**沒有的指標**:磁碟用量百分比(telemetry 與 JMX 的這組 MBean 都沒有,要 node_exporter);憑證到期見第 23 章。
+
+**踩坑**:`kafka-topics --replica-assignment` 不能和 `--partitions` 一起用(錯誤被過濾掉會讓告警「沒有觸發」);JMX 的指標名稱是 `kafka_server_replicamanager_underminisrpartitioncount`(不是 underminispartitioncount);Prometheus `scrape_config_files` 的 glob 沒有匹配檔案時不報錯,所以 JMX 抓取設定可以只在 HA 模式存在;compose 的 `extends` 會串接 ports,要用 `!override`。
+
 ## 對應到客戶 RHEL 9 VM 的位置與步驟(手動部署)
 | demo | RHEL 9 VM |
 |---|---|
