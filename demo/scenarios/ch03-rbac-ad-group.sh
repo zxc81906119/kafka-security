@@ -1,5 +1,23 @@
 #!/usr/bin/env bash
-# 第 3 章:授權怎麼做 —— RBAC 綁 AD 群組;AD 群組異動後 Kafka 端零變更即生效
+# ============================================================================
+# ch03-rbac-ad-group.sh — 第 3 章:授權怎麼做 —— RBAC 綁 AD 群組;AD 群組異動後 Kafka 端零變更即生效
+# ----------------------------------------------------------------------------
+# 白話:授權不是一個一個人設,而是在 C3 把「AD 群組 orders-write」綁上 orders.* 的寫入角色。
+#       之後只要在 AD 把人加進或移出該群組,Kafka 端什麼都不用改,幾秒內就跟著生效。
+# 前置條件:建議先跑過第 1 章(從 reset 後的狀態開始);需要 e2e/ 的 Playwright(操作 C3 與 phpLDAPadmin 的網頁)
+# 用法:
+#   ./demo.sh 3                          經由講解控制台跑這一章
+#   ./scenarios/ch03-rbac-ad-group.sh    直接跑(DEMO_PAUSE=0 不暫停)
+# 會改動什麼:
+#   在 C3 新增 Group:orders-write 對 orders. 開頭 topic 的角色綁定(DeveloperWrite)
+#   在 AD(LDAP)把 ming 加進 orders-write 群組;往 orders.events 寫入測試訊息
+#   結束前不還原(第 4 章會接著用這個狀態;scripts/reset.sh 可還原)
+# 怎麼判斷成功:每一步印『✔ 符合預期』,最後一行『第 03 章完成(失敗 0 項)』
+# 實測結果摘要:
+#   授權前 yujie 寫入被拒;在 C3 綁定後 yujie 寫入成功(授權的是 AD 群組,不是個人)
+#   MDS API 查 Group:orders-write 可看到 DeveloperWrite 綁定,與 C3 畫面一致
+#   ming 不在群組時被拒;AD 加入 ming 後,MDS 重新讀取 LDAP 群組(demo 設定 5 秒,預設 60 秒),ming 不需任何 Kafka 端變更就寫入成功(腳本最多重試 12 輪、每輪間隔 3 秒)
+# ============================================================================
 source "$(dirname "$0")/../scripts/lib-ev.sh"
 ch_begin ch03 "RBAC 與 AD 群組:授權跟著群組走"
 UI() { (cd "$DEMO_ROOT/e2e" && node ch03-ui.mjs "$1" 2>&1 | grep -v '^$'); }

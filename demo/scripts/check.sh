@@ -2,7 +2,7 @@
 # ============================================================================
 # check.sh — 檢查腳本有沒有語法錯誤(改完腳本先跑這個)
 # ----------------------------------------------------------------------------
-# 白話:對 scripts/、scenarios/ 底下的 .sh 逐一做語法檢查(bash -n),再用 shellcheck(常見錯誤掃描,
+# 白話:對 scripts/、scenarios/ 底下的 .sh 逐一做語法檢查(bash -n)、確認都有標準說明標頭,再用 shellcheck(常見錯誤掃描,
 #   透過官方映像 koalaman/shellcheck 執行)掃新風格的檔案。語法錯誤曾讓一支腳本整個跑不起來,這一步能提早抓到。
 # 用法:
 #   scripts/check.sh            全部檢查
@@ -24,6 +24,14 @@ for f in scripts/*.sh scripts/lib/*.sh scenarios/*.sh opmenu/lib/*.sh opmenu/lib
   err=$(bash -n "$f" 2>&1) || { note "語法錯誤:$f"; echo "$err" | head -3 | sed 's/^/      /'; bad=1; }
 done
 note "已檢查 $n 個檔案"
+
+# 標頭檢查:每支腳本開頭都要有標準說明標頭(含「白話:」),新手打開檔案才看得懂這支腳本在做什麼
+say "檢查每支腳本都有標準說明標頭(含「白話:」)"
+missing=0
+for f in scripts/*.sh scenarios/*.sh; do
+  head -30 "$f" | grep -q '白話:' || { note "缺標頭:$f"; missing=1; }
+done
+[ "$missing" = 0 ] && note "全部都有" || bad=1
 
 if [ "${1:-}" != "--no-lint" ]; then
   # 新風格的檔案(有 lib/ 與標頭樣板)用 shellcheck 掃;舊腳本寫法較舊,先不掃,避免產生一堆不相干的警告

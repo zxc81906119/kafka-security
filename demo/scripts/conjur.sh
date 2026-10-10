@@ -1,5 +1,10 @@
 #!/usr/bin/env bash
-# 模擬行內 CyberArk(Conjur OSS):建立、載入 policy、存取秘密。正式環境這些動作由 CyberArk 管理員在 PVWA / CLI 做。
+# ============================================================================
+# conjur.sh — 模擬行內 CyberArk(Conjur OSS):建立、載入 policy、存取秘密
+# ----------------------------------------------------------------------------
+# 白話:行內用 CyberArk 保管密碼。這支腳本在 demo 裡用 Conjur OSS 模擬它,讓應用程式「向保險箱取密碼」的流程能實際跑起來。
+#   正式環境這些動作由 CyberArk 管理員在 PVWA / CLI 做。
+# 前置條件:Docker 已啟動;compose profile cyberark 的映像可用。
 # 用法:
 #   scripts/conjur.sh up                       啟動(產生 data key、建立帳戶、載入 policy、產生各 host 的 API key)
 #   scripts/conjur.sh load                     重新載入 policy(config/conjur/policy/kafka.yml)並補齊缺少的 API key
@@ -9,6 +14,18 @@
 #   scripts/conjur.sh probe-as <host> <變數>   同上,但永遠印出 HTTP 狀態與內容(示範用)
 #   scripts/conjur.sh rotate-key <host>        重新產生某個 host 的 API key(存到 config/conjur/keys/<host>.key)
 #   scripts/conjur.sh down                     停掉並清除 Conjur(資料一併清除)
+#   scripts/conjur.sh probe-bad <host>         (原說明未列)用錯誤的 API key 冒充該 host,示範認證失敗
+#   host 清單:svc-orders legacy-orders rogue-app opmenu broker(與 policy/kafka.yml 一致);Conjur 帳戶名稱 demo。
+# 會改動什麼:
+#   up        產生 config/conjur/conjur.env(data key)、admin.key、各 host 的 keys/<host>.key,啟動 conjur 相關容器
+#   load      重新載入 policy,補齊缺少的 host API key
+#   set / set-cred / rotate-key   改寫 Conjur 內的秘密或 host API key(及對應的 keys 檔)
+#   down      移除容器與資料,刪除 admin.key、policy.out、keys/(保留 conjur.env)
+#   get-as / probe-as / probe-bad   只查詢(API key 以唯讀掛載給容器,不放環境變數、不出現在行程清單,token 不落地)
+# 怎麼判斷成功:up 最後印「[conjur] 完成:…」;get-as 成功印秘密值,失敗印「[HTTP code]」(結束碼 1);
+#   set 印「已寫入」。
+# 常見失敗:「沒有 <host> 的 API key」→ 還沒產生 → 先執行 scripts/conjur.sh rotate-key <host>(或 up / load)。
+# ============================================================================
 set -euo pipefail
 cd "$(dirname "$0")/.."
 export MSYS_NO_PATHCONV=1
@@ -80,5 +97,5 @@ down)
   rm -f "$C/admin.key" "$C/policy.out"; rm -rf "$C/keys"
   echo "[conjur] 已清除(保留 $C/conjur.env)"
   ;;
-*) sed -n 2,10p "$0"; exit 1 ;;
+*) sed -nE '2,/^# ={20,}$/p' "$0" | sed -E '1d;$d; s/^# ?//'; exit 1 ;;
 esac

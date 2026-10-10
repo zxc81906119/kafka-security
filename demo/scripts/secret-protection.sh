@@ -1,5 +1,11 @@
 #!/usr/bin/env bash
-# Confluent Secret Protection(官方功能):把 broker 設定檔裡的密碼加密,主金鑰放到 CyberArk(Conjur),broker 啟動時才取。
+# ============================================================================
+# secret-protection.sh — Confluent Secret Protection(官方功能):把 broker 設定檔裡的密碼加密,主金鑰放到 CyberArk(Conjur),broker 啟動時才取
+# ----------------------------------------------------------------------------
+# 白話:broker 設定檔裡的 AD 查詢帳號密碼原本是明文。Secret Protection 把它加密存成 certs/security.properties,
+#   解密用的「主金鑰」只放在 Conjur 與 broker 程序的環境變數,不寫入任何檔案。這支腳本涵蓋建置、套用、
+#   主金鑰與資料金鑰輪替,以及「檔與金鑰不成對 broker 就起不來」的示範。
+# 前置條件:CyberArk(Conjur)已啟動(scripts/conjur.sh up),demo 環境已啟動。
 # 用法:
 #   scripts/secret-protection.sh setup     產生主金鑰 → 存進 Conjur(kafka/broker/master-key)→ 加密 AD 查詢帳號的密碼 → 寫出 certs/security.properties
 #   scripts/secret-protection.sh apply     以加密設定重建 broker2(docker-compose.cyberark.yml 覆蓋;啟動前向 Conjur 取主金鑰)
@@ -11,9 +17,22 @@
 #   scripts/secret-protection.sh mismatch-demo  故意讓「檔」與「主金鑰」不成對(換回輪替前的舊檔)重啟 broker2 → 起不來;再換回成對的檔 → 恢復
 #   scripts/secret-protection.sh check           檢查 certs/security.properties 與 Conjur 的主金鑰是不是一對(解得開)
 #   scripts/secret-protection.sh join-broker1  讓 broker1 也套用(與 broker2 共用同一把主金鑰、同一份檔)→ 之後輪替會「滾動」重啟兩台
-#   scripts/secret-protection.sh revert    broker2 回到原本的明文設定
+#   scripts/secret-protection.sh revert    broker2 回到原本的明文設定(程式實際上 broker1、broker2 都用原本設定重建)
 #   scripts/secret-protection.sh show      看 broker2 生效的設定裡那個值長什麼樣(佔位符,不是密碼)
 # 主金鑰只存在 Conjur 與 broker 程序的環境變數,不寫入任何檔案。
+# 會改動什麼:
+#   setup / rotate-*  寫入或換掉 certs/security.properties(輪替時會留 .old、.before-data 備份)、改寫 Conjur 的
+#     kafka/broker/master-key、master-key-passphrase、master-key-previous
+#   apply / apply-summon / join-broker1 / rotate-* / mismatch-demo / revert  重建或重啟 broker1 / broker2
+#   summon-setup  下載 summon 與 summon-conjur 到 config/conjur/bin、寫 config/conjur/identity-broker/conjur.identity(不進版本庫)
+#   check / show  只查詢,什麼都不改
+#   還原用 revert(回到明文設定);mismatch-demo 結束時會自動換回成對的檔。
+# 怎麼判斷成功:各子命令多半以「判定:…」結尾(rotate-master、rotate-data、mismatch-demo、join-broker1);
+#   check 印「是一對(解得開)」;印「不成對」或「起不來」表示失敗,結束碼非 0。
+# 常見失敗:「先執行 scripts/conjur.sh up」→ 沒有 Conjur 的 broker 身分金鑰 → 先啟動 Conjur;
+#   「輪替失敗(取不到新主金鑰)」→ confluent CLI 輪替沒有輸出新主金鑰 → 確認 setup 已執行、Conjur 內的主金鑰與 passphrase 是目前的;
+#   「沒有可退回的舊檔或舊主金鑰」→ 沒做過 rotate-master;「先執行 rotate-master(才有輪替前的舊檔)」→ mismatch-demo 需要先輪替過。
+# ============================================================================
 set -euo pipefail
 cd "$(dirname "$0")/.."
 export MSYS_NO_PATHCONV=1
@@ -167,5 +186,5 @@ show)
   echo "broker2 的 /etc/kafka/kafka.properties 裡 AD 查詢密碼那一行:"; docker exec broker2 grep '^ldap.java.naming.security.credentials' /etc/kafka/kafka.properties
   echo "broker2 的環境裡有沒有明文密碼:$(docker exec broker2 env | grep -c 'ldap-bind-pw' || true) 處"
   ;;
-*) sed -n 2,11p "$0"; exit 1 ;;
+*) sed -nE '2,/^# ={20,}$/p' "$0" | sed -E '1d;$d; s/^# ?//'; exit 1 ;;
 esac

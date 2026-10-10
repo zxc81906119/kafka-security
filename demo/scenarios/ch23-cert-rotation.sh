@@ -1,10 +1,19 @@
 #!/usr/bin/env bash
-# 第 23 章(進階):憑證到期監控與不停機換憑證
-# 需要 HA 模式、Prometheus、Alertmanager、blackbox-exporter:scripts/ha.sh on;docker compose --profile c3 up -d prometheus alertmanager blackbox-exporter
+# ============================================================================
+# ch23-cert-rotation.sh — 第 23 章:憑證到期監控與不停機換憑證
+# ----------------------------------------------------------------------------
+# 白話:憑證過期是常見的停機原因。這一章用 blackbox 探測各端點「實際送出」的憑證算剩餘天數,並實測不重啟 broker 的換憑證流程(預檢、金絲雀、帶外回退),以及 SAN 不對、換成別的 CA 簽的憑證會發生什麼事。
+# 前置條件:需要 HA 模式、Prometheus、Alertmanager、blackbox-exporter:scripts/ha.sh on;docker compose --profile c3 up -d prometheus alertmanager blackbox-exporter
+# 用法:
+#   ./demo.sh 23                  經由講解控制台跑這一章(DEMO_PAUSE=0 不暫停)
+#   ./scenarios/ch23-cert-rotation.sh    直接跑
+# 會改動什麼:在 certs/ 產生測試用憑證與 keystore(不進版本庫);對 broker 設定動態 keystore(cleanup 步驟會移除);persist 步驟會重啟 broker1;rotate 建立並刪除 topic cert.roll。
+# 怎麼判斷成功:每一步印「✔ 符合預期」,最後一行「第 23 章完成(失敗 0 項)」
 # 實測結果摘要:
 #   監控:blackbox 探測 12 個端點(對外 TLS 6、內部 mTLS 6)的「實際送出」憑證;telemetry 的 mtls_earliest_cert_expiration_ms 全部回報 Long.MAX_VALUE(沒填值),不採用
 #   換憑證:動態 keystore 重載(不重啟)比滾動重啟好;Kafka 規定 keystore 設定只能設在單一 broker,所以「預檢 → 金絲雀 → 其餘」;MDS 不在動態重載範圍
 #   事故:SAN 不同被 broker 拒絕;別的 CA 簽的憑證 broker 會接受但 client 全部失敗 → 回退要走帶外路徑(INTERNAL mTLS 埠)
+# ============================================================================
 source "$(dirname "$0")/../scripts/lib-ev.sh"
 ch_begin ch23 "憑證到期監控與不停機換憑證"
 CL="$DEMO_ROOT/scripts/cert-lab.sh"

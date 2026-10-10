@@ -1,5 +1,24 @@
 #!/usr/bin/env bash
-# 第 7 章:機器(不在 AD)—— 服務身分 = Kafka 內的 SCRAM 帳號,授權仍走 RBAC,且最小權限
+# ============================================================================
+# ch07-service.sh — 第 7 章:機器(不在 AD)—— 服務身分 = Kafka 內的 SCRAM 帳號,授權仍走 RBAC,且最小權限
+# ----------------------------------------------------------------------------
+# 白話:機器 / 應用程式不在 AD 裡,所以用 Kafka 內建的 SCRAM 帳號當服務身分(密碼放密碼庫)。
+#       授權仍然走同一套 RBAC,與 AD 群組並列在 C3 同一張表,而且只給最小權限。
+# 前置條件:環境已建好;需要 e2e/ 的 Playwright(操作 C3);scripts/create-service-account.sh、scripts/rbac-lib.sh
+# 用法:
+#   ./demo.sh 7                      經由講解控制台跑這一章
+#   ./scenarios/ch07-service.sh      直接跑(DEMO_PAUSE=0 不暫停)
+# 會改動什麼:
+#   建立 SCRAM 帳號 svc-orders(密碼 orders-secret-v1);在 C3 指派 User:svc-orders 對 orders. 的 DeveloperWrite
+#   在 config/clients/ 產生 scram-svc-orders-wrong.properties、plain-svc-orders.properties(測試用設定檔);往 orders.events 寫入一則訊息
+#   結束前不還原(第 9 章會接著用 svc-orders;scripts/reset.sh 可還原)
+# 怎麼判斷成功:每一步印『✔ 符合預期』,最後一行『第 07 章完成(失敗 0 項)』
+# 實測結果摘要:
+#   授權前 svc-orders 認證成功但寫入被拒;在 C3 授權後寫入成功
+#   最小權限:svc-orders 寫 payments.* 被拒
+#   密碼錯誤 → SCRAM 認證失敗;用 AD(SASL/PLAIN)方式驗證 svc-orders → 失敗,服務身分與人完全分開
+#   audit log 看得到 principal = User:svc-orders
+# ============================================================================
 source "$(dirname "$0")/../scripts/lib-ev.sh"
 ch_begin ch07 "機器怎麼辦(不在 AD):服務帳號 SCRAM + RBAC"
 source "$DEMO_ROOT/scripts/rbac-lib.sh"

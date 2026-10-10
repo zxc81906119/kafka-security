@@ -1,8 +1,16 @@
 #!/usr/bin/env bash
-# 用 curl 容器呼叫 MDS REST(可用 client 憑證 mTLS 或 AD 帳密 Basic)。
+# ============================================================================
+# mds.sh — 用 curl 容器呼叫 MDS REST
+# ----------------------------------------------------------------------------
+# 白話:可用 client 憑證(mTLS)或 AD 帳密(Basic)驗證。MDS 位址預設 https://broker1:8091,可用環境變數 MDS_URL 覆寫。
+#   scripts/rbac-lib.sh 的 rbac_bind / rbac_unbind 靠它呼叫 MDS。
+# 前置條件:demo 環境已啟動(scripts/up.sh)
 # 用法:
-#   scripts/mds.sh cert <name> <METHOD> <path> [json-body]     # 以 certs/client-<name>.pem 驗證(服務/平台元件身分)
-#   scripts/mds.sh basic <user:pass> <METHOD> <path> [json-body]
+#   scripts/mds.sh cert <name> <METHOD> <path> [json-body]          以 certs/client-<name>.pem 驗證(服務/平台元件身分)
+#   scripts/mds.sh basic <user:pass> <METHOD> <path> [json-body]    以 AD 帳密驗證
+# 會改動什麼:取決於 METHOD 與 path(GET 只查詢;POST / DELETE 會改 MDS 的 role binding)。
+# 怎麼判斷成功:輸出結尾的 [HTTP nnn]。
+# ============================================================================
 export MSYS_NO_PATHCONV=1
 D="$(cd "$(dirname "$0")/.." && pwd -W 2>/dev/null || pwd)"
 mode="$1"; who="$2"; method="$3"; path="$4"; body="${5:-}"

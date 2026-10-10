@@ -1,7 +1,25 @@
 #!/usr/bin/env bash
-# 第 16 章(進階):OP menu —— 日常維運選單(docker 後端;選單程式在 demo/opmenu/)
-# 取證用:以環境變數帶入帳密與核准單號(僅 demo 設定檔 OPMENU_ALLOW_ENV_OVERRIDE=1 時有效;正式環境一律忽略)。
-# 滾動重啟(27)會真的依序重啟兩台 broker,約 3 分鐘;不想跑時設 CH16_SKIP_ROLLING=1。
+# ============================================================================
+# ch16-opmenu.sh — 第 16 章:OP menu:日常維運選單(登入、查看、維護模式、權限覆核、audit、時窗與並行鎖、滾動重啟)
+# ----------------------------------------------------------------------------
+# 白話:示範 demo/opmenu/ 的日常維運選單(docker 後端):選單分四層,編號第一位是層級。
+#   選單本身不判斷權限,一律交給 Kafka RBAC(沒權限的人用同一個選單會被拒);變更類項目還有變更時窗與並行鎖保護。
+# 前置條件:環境已建好;Alertmanager 已啟用(維護模式要建靜音)
+# 用法:
+#   ./demo.sh 16                  經由講解控制台跑這一章
+#   ./scenarios/ch16-opmenu.sh      直接跑(DEMO_PAUSE=0 不暫停)
+# 會改動什麼:開頭刪除 opmenu 的並行鎖目錄與 demo/.maint.out。
+#   維護模式:對 broker1 建立 Alertmanager 靜音再結束它;匯出權限清單 CSV 到 opmenu/log/;並行鎖那步暫時建立鎖目錄與背景 sleep(結束前清掉)。
+#   滾動重啟(項目 27)會真的依序重啟兩台 broker,約 3 分鐘;不想跑時設 CH16_SKIP_ROLLING=1。
+#   結束前刪除 .maint.out。
+# 怎麼判斷成功:每一步印『✔ 符合預期』,最後一行『第 16 章完成(失敗 0 項)』
+# 實測結果摘要:取證用:以環境變數帶入帳密與核准單號(OPMENU_USER、OPMENU_PASS、OPMENU_TICKET 等),僅在 demo 設定檔 OPMENU_ALLOW_ENV_OVERRIDE=1 時有效,正式環境一律忽略
+#   項目 11 一次看完 partition、broker、MDS、token 剩餘時間、controller quorum;項目 19 顯示每個設定值的來源(conf / derived / default)
+#   項目 25/26:維護模式 = Alertmanager silence,只能結束 opmenu 自己建的
+#   ming(唯讀)匯出權限清單被 Kafka RBAC 拒絕
+#   變更時窗:模擬週三中午嘗試變更被擋(唯讀項目與緊急模式不受限);另一人持有鎖時變更被拒並顯示是誰在做什麼
+#   項目 27 滾動重啟:一次一台,每台重啟後先等 45 秒,再連續兩次確認全部 broker 在線且 under-replicated 與 offline 為 0 才換下一台
+# ============================================================================
 source "$(dirname "$0")/../scripts/lib-ev.sh"
 ch_begin ch16 "OP menu:日常維運選單(登入、查看、維護模式、權限覆核、audit、時窗與並行鎖)"
 OPDIR="$DEMO_ROOT/opmenu"

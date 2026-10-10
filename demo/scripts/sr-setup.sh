@@ -1,5 +1,9 @@
 #!/usr/bin/env bash
-# 第 20 章:啟動 Schema Registry(RBAC)並完成授權。可重複執行。
+# ============================================================================
+# sr-setup.sh — 第 20 章:啟動 Schema Registry(RBAC)並完成授權
+# ----------------------------------------------------------------------------
+# 白話:Schema Registry 要存 schema、查授權、放加密金鑰,每一項都需要 RBAC 授權,少一項就啟動失敗或回 403。
+#   這支腳本把 SR 自己與相關人員群組需要的授權全部補齊、啟動 SR,並等到授權生效。可重複執行。
 # 身分:SR 自己用 client 憑證(CN=schema-registry)向 MDS 換 token(與 REST Proxy 同一種做法),不是 AD 帳號;人用 AD 帳密(Basic)。
 # SR 需要的授權(實測逐一補齊,少一項就會在日誌看到 TopicAuthorizationException 或 403):
 #   _schemas topic 與 consumer group schema-registry   → ResourceOwner(存 schema)
@@ -8,6 +12,15 @@
 #   SR 叢集範圍的 SecurityAdmin                         → 代使用者向 MDS 查授權(沒有:KEK 端點回 500,日誌 "not permitted for requestor")
 # 人的授權(AD 群組):topic-admin → 全部 subject 的 ResourceOwner;security → 全部 KEK 的 ResourceOwner(KEK 保管人);
 #   orders-write → orders. 開頭 subject 的讀寫,與 KEK orders-kek 的讀取
+# 前置條件:demo 環境已啟動(scripts/up.sh)。
+# 用法:
+#   scripts/sr-setup.sh
+# 會改動什麼:補產 SR 需要的憑證(scripts/make-certs.sh,已有的略過);新增上述 role binding;
+#   啟動 schema-registry 容器(compose profile sr)。不會還原。
+# 怎麼判斷成功:最後印「[sr] 就緒(gary 可列 KEK)」,結束碼 0。
+# 常見失敗:印「[sr] 授權尚未生效(最後狀態碼 …);稍後再試」(結束碼 1)→ SR 對 MDS 的授權快取還沒更新,
+#   或 SR 沒起來 → 稍等後重跑,並看 docker logs schema-registry。
+# ============================================================================
 set -euo pipefail
 cd "$(dirname "$0")/.."
 export MSYS_NO_PATHCONV=1

@@ -1,5 +1,20 @@
 #!/usr/bin/env bash
-# 第 15 章(進階):人員異動/離職 —— AD 群組一收回,已發出的 MDS token 立刻失去權限(token 本身未到期)
+# ============================================================================
+# ch15-offboarding.sh — 第 15 章:人員異動:AD 收回群組後,已發出的 token 失去權限
+# ----------------------------------------------------------------------------
+# 白話:員工離職或調職時,只要在 AD 把他移出群組,他手上已發出且尚未到期的 MDS token 也會立刻失去權限。
+#   因為授權是依「現在的群組」判斷,不是依發 token 當下;Kafka 與 token 本身都不用動。
+# 前置條件:環境已建好(AD、MDS、REST Proxy)
+# 用法:
+#   ./demo.sh 15                  經由講解控制台跑這一章
+#   ./scenarios/ch15-offboarding.sh      直接跑(DEMO_PAUSE=0 不暫停)
+# 會改動什麼:開頭確保 yujie 在 orders-write,並綁 Group:orders-write 對 orders. 的 DeveloperWrite 與 DeveloperRead;中途把 yujie 移出 orders-write;暫存 token 於 demo/.tok-yujie。
+#   結束前:刪除 .tok-yujie、把 yujie 加回 orders-write、解除上述兩條 role binding。
+# 怎麼判斷成功:每一步印『✔ 符合預期』,最後一行『第 15 章完成(失敗 0 項)』
+# 實測結果摘要:yujie 取得的 token 是 JWT,效期 1 小時,sub 為 YUJIE
+#   收回前用該 token 寫入 200;AD 移出群組(等群組快取刷新約 12 秒)後,同一個未到期的 token 再寫入 403
+#   帳號仍在 AD 時還是能登入(HTTP 200),只是沒有任何 role、看不到業務 topic
+# ============================================================================
 source "$(dirname "$0")/../scripts/lib-ev.sh"
 source "$DEMO_ROOT/scripts/rbac-lib.sh"
 ch_begin ch15 "人員異動:AD 收回群組後,已發出的 token 失去權限"

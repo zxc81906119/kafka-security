@@ -1,6 +1,24 @@
 #!/usr/bin/env bash
-# 第 19 章(進階):帳號被偷之後 —— 讓被偷的帳號「撐不久、灌不大、被發現、不拖垮管理員」
-# 對應第 18 章的發現(只停用 SCRAM 憑證擋不住舊連線)。六項:SASL 重新認證、認證失敗告警、TLS 套件限定、連線數上限、client quota、AD 帳號鎖定的反向影響。
+# ============================================================================
+# ch19-stolen-account.sh — 第 19 章:帳號被偷之後:讓被偷的帳號撐不久、灌不大、被發現、不拖垮管理員
+# ----------------------------------------------------------------------------
+# 白話:接續第 18 章的發現(只停用 SCRAM 憑證擋不住舊連線),示範六項補強:SASL 重新認證、認證失敗告警、TLS 套件限定、連線數上限、client quota、AD 帳號鎖定的反向影響(鎖定也可能把管理員擋在外面)。
+# 前置條件:環境已建好;Prometheus、Alertmanager 已啟動(告警那步);步驟會用 docker 起臨時 openssl 容器
+# 用法:
+#   ./demo.sh 19                  經由講解控制台跑這一章
+#   ./scenarios/ch19-stolen-account.sh      直接跑(DEMO_PAUSE=0 不暫停)
+# 會改動什麼:connections.max.reauth.ms 是環境既有設定,本章只檢查。
+#   連線數上限:暫時加上動態設定 max.connections.per.ip=2,同一步結束前移除。
+#   reauth-test.sh、quota-test.sh 各自做實驗;AD 鎖定先開(ad-lockout.sh on)、解鎖後關閉(off)。
+#   scram-bug 一步會新建並刪除 SCRAM 帳號、重啟 broker1,再重建帳號重啟恢復。
+# 怎麼判斷成功:每一步印『✔ 符合預期』,最後一行『第 19 章完成(失敗 0 項)』
+# 實測結果摘要:重新認證:CLIENT listener 的 SASL 連線每 60 秒重新認證一次(demo 值,正式環境建議 1 小時;預設 0 = 連著永遠有效);停用憑證後 60 秒內舊連線被切斷(第 18 章同樣情境 14/14 全寫入)
+#   告警:5 次錯誤登入觸發 Prometheus 規則 KafkaAuthFailuresBurst 並送到 Alertmanager(規則與指標都約每 60 秒一次)
+#   TLS 只收 1.2/1.3 與 AEAD 套件,CBC + SHA-1 弱套件被拒(未設定前 broker 接受 ECDHE-RSA-AES128-SHA)
+#   單一來源 IP 最多 2 條連線,超過的被 broker 拒絕;quota 限速後吞吐量降為原來的 1/N
+#   AD 帳戶鎖定是雙面刃:對 GARY 亂試 6 次把他鎖住,連對的密碼都進不去;機器帳號與緊急路徑(bootstrap 憑證)不受影響;管理員解鎖或等 60 秒即恢復
+#   已知 bug KAFKA-20774:刪除 SCRAM 帳號(--delete-config)後重啟 broker,重放 metadata 時整組 SCRAM 使用者被丟掉,所有 SCRAM 登入失敗(fix 在 Kafka 4.5.0 未發行,CP 8.3.2 受影響);救回 = 重建被刪帳號再重啟。所以這個 demo 停用帳號一律覆寫隨機密碼、不刪除
+# ============================================================================
 source "$(dirname "$0")/../scripts/lib-ev.sh"
 ch_begin ch19 "帳號被偷之後:失效、告警、限速、限連線、鎖定"
 DC="$DEMO_ROOT/scripts/dcurl.sh"

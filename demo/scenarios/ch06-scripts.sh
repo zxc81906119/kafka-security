@@ -1,5 +1,21 @@
 #!/usr/bin/env bash
-# 第 6 章:維運腳本怎麼辦 —— 腳本共用、憑證各人各自;反例:共用帳號 → 稽核看不到「是誰」
+# ============================================================================
+# ch06-scripts.sh — 第 6 章:維運腳本怎麼辦 —— 腳本共用、憑證各人各自;反例:共用帳號 → 稽核看不到「是誰」
+# ----------------------------------------------------------------------------
+# 白話:全組共用一支維運腳本沒問題,但腳本裡不能寫帳號密碼,而是讀「執行者自己的」client.properties,
+#       這樣權限和稽核都跟著人走。反例是全組共用一個帳號:唯讀的人也能寫,audit log 也只看到共用帳號。
+# 前置條件:建議已跑過第 3、4 章(yujie 在 orders-write、ming 為 orders-read);需要 scripts/ops/orders-heartbeat.sh
+# 用法:
+#   ./demo.sh 6                      經由講解控制台跑這一章
+#   ./scenarios/ch06-scripts.sh      直接跑(DEMO_PAUSE=0 不暫停)
+# 會改動什麼:
+#   建立反面教材用的 SCRAM 帳號 shared-ops,並綁 User:shared-ops 對 orders. 的 DeveloperWrite;往 orders.events 寫入心跳訊息
+#   結束前會還原:解除該綁定、以 scripts/scram-disable.sh 停用 shared-ops
+# 怎麼判斷成功:每一步印『✔ 符合預期』,最後一行『第 06 章完成(失敗 0 項)』
+# 實測結果摘要:
+#   同一支腳本:yujie 執行成功(OK: 已送出)、ming 執行被拒(他是 orders-read)——權限跟著各人的設定走
+#   共用帳號 shared-ops:yujie、ming 用都成功(連唯讀的人都能寫);audit log 的 principal 全部是 User:shared-ops,看不出是誰
+# ============================================================================
 source "$(dirname "$0")/../scripts/lib-ev.sh"
 ch_begin ch06 "維運腳本:腳本共用、憑證各人各自"
 source "$DEMO_ROOT/scripts/rbac-lib.sh"

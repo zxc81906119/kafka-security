@@ -1,7 +1,20 @@
 #!/usr/bin/env bash
-# 第 20 章(進階):Schema Registry 納入同一套身分與授權;KEK 管理權限;欄位級加密(CSFLE)的授權前提
-# 實測結果摘要:SR 的 REST 要認證,授權跟 AD 群組走(subject 與 KEK 都是);KEK 只有 security 群組能建;
-#   但 CSFLE 本身(ENCRYPT 規則)需要「企業版 + CSFLE 加購授權」,demo 的試用授權註冊會回 402,所以加密與解密沒有在這個環境驗證。
+# ============================================================================
+# ch20-schema-registry.sh — 第 20 章:Schema Registry 納入同一套身分與授權;KEK 管理權限;欄位級加密(CSFLE)的授權前提
+# ----------------------------------------------------------------------------
+# 白話:Schema Registry(SR)的 REST 要認證,授權與 Kafka 一樣依 AD 群組走(subject 與 KEK 都是)。
+#   欄位級加密(CSFLE)需要額外授權,這個環境無法驗證加密與解密本身,只示範授權面與上線前的檢查習慣。
+# 前置條件:需要 profile sr(第一步 scripts/sr-setup.sh 會啟動 Schema Registry 並補角色);環境已建好
+# 用法:
+#   ./demo.sh 20                  經由講解控制台跑這一章
+#   ./scenarios/ch20-schema-registry.sh      直接跑(DEMO_PAUSE=0 不暫停)
+# 會改動什麼:啟動 Schema Registry,補 SR 自己的 role 與 SR 叢集範圍的群組 role;註冊 schema 到 payments.events-value、orders.events-value;建立 KEK orders-kek(local-kms,僅測試用);sr-raw-check.sh 寫入一筆含卡號的測試訂單。本章結尾沒有還原這些項目。
+# 怎麼判斷成功:每一步印『✔ 符合預期』,最後一行『第 20 章完成(失敗 0 項)』
+# 實測結果摘要:SR 的 REST 要認證,授權跟 AD 群組走(subject 與 KEK 都是);KEK 只有 security 群組(gary)能建
+#   不帶帳密與密碼錯誤都是 401,正確 200;orders-write(yujie)只能寫 orders. 開頭的 subject,payments 被拒;yujie 只被授權『讀』orders-kek,ming 沒有任何 role
+#   CSFLE 本身(ENCRYPT 規則)需要企業版加 CSFLE 加購授權,demo 的試用授權註冊會回 402(Both enterprise and add-on CSFLE licenses are required),所以加密與解密沒有在這個環境驗證
+#   上線前檢查:不看 producer 有沒有報錯,直接用一般 consumer 讀 topic 原始位元組;這個環境會看到明文,正式環境看到明文就代表加密規則沒生效
+# ============================================================================
 source "$(dirname "$0")/../scripts/lib-ev.sh"
 ch_begin ch20 "Schema Registry 與欄位級加密(CSFLE)的授權"
 DC="$DEMO_ROOT/scripts/dcurl.sh"

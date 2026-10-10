@@ -1,9 +1,24 @@
 #!/usr/bin/env bash
-# 第 11 章(進階):維運分權 —— 平常人人唯讀,「看叢集」「管 topic」「管授權」拆成不同 AD 群組,需要時經核准臨時加入、做完收回
-# 2026-10-07 依「簡報的 7 組」重寫:ops = Operator、topic-admin = ResourceOwner(Topic*、Group*)、rbac-admin = UserAdmin。
-# 三組的 role binding 在 bootstrap 時就綁好,日常這些群組是空的;臨時提權 = 只在 AD 把人加進群組,Kafka 端零變更。
-# 能力以實測為準(spike/group-roles-aligned/run.log):ops 看得到 topic 清單但不能建、不能讀、不能改授權;
-# topic-admin 能建/刪 topic、讀資料、並且能在自己的 Topic* 範圍內改授權(所以是強角色);rbac-admin 只能改授權。
+# ============================================================================
+# ch11-separation.sh — 第 11 章:維運分權:平常人人唯讀,「看叢集」「管 topic」「管授權」拆成不同 AD 群組,需要時臨時加入、做完收回
+# ----------------------------------------------------------------------------
+# 白話:日常沒有人擁有維運權限;需要時經核准,只在 AD 把人加進對應群組,Kafka 端零變更,做完再移出。
+#   依簡報的 7 組群組(2026-10-07 重寫):ops = Operator、topic-admin = ResourceOwner(Topic*、Group*)、rbac-admin = UserAdmin。
+#   三組的 role binding 在 bootstrap 時就綁好,日常這些群組是空的。
+# 前置條件:環境已建好(AD、MDS、C3);用瀏覽器自動化(e2e/ch11-ui.mjs)操作 C3 與 phpLDAPadmin
+# 用法:
+#   ./demo.sh 11                  經由講解控制台跑這一章
+#   ./scenarios/ch11-separation.sh      直接跑(DEMO_PAUSE=0 不暫停)
+# 會改動什麼:開頭先清掉上次殘留:把 yujie、ming 移出 ops/topic-admin/rbac-admin,ming 設回 orders-read,刪 topic infra.ops-demo,補 orders-read/orders-write 對 Group demo- 的 DeveloperRead,並寫一筆測試資料到 orders.events。
+#   過程中:在 AD 暫時把 yujie 加進 ops、topic-admin,把 ming 加進 rbac-admin(每次都在該步收回);建立 topic infra.ops-demo;暫時綁 orders-write 對 infra. 的 DeveloperRead。
+#   結束前清掉:infra. 與 demo- 的 role binding、orders-read 對 orders. 的 role binding、topic infra.ops-demo。
+# 怎麼判斷成功:每一步印『✔ 符合預期』,最後一行『第 11 章完成(失敗 0 項)』
+# 實測結果摘要:能力以實測為準(spike/group-roles-aligned/run.log)
+#   ops:看得到 topic 清單,但不能建 topic、不能讀資料、不能改授權
+#   topic-admin:能建/刪 topic、讀資料,並能在自己的 Topic* 範圍內改授權(所以是強角色)
+#   rbac-admin:只能改授權,不能管 topic
+#   收回後 yujie 建 topic、ming 改授權都再次被拒(403);audit log 看得到 yujie 被拒、ming 被允許
+# ============================================================================
 source "$(dirname "$0")/../scripts/lib-ev.sh"
 ch_begin ch11 "維運分權:唯讀 / 維運(ops)/ topic 管理(topic-admin)/ 授權管理(rbac-admin)"
 source "$DEMO_ROOT/scripts/rbac-lib.sh"

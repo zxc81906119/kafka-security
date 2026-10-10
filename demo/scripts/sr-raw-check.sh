@@ -1,9 +1,20 @@
 #!/usr/bin/env bash
-# 第 20 章:上線前的檢查習慣——欄位到底有沒有被加密?不要只看 producer 沒報錯,直接讀 topic 的原始位元組。
+# ============================================================================
+# sr-raw-check.sh — 第 20 章:上線前的檢查習慣——欄位到底有沒有被加密?直接讀 topic 的原始位元組
+# ----------------------------------------------------------------------------
+# 白話:不要只看 producer 沒報錯就當欄位已加密。這支腳本寫入一筆含卡號的訂單,再用一般 consumer 讀 topic 的原始位元組,
+#   找得到卡號字串就代表是明文。
 #   ① 以 svc-orders(SCRAM,不受前面章節的 role 變動影響;Schema Registry 的帳密用 yujie)用 Avro(Schema Registry 的 orders.events-value v1)寫一筆含卡號的訂單;
 #   ② 以 bootstrap 身分用一般 console consumer 讀原始位元組,找卡號字串。
 #   在這個環境(CSFLE 沒有授權、schema 沒有加密規則)會看到明文——這就是「規則沒生效」時 topic 裡的樣子。
-# 用法: scripts/sr-raw-check.sh [卡號,預設 5500-0000-0000-0004]
+# 前置條件:demo 環境與 Schema Registry 已啟動(scripts/sr-setup.sh),且 orders.events-value 已有 v1 schema(含 card_no 欄位)。
+# 用法:
+#   scripts/sr-raw-check.sh [卡號]    預設 5500-0000-0000-0004
+# 會改動什麼:在 orders.events 寫入一筆訂單(不刪除、不還原);另用一個一次性的 consumer group(raw-<隨機數>)讀取。
+# 怎麼判斷成功:最後的「判定:…」。本環境預期「topic 裡的卡號是明文(欄位沒有被加密)」;
+#   正式環境若看到明文,代表加密規則沒生效。「找不到明文卡號」可能是欄位已加密,也可能是這筆沒寫入。
+# 常見失敗:印「寫入失敗:」並結束 → producer 對 Schema Registry 或 Kafka 的授權/認證錯誤,錯誤行會一併印出。
+# ============================================================================
 set -euo pipefail
 cd "$(dirname "$0")/.."
 export MSYS_NO_PATHCONV=1

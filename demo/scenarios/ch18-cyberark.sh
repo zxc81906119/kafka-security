@@ -1,6 +1,27 @@
 #!/usr/bin/env bash
-# 第 18 章(進階):與行內 CyberArk 整合 —— 以 Conjur(CyberArk 的開源秘密管理)示範「應用程式取密碼、輪替、OP menu 取帳密、設定檔密碼不落地」
-# 需要:profile cyberark(scripts/conjur.sh up 會啟動)。PAM 那一側(PSM 代登入、CPM 輪替主機帳號)無法在本機重現,只在文件說明。
+# ============================================================================
+# ch18-cyberark.sh — 第 18 章:與行內 CyberArk 整合:應用程式取密碼、輪替、設定檔密碼不落地
+# ----------------------------------------------------------------------------
+# 白話:以 Conjur(CyberArk 的開源秘密管理)示範:應用程式用機器身分向 Conjur 取密碼,不把密碼寫在檔案;密碼輪替(含新舊並行的零中斷輪替);OP menu 執行時取帳密;broker 設定檔裡的密碼用 Confluent Secret Protection 加密,主金鑰由 Conjur 保管。
+#   PAM 那一側(PSM 代登入、CPM 輪替主機帳號)無法在本機重現,只在文件說明。
+# 前置條件:需要 profile cyberark(開頭執行 scripts/conjur.sh up 啟動 Conjur,啟動失敗就結束);環境已建好;sp-rolling 一步約 4 分鐘
+# 用法:
+#   ./demo.sh 18                  經由講解控制台跑這一章
+#   ./scenarios/ch18-cyberark.sh      直接跑(DEMO_PAUSE=0 不暫停)
+# 會改動什麼:Conjur:寫入 opmenu/alertmanager-auth、svc-orders 的帳密;Kafka:建立 User:svc-orders 對 orders. 的 DeveloperWrite。
+#   輪替那步改 svc-orders 的 SCRAM 密碼,restore 步驟改回原密碼;並行輪替會建立 svc-orders-v2、隔離/停用 svc-orders,rotate2-restore 還原並移除 v2;舊連線實驗後也各自 restore。
+#   broker2(及 broker1)改用 summon/加密設定重啟、輪替金鑰與資料金鑰、滾動重啟;最後 sp-revert 讓 broker2 回到原本設定。
+#   另建立再結束維護模式靜音。
+# 怎麼判斷成功:每一步印『✔ 符合預期』,最後一行『第 18 章完成(失敗 0 項)』
+# 實測結果摘要:policy:svc-orders 只能拿自己的密碼,OP menu 拿 Alertmanager 帳密,broker 拿主金鑰;未被授權的 rogue-app 取秘密回 404(不透露是否存在),錯的 API key 回 401
+#   應用啟動時在記憶體(tmpfs)組連線設定,主機與映像裡沒有密碼檔
+#   輪替後新密碼可用、舊密碼設定檔認證失敗;並行輪替先建新帳號並驗證再切 Conjur,任何一步失敗就回滾;不直接停用舊帳號,先隔離(解除角色,可逆),隔離期有人用會在 audit 看到 DENIED,可 rollback;只看『允許』不夠,因為 audit 不記 orders.* 的讀取成功
+#   舊連線實驗:已建立的連線不會被踢;只停用 SCRAM 憑證擋不住已連著的人(SCRAM 只在建立連線時驗證),解除角色才會切斷(後續見第 19 章)
+#   Secret Protection:主金鑰存 Conjur,生效設定只有佔位符;summon 版 PID 1 是 summon、取不到秘密就不執行,systemd 只需 ExecStart 一行(ExecStartPre 的環境變數不會傳給 ExecStart);兩台 broker 共用同一把主金鑰與同一份 security.properties
+#   主金鑰輪替要檔與 Conjur 的金鑰成對才解得開,不成對 broker 重啟失敗(Failed to unwrap the data key),多台主機每台都要檔加金鑰一起換;資料金鑰輪替 Conjur 不用動
+#   滾動重啟期間 producer 零送出失敗(副本數 2、min.insync.replicas=1,正式環境建議副本 3、min.isr 2)
+#   Conjur 稽核記錄誰取了什麼,rogue-app 被拒可查
+# ============================================================================
 source "$(dirname "$0")/../scripts/lib-ev.sh"
 ch_begin ch18 "與行內 CyberArk 整合:應用程式取密碼、輪替、設定檔密碼不落地"
 CJ="$DEMO_ROOT/scripts/conjur.sh"

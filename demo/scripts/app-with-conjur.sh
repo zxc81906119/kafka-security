@@ -1,9 +1,24 @@
 #!/usr/bin/env bash
-# 示範「應用程式啟動時向 CyberArk(Conjur)取帳密」:帳號與密碼放在 Conjur 的「同一個變數」(JSON),一次取、一次換,不會取到不配對的帳密。
-# 密碼只進記憶體(容器內的 tmpfs)。輪替時應用不用改設定。
-# 用法: scripts/app-with-conjur.sh <host 身分> <topic> <訊息>
+# ============================================================================
+# app-with-conjur.sh — 示範應用程式啟動時向 CyberArk(Conjur)取帳密,再寫入 Kafka
+# ----------------------------------------------------------------------------
+# 白話:帳號與密碼放在 Conjur 的「同一個變數」(JSON),一次取、一次換,不會取到不配對的帳密。
+#   密碼只進記憶體(容器內的 tmpfs),輪替時應用不用改設定。
+#   這支腳本扮演一個「應用程式」,走完 取帳密 → 連 Kafka 寫入 的完整流程。
+# 前置條件:CyberArk(Conjur)已啟動並設定好(第 18 章,scripts/conjur.sh),Conjur 內已有 kafka/<host>/credential 變數
+# 用法:
+#   scripts/app-with-conjur.sh <host 身分> <topic> <訊息>
 #   例: scripts/app-with-conjur.sh svc-orders orders.events hello-from-conjur
-# 流程:① 以 host 的 API key 向 Conjur 換 token → ② 取 kafka/<host>/credential(例 {"u":"svc-orders","p":"…"})→ ③ 在容器的 /dev/shm 組出連線設定 → ④ 寫入 topic → 容器結束,設定隨之消失
+#   流程:① 以 host 的 API key 向 Conjur 換 token → ② 取 kafka/<host>/credential(例 {"u":"svc-orders","p":"…"})
+#         → ③ 在容器的 /dev/shm 組出連線設定 → ④ 寫入 topic → 容器結束,設定隨之消失
+#   帳密與訊息都從 stdin 進容器(第一行是帳密 JSON,第二行起是訊息):不放環境變數,
+#   docker inspect 與行程清單都看不到。
+# 會改動什麼:對 <topic> 寫入一筆訊息(不刪除);臨時容器用 --rm,設定檔只在容器的 /dev/shm,結束即消失。
+# 怎麼判斷成功:印「結果:成功寫入 <topic>(以 <帳號> 身分…)」。
+# 常見失敗:
+#   「取帳密失敗:…」(結束碼 1)→ 向 Conjur 取不到帳密(host 名稱、Conjur 狀態或權限有問題)
+#   「結果:被拒絕」(結束碼 1)→ 該帳號 Kafka 認證失敗或沒有寫入 <topic> 的授權
+# ============================================================================
 set -euo pipefail
 cd "$(dirname "$0")/.."
 export MSYS_NO_PATHCONV=1

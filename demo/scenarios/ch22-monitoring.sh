@@ -1,8 +1,18 @@
 #!/usr/bin/env bash
-# 第 22 章(進階):平台監控與告警——官方列的必設告警(URP、離線分區、active controller)真的被觸發,兩條收集路徑各測一次
-# 需要 HA 模式與 Prometheus、Alertmanager:scripts/ha.sh on;docker compose --profile c3 up -d prometheus alertmanager
-# 路徑 A:telemetry reporter → Prometheus(Confluent 為 Control Center 設計);路徑 B:JMX exporter → Prometheus(業界通用,不依賴 C3)。
-# 實測偵測時間:A 約 150 到 250 秒(指標 60 秒送一次、規則 60 秒評估一次),B 約 35 秒(每 15 秒抓一次與評估);銀行自有監控建議走 B。
+# ============================================================================
+# ch22-monitoring.sh — 第 22 章:平台監控與告警——官方列的必設告警(URP、離線分區、active controller)真的被觸發,兩條收集路徑各測一次
+# ----------------------------------------------------------------------------
+# 白話:監控的價值在「出事時真的會響」。這一章把 broker、controller 實際停掉,看 Prometheus 的告警規則有沒有在預期時間觸發、有沒有送到 Alertmanager、恢復後有沒有解除;也檢查監控端點本身有沒有被保護(HTTPS、帳密、mTLS、帳號分開)。
+# 前置條件:需要 HA 模式與 Prometheus、Alertmanager:scripts/ha.sh on;docker compose --profile c3 up -d prometheus alertmanager
+# 用法:
+#   ./demo.sh 22                  經由講解控制台跑這一章(DEMO_PAUSE=0 不暫停)
+#   ./scenarios/ch22-monitoring.sh    直接跑
+# 會改動什麼:暫時停止 broker3 或 controller2/3(結束前啟動回來);建立並刪除 topic mon.offline;需要的話下載 JMX exporter agent 到 config/jmx/(不進版本庫)。
+# 怎麼判斷成功:每一步印「✔ 符合預期」,最後一行「第 22 章完成(失敗 0 項)」
+# 實測結果摘要:
+#   路徑 A:telemetry reporter → Prometheus(Confluent 為 Control Center 設計);路徑 B:JMX exporter → Prometheus(業界通用,不依賴 C3)。
+#   實測偵測時間:A 約 150 到 250 秒(指標 60 秒送一次、規則 60 秒評估一次),B 約 35 秒(每 15 秒抓一次與評估);銀行自有監控建議走 B。
+# ============================================================================
 source "$(dirname "$0")/../scripts/lib-ev.sh"
 ch_begin ch22 "平台監控與告警:URP、離線分區、active controller 的告警實際觸發"
 MON="$DEMO_ROOT/scripts/monitor-lab.sh"
