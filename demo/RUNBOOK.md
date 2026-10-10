@@ -348,6 +348,21 @@ gary 在 C3 指派 `orders-read` → DeveloperRead;LDAP 介面把 ming 從 devel
 
 **踩坑**:Alloy 第一次啟動 Docker 交出容器全部歷史日誌 → `sending queue is full`(用 `stage.drop older_than` 與 exporter `sending_queue.block_on_overflow`);Loki / Tempo 要 server 憑證 SAN 加 loki、tempo(`make-certs.sh`);Tempo 3.0 沒有 `compactor` 區塊(config 會報 field not found);`otelcol.receiver.kafka` 稽核用 `raw` 編碼會變 base64,改 `text`;`otelcol.processor.attributes` 加 `loki.attribute.labels` 提示才會把記錄屬性升為標籤;Tempo 搜尋的服務清單只算符合條件的 span;OTel agent release 沒有單檔 .sha256,用 `checksums.txt`。**沒測**:Loki / Tempo 高可用與物件儲存、取樣與脫敏、Alloy 高可用、trace-to-logs 連結、Loki 的存取控制與不可竄改、Tempo 3.0 的保留期設定。
 
+## 第 28 章(進階)Schema 演進與資料契約(`./demo.sh 28`,需 Schema Registry;約 4 分鐘)
+
+**準備**:`scripts/sr-setup.sh`(HA 或基礎環境皆可;記憶體吃緊先 `scripts/observability.sh off`、`docker stop control-center`)。`scripts/schema-lab.sh` 子命令:evolve、modes、transitive、gates、naming、contract。
+
+| 項目 | 實測結果 |
+|---|---|
+| 演進(BACKWARD 預設) | 加有預設值的欄位 200;加必填欄位 409 `READER_FIELD_MISSING_DEFAULT_VALUE`;int→string 409 `TYPE_MISMATCH`;註冊已存在的 schema 回原版本(不新增);`POST /compatibility/subjects/<s>/versions/latest` 先問 |
+| 三種模式 | X 加預設欄位 / Y 刪欄位 / Z 加必填欄位:BACKWARD true,true,false;FORWARD true,false,true;FULL true,false,false |
+| TRANSITIVE | v1={id}、v2 加有預設 a、候選 v3 a 必填:BACKWARD true、BACKWARD_TRANSITIVE false;**檢查要用 `/versions` 不是 `/versions/latest`** |
+| 兩道關卡 | yujie 在 orders.* 改型別 409、加預設欄位 200;payments.* 403 `User is denied operation Write on Subject` |
+| 命名策略 | TopicNameStrategy:subject `orders.strat-value`,yujie 可註冊;RecordNameStrategy:subject `demo.Order`,yujie 403(前綴授權不涵蓋) |
+| 資料契約 | CEL `message.amount >= 0`(onFailure ERROR):註冊 200(試用授權下可用);amount=100 寫入成功;amount=-5 `SerializationException … Rule failed: amountNonNegative`(client 端序列化器執行) |
+
+**踩坑**:相容性檢查用 `/versions/latest` 時 TRANSITIVE 也只比最新版;實驗 topic 要替 svc-orders 補 Write 的 ACL(否則先遇到 TopicAuthorizationException,看不到 schema 的結果);`kafka-avro-console-producer` 的 SR 帳密從標準輸入進容器(`scripts/schema-produce.sh`)。**沒測**:消費端規則與 DLQ、migration rules、Protobuf / JSON Schema、CI 外掛、Schema Linking;CEL 規則的正式授權範圍。
+
 ## 對應到客戶 RHEL 9 VM 的位置與步驟(手動部署)
 | demo | RHEL 9 VM |
 |---|---|
