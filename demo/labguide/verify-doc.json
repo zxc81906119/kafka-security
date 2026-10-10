@@ -1,42 +1,42 @@
 [
  {
-  "lab": "ch26",
-  "step": "26.1 啟動:備妥密碼、帳號、儀表板,再起三個容器",
+  "lab": "ch27",
+  "step": "27.1 啟動:Kafka 這一側先備妥,再起三個容器",
   "M": "ok",
   "A": "-",
   "E": "ok"
  },
  {
-  "lab": "ch26",
-  "step": "26.2 Grafana 就緒:只收 HTTPS,資料來源與儀表板載入",
+  "lab": "ch27",
+  "step": "27.2 日誌流向:容器 → Kafka → Loki",
   "M": "ok",
   "A": "-",
   "E": "ok"
  },
  {
-  "lab": "ch26",
-  "step": "26.3 官方儀表板用得起來嗎:逐個查詢檢查",
+  "lab": "ch27",
+  "step": "27.3 Kafka 當緩衝:Loki 停機,資料不掉",
   "M": "ok",
   "A": "-",
   "E": "ok"
  },
  {
-  "lab": "ch26",
-  "step": "26.4 主機指標:node_exporter 走 mTLS,補上磁碟告警",
+  "lab": "ch27",
+  "step": "27.4 trace 跨過 Kafka",
   "M": "ok",
   "A": "-",
   "E": "ok"
  },
  {
-  "lab": "ch26",
-  "step": "26.5 consumer lag:最小權限的 kafka_exporter",
+  "lab": "ch27",
+  "step": "27.5 稽核事件進 Loki",
   "M": "ok",
   "A": "-",
   "E": "ok"
  },
  {
-  "lab": "ch26",
-  "step": "26.6 AD 登入:群組對映角色",
+  "lab": "ch27",
+  "step": "27.6 最小權限:寫與讀分開",
   "M": "ok",
   "A": "-",
   "E": "ok"

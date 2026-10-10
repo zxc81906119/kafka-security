@@ -1,0 +1,9 @@
+# 【trace 跨過 Kafka】第 25 章的 Java 程式不改程式碼、掛上 OpenTelemetry agent:一個 trace 串起寫入端與讀取端
+$ java -javaagent:otel-javaagent.jar …;Tempo /api/search
+▶ 兩支 Java 程式掛上 OpenTelemetry agent(不改程式碼):寫入端送 5 筆、讀取端處理 5 筆;trace 經 Alloy → Kafka(otel-traces)→ Tempo
+Created topic app.trace.
+producer idempotent=true 確認成功=5 失敗=0
+已提交 offset
+Tempo 找到跨兩個服務的 trace(程式結束後約 40 秒):1157276907ca90a09c575c316f0f904a orders-consumer,orders-producer app.trace publish
+(格式:trace-id  服務清單  根 span;根 span 是寫入端的 publish,讀取端的 process 掛在同一個 trace 底下)
+判定:一個 trace 跨過 Kafka 串起寫入端(orders-producer)與讀取端(orders-consumer):context 隨訊息標頭傳遞,應用程式碼沒有改

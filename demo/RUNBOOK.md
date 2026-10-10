@@ -333,6 +333,21 @@ gary 在 C3 指派 `orders-read` → DeveloperRead;LDAP 介面把 ming 從 devel
 
 **踩坑**:`kafka-acls --topic *` 沒加引號會被 shell 展開成目前目錄的檔名,建出錯誤的 ACL(已清除,`kafka_acls` 函式註明要用 `'*'`);server 憑證要補 SAN(grafana、node-exporter、kafka-exporter)後 exporter 才不會 `bad certificate`(`make-certs.sh` 對既有環境同 key 重簽);Grafana 的檔案 provisioning 只在啟動時讀目錄,新增儀表板要重啟 Grafana(`grafana.sh on` 先放檔再啟動);`ldap.toml` 只展開環境變數,所以 bind 密碼由容器啟動指令從密碼檔讀入。**沒測**:磁碟告警實際觸發、Grafana 高可用與外部資料庫、raft 指標缺漏原因、Loki / Tempo(Lab 27 規劃)。
 
+## 第 27 章(進階)日誌與追蹤:經過 Kafka 進 Loki 與 Tempo(`./demo.sh 27`,需 HA 模式與 Grafana;約 12 分鐘)
+
+**準備**:`scripts/ha.sh on` → prometheus 等 → `scripts/grafana.sh on` → `docker stop control-center`(記憶體吃緊時)→ `scripts/observability.sh on`(Kafka 帳號 alloy-producer / alloy-consumer、topic otel-logs / otel-traces、ACL、OpenTelemetry Java agent 2.32.0 校驗 checksums.txt、啟動 loki / tempo / alloy,重啟 grafana 載入資料來源)。
+
+| 項目 | 實測結果 |
+|---|---|
+| 架構 | 容器日誌 → Alloy(loki.source.docker → otelcol.receiver.loki)→ otelcol.exporter.kafka(otel-logs,otlp_json)→ otelcol.receiver.kafka(group alloy-logs)→ otelcol.exporter.loki → Loki;trace:應用程式 OTLP gRPC 4317 → Kafka(otel-traces,otlp_proto)→ Tempo;稽核:confluent-audit-log-events(encoding text)→ Loki(job=kafka-audit) |
+| 保護 | Loki(3100)與 Tempo(3200、OTLP gRPC 4317)皆 HTTPS + mTLS(`client_auth_type: RequireAndVerifyClientCert`);Alloy 與 Grafana 帶 client-monitor 憑證;Kafka 走 SASL_SSL + SCRAM;Alloy 到 Kafka 的密碼從檔案讀進環境變數 |
+| Kafka 當緩衝 | Loki 停機約 1 分鐘:容器日誌 980 行 = Loki 980 行(每次相同,標記用 `bufx<epoch>`) |
+| trace | Producer / AtLeastOnce 掛 `-javaagent` 與 `-Dotel.javaagent.enabled=true`(java 檔名.java 會被判成 JDK 工具而預設停用 agent):同一個 trace 有 publish 與 process;約 40 秒可搜尋 |
+| 稽核 | YUJIE 讀 payments.events 被拒 → Loki `{job="kafka-audit"} |= "User:YUJIE" |~ "granted.{1,4}:false"` 查得到 |
+| 最小權限 | alloy-producer:`--producer` ACL(Write、Describe、Create、冪等)於 otel-*;讀與寫 orders.events 被拒;alloy-consumer:Read / Describe 於 otel-*、稽核 topic,group `alloy-` 前綴 Read;寫被拒 |
+
+**踩坑**:Alloy 第一次啟動 Docker 交出容器全部歷史日誌 → `sending queue is full`(用 `stage.drop older_than` 與 exporter `sending_queue.block_on_overflow`);Loki / Tempo 要 server 憑證 SAN 加 loki、tempo(`make-certs.sh`);Tempo 3.0 沒有 `compactor` 區塊(config 會報 field not found);`otelcol.receiver.kafka` 稽核用 `raw` 編碼會變 base64,改 `text`;`otelcol.processor.attributes` 加 `loki.attribute.labels` 提示才會把記錄屬性升為標籤;Tempo 搜尋的服務清單只算符合條件的 span;OTel agent release 沒有單檔 .sha256,用 `checksums.txt`。**沒測**:Loki / Tempo 高可用與物件儲存、取樣與脫敏、Alloy 高可用、trace-to-logs 連結、Loki 的存取控制與不可竄改、Tempo 3.0 的保留期設定。
+
 ## 對應到客戶 RHEL 9 VM 的位置與步驟(手動部署)
 | demo | RHEL 9 VM |
 |---|---|

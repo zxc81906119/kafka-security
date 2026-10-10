@@ -29,13 +29,13 @@ apps_prepare() {
 }
 
 # run_app <名稱> <程式> [參數...]:在前景執行 apps/<程式>.java,容器取名 <名稱>(之後可以用 docker kill <名稱> 強制中止)。
-#   環境變數 APP_ENV_ARGS 可以放額外的 docker 參數(例如 "-e BOOTSTRAP=…")。
+#   環境變數 APP_ENV_ARGS 可以放額外的 docker 參數(例如 "-e BOOTSTRAP=…"),APP_JAVA_OPTS 放額外的 JVM 參數(例如 -javaagent:…,第 27 章用來掛 OpenTelemetry agent)。
 run_app() {
   local name="$1" prog="$2"; shift 2
   docker rm -f "$name" >/dev/null 2>&1
   docker run --rm --name "$name" --network "$APP_NETWORK" \
     -v "$APP_HOST_DIR/certs:/etc/kafka/secrets:ro" -v "$APP_HOST_DIR/config/clients:/clients:ro" \
-    -v "$APP_HOST_DIR/apps:/apps:ro" -v "$APP_JARS_VOLUME:/jars:ro" \
+    -v "$APP_HOST_DIR/apps:/apps:ro" -v "$APP_JARS_VOLUME:/jars:ro" -v "$APP_HOST_DIR/config/observability:/otel:ro" \
     -e CLASSPATH="/jars/kafka/*" ${APP_ENV_ARGS:-} \
-    --entrypoint java "$APP_IMAGE" "/apps/$prog.java" "$@" 2>&1 | grep -v -E '^SLF4J|^WARNING|^Note:'
+    --entrypoint java "$APP_IMAGE" ${APP_JAVA_OPTS:-} "/apps/$prog.java" "$@" 2>&1 | grep -v -E '^SLF4J|^WARNING|^Note:'
 }

@@ -48,7 +48,7 @@ export const ACTS = [
     scene: ['基本功過關了,但現實不會照教科書走:半夜要有人能建 topic、舊系統不會說 Kafka 的語言、稽核要盤點每條連線、還有一個你不知道的 REST 入口。'] },
   { id: 'week3', title: '第三週:異動、日常維運、傳輸加密、CyberArk、帳號被偷與 Schema Registry', when: '第三週', labs: [15, 16, 17, 18, 19, 20],
     scene: ['人會調動、會離職;而日常維運不能每次都靠指令記憶。第三週,Ming 處理人員異動,並第一次用平台組自己做的維運選單(OP menu)值班。接著把「線上傳輸」補完整:連 AD 的線路、監控元件、使用者連 C3 的入口。最後,資安要求所有密碼不能再放在檔案裡——行裡的 CyberArk 登場。'] },
-  { id: 'week4', title: '第四週:平台韌性與監控', when: '第四週', labs: [21, 22, 23, 24, 25, 26],
+  { id: 'week4', title: '第四週:平台韌性與監控', when: '第四週', labs: [21, 22, 23, 24, 25, 26, 27],
     scene: ['前三週都在精簡環境裡做。主管問了一句很現實的話:「如果半夜壞一台,會怎樣?壞兩台呢?」Ming 決定不憑印象回答,切到 3 台 controller、3 台 broker 的環境,一台一台停給大家看。'] }
 ];
 
@@ -161,6 +161,11 @@ export const LAB_STORY = {
       '接著補上 node_exporter 與 kafka_exporter。他給 kafka_exporter 一個只有 Describe 權限的帳號,證明它看得到 lag、卻讀不到任何訊息;然後故意讓一個 consumer 落後 4000 筆,看告警響、追上後解除。最後 Grafana 的登入也接上 AD,不另建帳號:Gary 是 Admin,其他人只能看。'],
     mission: ['把 Grafana 接上 Prometheus,匯入官方儀表板並檢查它們真的有資料。', '補上主機磁碟與 consumer lag 的監控與告警。', '讓 Grafana 與兩個 exporter 和其他元件一樣受保護:HTTPS、AD 登入、mTLS、最小權限帳號。'],
     recap: ['匯入成功不等於用得起來:官方儀表板的標籤與指標名稱要和抓取設定對得上(job 名稱、env 標籤、exporter 版本)。', '不改官方儀表板內容;對不上的記下來,或另外寫補充的儀表板。', 'node_exporter 補磁碟、kafka_exporter 補 consumer lag;兩個都用 mTLS 保護,Kafka 帳號只給 Describe。', 'Grafana 的使用者與群組以 AD 為準,本機 admin 只留給 break-glass;告警統一走 Prometheus 與 Alertmanager。', 'kafka_exporter 是社群專案,上線前評估維護狀況;磁碟告警的門檻與 lag 門檻都是範例值。'] },
+  27: { scene: ['儀表板上線後,值班的人又問了兩個問題:「出事當下,broker 的日誌在哪裡看?」「訂單慢,是 producer 慢、Kafka 慢,還是 consumer 慢?」Ming 知道指標只回答「有沒有問題」,回答不了「為什麼」,要補日誌和追蹤。',
+      '他決定日誌和 trace 都不直接送進 Loki 與 Tempo,而是先寫進 Kafka:「下游維護的時候,資料不能掉。」他做了一個實驗:把 Loki 停掉,期間照常製造日誌,恢復後比對,980 行對 980 行。接著用 OpenTelemetry 的 Java agent 掛上 Lab 25 的兩支程式,程式碼一行沒改,一個 trace 就把寫入端和讀取端串在一起。',
+      '最後他把 Lab 10 的稽核事件也接了進來,YUJIE 讀不該讀的 topic 被拒,稽核人員在 Grafana 一個地方就查得到。他也把 Alloy 用的 Kafka 帳號拆成只能寫與只能讀的兩個,讓這一整條觀測管線就算被攻破,碰得到的也只有觀測資料。'],
+    mission: ['把平台日誌經 Kafka 送進 Loki,並證明下游停機時資料不掉。', '讓一個 trace 跨過 Kafka,串起 producer 與 consumer,而且不改應用程式碼。', '讓稽核事件也能在 Grafana 查到。', '把觀測管線的 Kafka 帳號拆成最小權限。'],
+    recap: ['Kafka 當緩衝的價值是下游可以停機,保留期就是可以停機的上限;要監控 Alloy 的 consumer lag。', 'trace 要跨過訊息佇列,靠訊息標頭傳遞 context;OpenTelemetry agent 不改程式碼就能做到,但 java 檔名.java 方式要明確啟用 agent。', '稽核事件與平台日誌進同一個 Loki,但 Loki 本身沒有 RBAC,存取控制與不可竄改要另外處理。', '寫與讀用不同的 Kafka 帳號,各自只開需要的 topic。', 'Docker socket 只在測試環境用;正式環境讀日誌檔。取樣、脫敏、保留期都是上線前要決定的事。'] },
   23: { scene: ['告警上線的第一週,Prometheus 發出了一則 Ming 沒見過的訊息:某個端點送出的憑證只剩 20 天。原來憑證到期也是會「出事」的東西,而他之前只有選單裡一個列出日期的功能。',
       'Ming 先比較了怎麼監控:Kafka 自己的憑證到期指標沒有填值,JMX 也沒有;最後用 blackbox 從外面真的握一次手,看 client 會看到什麼,再用選單的檔案巡檢補上 client 憑證與 CA。',
       '換憑證時他學到三件事:動態重載不用重啟,但 MDS 不在範圍內;SAN 不一樣會被拒絕;別的 CA 簽的憑證 broker 照收、client 全掛,所以要預檢、先換一台、並且回退不能走剛被弄壞的那條路。他在變更紀錄寫下:換完之後,靜態設定也要同步。'],

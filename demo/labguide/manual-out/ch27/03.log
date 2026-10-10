@@ -1,0 +1,11 @@
+▶ 把 Loki 停掉,期間製造日誌(建 5 個 topic 會在 broker 留下含 bufx 的日誌),恢復後比對 Loki 收到的行數和容器實際的日誌行數
+Loki 已停止
+Created topic bufx1791642263-1.
+Created topic bufx1791642263-2.
+Created topic bufx1791642263-3.
+Created topic bufx1791642263-4.
+Created topic bufx1791642263-5.
+容器實際的日誌(含 bufx1791642263):980 行
+Loki 已啟動;等 Alloy 把留在 Kafka 的日誌補送進去
+Loki 收到:980 行
+判定:Loki 停機期間產生的日誌,恢復後補齊(980 行 = 980 行,一筆不少):資料留在 Kafka,Alloy 追上後送進去

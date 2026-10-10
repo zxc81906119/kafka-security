@@ -1,0 +1,1 @@
+日誌與追蹤經過 Kafka 進 Loki 與 Tempo

@@ -1,0 +1,5 @@
+# 【啟動】備妥 Kafka 這一側(兩個專用帳號、兩個 topic、最小權限 ACL)、OpenTelemetry Java agent(校驗 SHA-256),啟動 Loki、Tempo、Alloy,讓 Grafana 載入 Loki 與 Tempo 資料來源
+$ scripts/observability.sh on
+   alloy-producer 的 ACL:2 個資源;alloy-consumer:4 個資源
+▶ 啟動 Loki、Tempo、Alloy,並讓 Grafana 載入 Loki 與 Tempo 資料來源(重啟 grafana 容器)
+   [observability] 完成:Alloy UI 只在 demo 網路內(12345);Grafana 的 Explore 選 Loki 或 Tempo 查詢

@@ -1,0 +1,6 @@
+# 【最小權限】alloy-producer 只能寫 otel-*、alloy-consumer 只能讀;兩者都不能碰其他 topic
+$ kafka-console-producer / consumer(以 alloy-producer、alloy-consumer 的 SCRAM 帳號)
+▶ alloy-producer 只能寫 otel-*,alloy-consumer 只能讀 otel-* 與稽核 topic;兩者都不能碰其他 topic
+alloy-producer:寫 otel-logs 被拒 0 次(預期 0);讀 otel-logs 被拒 1 次(預期 ≥1);寫 orders.events 被拒 3 次(預期 ≥1)
+alloy-consumer:讀 otel-logs 讀到內容 1(預期 ≥1);寫 otel-logs 被拒 2 次(預期 ≥1)
+判定:最小權限:alloy-producer 只能寫 otel-*(讀與寫其他 topic 都被拒);alloy-consumer 只能讀(寫被拒)

@@ -1,0 +1,4 @@
+▶ 用 YUJIE 的身分讀沒有權限的 topic(payments.events)→ 被拒;稽核事件經 Kafka 進了 Loki,查得到誰、對什麼、有沒有被允許
+Loki 查到 YUJIE 對 payments.events 被拒絕的稽核事件:有
+查詢(在 Grafana Explore 選 Loki):{job="kafka-audit"} |= "payments.events" |= "User:YUJIE" |~ "granted.{1,4}:false"
+判定:被拒絕的存取留下稽核事件:稽核 topic → Kafka → Alloy → Loki,Grafana 查得到誰(User:YUJIE)對哪個 topic 被拒

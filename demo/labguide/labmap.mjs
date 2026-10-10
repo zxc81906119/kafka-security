@@ -69,6 +69,8 @@ export const MAPS = [
     flows: [['broker 凍結 5 秒,producer 逾時重送', '關閉冪等 → broker 收到兩份', '✘ 1500 筆變 1505 → ✔ 開冪等 0 重複'], ['consumer 處理後、提交前當機', 'offset 沒提交 → 重啟從上次位置再讀', '✘ 同一批 100 筆處理兩次(at-least-once)'], ['新成員加入群組', 'eager 全收 / cooperative 只收要換的', '✘ 6 個分區全停 → ✔ 只動 3 個'], ['成員滾動重啟', '動態成員每次觸發 rebalance / 靜態成員不觸發', '✘ 多 2 次 → ✔ 0 次'], ['交易 abort', 'abort 的訊息仍在 log', '✔ read_committed 看不到 → ✘ read_uncommitted 看得到']] },
   { n: 26, prove: 'Grafana 全元件監控:官方儀表板要檢查「真的有資料」;主機磁碟與 consumer lag 用 node_exporter / kafka_exporter 補上;監控元件自己也要 HTTPS、AD 登入、mTLS、最小權限', use: ['cli', 'broker', 'prom', 'am', 'ad', 'certs', 'browser'],
     flows: [['匯入官方儀表板', '查詢標籤對不對得上抓取設定', '✔ 150 個查詢約 108 個有資料(107 到 108,隨環境略有出入);✘ 其餘是環境沒有的功能或名稱不符'], ['node_exporter / kafka_exporter', 'mTLS(client 憑證)', '✘ 無憑證與外來憑證握手被拒 → ✔ monitor 憑證 200'], ['kafka_exporter 的 Kafka 帳號', 'ACL 只有 Describe', '✔ 看得到 offset 與 lag → ✘ 讀訊息被拒'], ['consumer 落後 4000 筆', 'kafka_consumergroup_lag → Prometheus 規則', '✔ KafkaConsumerLagHigh 觸發 → 追上後解除'], ['AD 帳號登入 Grafana', 'LDAPS + 群組對映角色', '✔ GARY Admin;YUJIE、MING Viewer;✘ 錯密碼 / 匿名 401']] },
+  { n: 27, prove: '日誌與 trace 經 Kafka 當緩衝進 Loki / Tempo:下游停機資料不掉;trace 跨過 Kafka 串起 producer 與 consumer;稽核事件也進 Loki;觀測管線的 Kafka 帳號寫讀分開', use: ['cli', 'broker', 'prom', 'certs', 'browser'],
+    flows: [['平台容器日誌', 'Alloy → Kafka(otel-logs)→ Alloy → Loki(mTLS)', '✔ 6 個節點都進 Loki'], ['Loki 停機 1 分鐘', '日誌留在 Kafka', '✔ 恢復後 980 行 = 980 行'], ['Java 程式掛 OpenTelemetry agent', 'trace context 放進訊息標頭', '✔ 一個 trace 串起 publish 與 process'], ['YUJIE 讀沒有權限的 topic', '稽核事件 → Kafka → Loki', '✘ 被拒 → ✔ Loki 查得到 granted false'], ['alloy-producer / alloy-consumer', 'ACL 寫讀分開', '✔ 各做各的 → ✘ 越權被拒']] },
 ];
 
 const esc = s => s.replace(/&/g, '&amp;').replace(/</g, '&lt;');
