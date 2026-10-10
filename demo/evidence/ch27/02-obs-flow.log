@@ -1,14 +1,14 @@
 # 【日誌流向】平台容器 → Kafka(otel-logs)→ Loki;Loki 與 Tempo 要 mTLS
 $ LogQL sum(count_over_time({job="kafka-platform"}[10m]));kafka-get-offsets otel-logs
 ▶ 確認平台容器的日誌真的經 Kafka 進了 Loki,而且 Loki、Tempo 都要 mTLS
-最近 10 分鐘 Loki 收到的平台日誌:2078 行
-  broker1:427 行
-  broker2:981 行
-  broker3:329 行
-  controller1:82 行
-  controller2:48 行
-  controller3:48 行
-Kafka topic otel-logs 累計 12199 筆(日誌是先寫進這裡,再由 Alloy 讀出送進 Loki)
+最近 10 分鐘 Loki 收到的平台日誌:5967 行
+  broker1:1881 行
+  broker2:2065 行
+  broker3:1567 行
+  controller1:173 行
+  controller2:138 行
+  controller3:138 行
+Kafka topic otel-logs 累計 7925 筆(日誌是先寫進這裡,再由 Alloy 讀出送進 Loki)
 Loki 不帶 client 憑證 [HTTP 000];帶 monitor 憑證 [HTTP 503]
 Tempo 不帶 client 憑證 [HTTP 000];帶 monitor 憑證 [HTTP 200]
-判定:平台日誌經 Kafka(otel-logs 累計 12199 筆)進了 Loki(2078 行 / 10 分鐘);Loki 與 Tempo 都要 mTLS(無憑證握手被拒)
+判定:平台日誌經 Kafka(otel-logs 累計 7925 筆)進了 Loki(5967 行 / 10 分鐘);Loki 與 Tempo 都要 mTLS(無憑證握手被拒)

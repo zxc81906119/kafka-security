@@ -9,7 +9,7 @@ Created topic zdt.test.
 ② 等 producer 寫完…
    producer 的警告(重試、換 leader、斷線重連,屬正常)前幾種:
            1 WARN [Producer clientId=perf-producer-client] Received invalid metadata error in produce request on partition zdt.test-2
-           1 WARN [Producer clientId=perf-producer-client] Received invalid metadata error in produce request on partition zdt.test-1
+           1 WARN [Producer clientId=perf-producer-client] Received invalid metadata error in produce request on partition zdt.test-0
            1 WARN [Producer clientId=perf-producer-client] Got error produce response with correlation id 89 on topic-partition zdt.t
    producer 回報送出 1200 筆;topic 實際 1200 筆;送出失敗 0 筆;警告行 4
 判定:滾動重啟期間 producer 零送出失敗、零遺失(送出 1200 筆 = topic 1200 筆)

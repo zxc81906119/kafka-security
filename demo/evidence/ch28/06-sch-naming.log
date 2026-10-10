@@ -1,6 +1,7 @@
 # 【命名策略】TopicNameStrategy 的 subject 跟著 topic,前綴授權有效;RecordNameStrategy 的 subject 是記錄全名,前綴授權失效
 $ kafka-avro-console-producer --property value.subject.name.strategy=…RecordNameStrategy
 ▶ 命名策略決定 producer 把 schema 註冊在哪個 subject。預設 TopicNameStrategy = <topic>-value(按 topic 前綴授權有效);RecordNameStrategy = 記錄的全名 demo.Order(和 topic �
+Created topic orders.strat.
 yujie 的 producer(TopicNameStrategy,預設):
    → 完成(0 個錯誤);subject 列表:"orders.strat-value" 
 yujie 的 producer(RecordNameStrategy):

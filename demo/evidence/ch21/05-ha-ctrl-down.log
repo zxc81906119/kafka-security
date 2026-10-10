@@ -4,5 +4,5 @@ $ docker stop controller3;kafka-topics --create;寫入;docker start controller3
 停 controller3(剩 2/3,仍有多數)
 建立 topic:Created topic ha.c1.
 寫入既有 topic:送出 100 筆
-LeaderId:               1
+LeaderId:               2
 判定:停 1 台 controller 仍有多數,建立 topic 與寫入都正常

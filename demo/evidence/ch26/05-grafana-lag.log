@@ -8,9 +8,9 @@ ACL:3 個資源(topic *、group *、cluster),操作只有 Describe 與 DescribeC
 ▶ 先替 group 的每個分區建立 offset(從頭開始)——沒提交過 offset 的分區,Kafka 與 kafka_exporter 都不會算 lag(實測踩過:資料集中在某個分區時,lag 只看到幾十
    已建立 offset 的分區數:3
 ▶ consumer group 只讀 2000 筆就停(提交 offset),所以落後約 4000 筆
-   7 秒後:Prometheus 看到 g-lag-1791637379 落後超過 1000 筆
-目前 g-lag-1791637379 的 lag:4000
-   179 秒後:KafkaConsumerLagHigh 觸發
+   7 秒後:Prometheus 看到 g-lag-1791656278 落後超過 1000 筆
+目前 g-lag-1791656278 的 lag:4000
+   172 秒後:KafkaConsumerLagHigh 觸發
 ▶ 再讀完剩下的,lag 回到 0,告警應該解除
-   77 秒後:KafkaConsumerLagHigh 解除
+   85 秒後:KafkaConsumerLagHigh 解除
 判定:kafka_exporter 只有 Describe 權限(看得到 offset、讀訊息被拒);consumer 落後時 lag 指標與告警觸發,追上後解除

@@ -2,9 +2,9 @@
 $ docker stop broker3;等告警 firing;docker start broker3;等告警解除
 ▶ 停 broker3:它上面的副本跟不上,『副本不足的分區數』(URP)會大於 0,告警應該觸發
 停 broker3
-   113 秒後 KafkaUnderReplicatedPartitions 觸發(目前 firing:KafkaBrokerFenced,KafkaJmxScrapeDown,KafkaJmxUnderReplicatedPartitions,KafkaUnderReplicatedPartitions)
+   167 秒後 KafkaUnderReplicatedPartitions 觸發(目前 firing:KafkaBrokerFenced,KafkaJmxScrapeDown,KafkaJmxUnderReplicatedPartitions,KafkaUnderReplicatedPartitions)
 Alertmanager 收到 KafkaUnderReplicatedPartitions:1(1=是)
 ▶ 把 broker3 啟動回來:ISR 補齊後 URP 回到 0,告警應該自動解除
 恢復 broker3;等 ISR 補齊後告警應解除
-   164 秒後 KafkaUnderReplicatedPartitions 解除
+   157 秒後 KafkaUnderReplicatedPartitions 解除
 判定:停 1 台 broker 觸發 URP 告警並送到 Alertmanager,恢復後解除(來源:telemetry)

@@ -2,13 +2,13 @@
 $ openssl verify(失敗);kafka-configs 先 broker1;回退用 --bootstrap-server broker:9092 --command-config internal.properties
 ▶ 建一個『別的 CA』簽一張同 DN、同 SAN 的憑證——broker 不會擋,但 client 會全部驗證失敗;練習怎麼限制影響面並回退
 建一個「別的 CA」,用它簽一張同 DN、同 SAN 的憑證:
-   srv-rogue:4BE0F145271FEDF06D3129A3AA908619CA319402 到期 Nov  9 10:10:26 2026 GMT 
+   srv-rogue:4BE0F145271FEDF06D3129A3AA908619CA319403 到期 Nov  9 18:02:16 2026 GMT 
    預檢 srv-rogue:鏈驗證 → error srv-rogue.pem: verification failed;SAN 與現有相同
    → 預檢攔下了:鏈不是行內 CA 簽的。正常流程到這裡就停
 ▶ 為了看後果,故意不理預檢,只換 broker1 一台(金絲雀),其他台不動
 為了看後果,故意不理預檢,只換一台當金絲雀(broker1 = id 11):
 Completed updating config for broker 11.
-三台 broker 送出的序號:4BE0F145271FEDF06D3129A3AA908619CA319402 4474B9BA75C8AEC73D198B55BD22276108461BB0 4474B9BA75C8AEC73D198B55BD22276108461BB0 
+三台 broker 送出的序號:4BE0F145271FEDF06D3129A3AA908619CA319403 4474B9BA75C8AEC73D198B55BD22276108461BB6 4474B9BA75C8AEC73D198B55BD22276108461BB6 
 從 client 角度驗證 broker1 送出的鏈:verify error:num=19:self-signed certificate in certificate chain
 client(只信任行內 CA)連 broker1: 驗證失敗(PKIX / 握手錯誤)
 同一個 client 連沒換的 broker2: 成功(只有金絲雀受影響,影響面被限制在一台)
@@ -17,6 +17,6 @@ client(只信任行內 CA)連 broker1: 驗證失敗(PKIX / 握手錯誤)
 Completed updating config for broker 11.
 Completed updating config for broker 12.
 Completed updating config for broker 13.
-回退後序號:4474B9BA75C8AEC73D198B55BD22276108461BAE 4474B9BA75C8AEC73D198B55BD22276108461BAE 4474B9BA75C8AEC73D198B55BD22276108461BAE 
+回退後序號:4474B9BA75C8AEC73D198B55BD22276108461BB4 4474B9BA75C8AEC73D198B55BD22276108461BB4 4474B9BA75C8AEC73D198B55BD22276108461BB4 
 client 再連 broker1: 成功
 判定:別的 CA 簽的憑證通得過 broker 的動態更新驗證(它不檢查自己送出的鏈是否被 client 信任),但 client 全部驗證失敗;所以要先離線預檢、先換一台金絲�

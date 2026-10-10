@@ -3,12 +3,12 @@ $ JVM 參數 -javaagent:…=7778:kafka.yml;curl <節點>:7778/metrics
 ▶ 確認 6 個節點都開了 JMX exporter(HTTPS + Basic 帳密),而且關鍵指標都在
 agent:jmx_prometheus_javaagent 1.0.1,SHA-1 f9c53eb0aa1828c3c9cd7647238563e43a4ed68c(下載時已與 Maven Central 的 .sha1 比對)
 JVM 參數(broker1):KAFKA_OPTS=-Ddemo.cpsec=1 -javaagent:/opt/jmx/jmx_prometheus_javaagent.jar=7778:/opt/jmx/kafka_broker_tls.yml
-  broker1:7778(HTTPS + Basic)→ 14103 個 kafka_ 指標
-  broker2:7778(HTTPS + Basic)→ 14038 個 kafka_ 指標
-  broker3:7778(HTTPS + Basic)→ 13985 個 kafka_ 指標
-  controller1:7778(HTTPS + Basic)→ 964 個 kafka_ 指標
-  controller2:7778(HTTPS + Basic)→ 946 個 kafka_ 指標
-  controller3:7778(HTTPS + Basic)→ 950 個 kafka_ 指標
+  broker1:7778(HTTPS + Basic)→ 12615 個 kafka_ 指標
+  broker2:7778(HTTPS + Basic)→ 12550 個 kafka_ 指標
+  broker3:7778(HTTPS + Basic)→ 12492 個 kafka_ 指標
+  controller1:7778(HTTPS + Basic)→ 966 個 kafka_ 指標
+  controller2:7778(HTTPS + Basic)→ 954 個 kafka_ 指標
+  controller3:7778(HTTPS + Basic)→ 939 個 kafka_ 指標
 broker1 的關鍵指標:
   kafka_server_replicamanager_underminisrpartitioncount 0.0
   kafka_server_replicamanager_underreplicatedpartitions 0.0

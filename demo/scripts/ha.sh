@@ -28,6 +28,8 @@ current_mode() {
 # 清除所有 profile 的容器與資料(失敗也繼續,可能本來就沒有)。
 remove_everything() {
   docker compose --profile c3 --profile restproxy --profile cyberark --profile sr --profile grafana --profile observability --profile connect down -v >/dev/null 2>&1 || true
+  # Conjur 的資料卷已清掉,舊的 admin.key / 各 host 的 API key 就失效了;不清的話第 18 章會『Unable to authenticate』(conjur.env 的 data key 保留)
+  rm -f config/conjur/admin.key config/conjur/policy.out; rm -rf config/conjur/keys
 }
 
 # 改 .env:HA 模式加上 COMPOSE_FILE(兩個 compose 檔疊加);基礎模式移除。

@@ -7,11 +7,11 @@ $ Prometheus: probe_ssl_earliest_cert_expiry、probe_success(job tls-expiry、tl
   broker1:8091 → 剩 824.9 天
   broker2:8092 → 剩 824.9 天
   broker3:8093 → 剩 824.9 天
-  broker1:9092(內部 mTLS)→ 剩 824.2 天
-  broker2:9092(內部 mTLS)→ 剩 824.2 天
-  broker3:9092(內部 mTLS)→ 剩 824.2 天
-  controller1:9093(內部 mTLS)→ 剩 824.2 天
-  controller2:9093(內部 mTLS)→ 剩 824.2 天
-  controller3:9093(內部 mTLS)→ 剩 824.2 天
+  broker1:9092(內部 mTLS)→ 剩 823.9 天
+  broker2:9092(內部 mTLS)→ 剩 823.9 天
+  broker3:9092(內部 mTLS)→ 剩 823.9 天
+  controller1:9093(內部 mTLS)→ 剩 823.9 天
+  controller2:9093(內部 mTLS)→ 剩 823.9 天
+  controller3:9093(內部 mTLS)→ 剩 823.9 天
 目前 firing 的憑證告警:-
 判定:12 個 TLS 端點(6 個對外、6 個內部 mTLS)的探測都成功並有剩餘天數,基準狀態沒有憑證告警

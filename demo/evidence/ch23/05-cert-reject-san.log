@@ -2,9 +2,9 @@
 $ kafka-configs --alter(新憑證 SAN 多了 evil.example.com)
 ▶ 簽一張 SAN 不同的憑證(多了 evil.example.com、少了所有 broker 名稱),broker 應該拒絕這次動態更新
 簽一張 SAN 不同的憑證(多了 evil.example.com、少了所有 broker 名稱):
-   新憑證 srv-san:4474B9BA75C8AEC73D198B55BD22276108461BB1 到期 Jan 12 10:10:02 2029 GMT 
+   新憑證 srv-san:4474B9BA75C8AEC73D198B55BD22276108461BB7 到期 Jan 12 18:01:58 2029 GMT 
    Error while executing config command with args '--bootstrap-server broker1:9094,broker2:9094,broker3:9094 --command-config /clients/token-bootstrap.properties --entity-type brokers --entity-name 11
    java.util.concurrent.ExecutionException: org.apache.kafka.common.errors.InvalidRequestException: Invalid value org.apache.kafka.common.config.ConfigException: Validation of dynamic config update of
    Caused by: org.apache.kafka.common.errors.InvalidRequestException: Invalid value org.apache.kafka.common.config.ConfigException: Validation of dynamic config update of SSLFactory failed: org.apache
-換之前的序號:4474B9BA75C8AEC73D198B55BD22276108461BB0 4474B9BA75C8AEC73D198B55BD22276108461BB0 4474B9BA75C8AEC73D198B55BD22276108461BB0 ;之後:4474B9BA75C8AEC73D198B55BD22276108461BB0 4474B9BA7
+換之前的序號:4474B9BA75C8AEC73D198B55BD22276108461BB6 4474B9BA75C8AEC73D198B55BD22276108461BB6 4474B9BA75C8AEC73D198B55BD22276108461BB6 ;之後:4474B9BA75C8AEC73D198B55BD22276108461BB6 4474B9BA7
 判定:SAN 與現有不同的憑證被 broker 拒絕,動態更新沒有生效(防止被塞進不同身分的憑證)

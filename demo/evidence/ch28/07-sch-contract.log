@@ -1,6 +1,7 @@
 # 【資料契約】schema 掛 CEL 規則 amount >= 0:amount=100 寫得進去,amount=-5 在寫入端被擋
 $ POST /subjects/…/versions(帶 ruleSet);kafka-avro-console-producer(use.latest.version=true)
 ▶ 在 schema 上掛資料契約規則(CEL):amount 不得為負。註冊成功與否看授權;寫入端違反規則時序列化器直接拒絕,壞資料進不了 topic
+Created topic orders.contract.
 註冊帶規則的 schema(CEL 條件規則):[HTTP 200]
 寫入 amount=100:0 個錯誤
 寫入 amount=-5:

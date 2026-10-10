@@ -3,8 +3,8 @@ $ java RebalanceWatch.java <topic> <group> eager|cooperative <秒> <成員 id>
 ▶ 6 分區的 topic,c1 先加入群組(拿到全部 6 個分區),過一會 c2 加入。比較兩種分配策略下 c1 的事件
 【eager】c1 的事件(REVOKED = 被收回、ASSIGNED = 被指派):
   [ 5s] c1         ASSIGNED [0, 1, 2, 3, 4, 5]
-  [29s] c1         REVOKED  [0, 1, 2, 3, 4, 5]
-  [29s] c1         ASSIGNED [0, 1, 2]
+  [31s] c1         REVOKED  [0, 1, 2, 3, 4, 5]
+  [32s] c1         ASSIGNED [0, 1, 2]
   [45s] c1         REVOKED  [0, 1, 2]
 【cooperative】c1 的事件(REVOKED = 被收回、ASSIGNED = 被指派):
   [ 5s] c1         ASSIGNED [0, 1, 2, 3, 4, 5]

@@ -3,7 +3,7 @@ $ docker stop controller2 controller3;kafka-topics --create(逾時);寫入與讀
 ▶ 停 2 台 controller(剩 1/3,失去多數):控制面(建 topic、describe)會卡住,資料面(讀寫既有 topic)應該還能用
 停 controller2、controller3(剩 1/3,失去多數)
 建立 topic(等 25 秒):沒有回應(逾時)
-describe topic(等 25 秒):3
+describe topic(等 25 秒):沒有回應(逾時)
 寫入既有 topic(acks=all):送出 100 筆
 讀取既有 topic 全部分區:750 筆
 ▶ 把 controller2、controller3 啟動回來,恢復多數後控制面才恢復
