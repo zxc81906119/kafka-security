@@ -274,6 +274,34 @@ gary 在 C3 指派 `orders-read` → DeveloperRead;LDAP 介面把 ming 從 devel
 
 **踩坑**:`kafka-topics --replica-assignment` 不能和 `--partitions` 一起用(錯誤被過濾掉會讓告警「沒有觸發」);JMX 的指標名稱是 `kafka_server_replicamanager_underminisrpartitioncount`(不是 underminispartitioncount);Prometheus `scrape_config_files` 的 glob 沒有匹配檔案時不報錯,所以 JMX 抓取設定可以只在 HA 模式存在;compose 的 `extends` 會串接 ports,要用 `!override`。
 
+## 第 23 章(進階)憑證到期監控與不停機換憑證(`./demo.sh 23`,需 HA 模式、Prometheus、blackbox-exporter;約 15 分鐘)
+
+**準備**:`scripts/ha.sh on` → `docker compose --profile c3 up -d prometheus alertmanager blackbox-exporter`。
+
+| 項目 | 實測結果 |
+|---|---|
+| 到期監控 | blackbox exporter 對 12 個端點(對外 TLS 6、內部 mTLS 6)探測「實際送出」的憑證;`probe_ssl_earliest_cert_expiry`;< 30 天告警。telemetry 的 `mtls_earliest_cert_expiration_ms` 全部回報 Long.MAX(沒填值)不採用;官方 JMX 設定沒有憑證到期指標。client 憑證與 CA 靠 OP menu 第 17 項檔案巡檢(含剩餘時間分級) |
+| 不停機換憑證 | 動態 keystore 重載(`listener.name.client.ssl.keystore.*`),keystore 設定只能逐台設(不能設叢集預設);流程「預檢 → 金絲雀(broker1)→ client 角度驗證 → 其餘」;背景寫入 300 筆零失敗、broker 沒有重啟;MDS(Jetty)不在動態重載範圍 |
+| SAN 不同 | broker 拒絕動態更新(DN / SAN 必須與現有相同) |
+| 別的 CA 簽的憑證 | broker 接受(不檢查鏈是否被 client 信任),client 全部驗證失敗;影響限於金絲雀;回退必須走不經 CLIENT 埠的帶外路徑(INTERNAL mTLS 埠) |
+| 重啟之後 | 動態設定存在叢集 metadata,重啟後仍生效;靜態設定檔要同步,否則兩處不一致 |
+
+**沒測**:MDS 與其他 Jetty 入口的換憑證(要重啟)、client 憑證與 CA 輪替、INTERNAL / CONTROLLER 埠憑證輪替(全叢集共用的 super user 憑證)。
+
+## 第 24 章(進階)容量與再平衡:分區重新指派加限速(`./demo.sh 24`,需 HA 模式;約 6 分鐘)
+
+**準備**:`scripts/ha.sh on`(不需要 Prometheus)。`scripts/reassign-lab.sh` 五個子命令:`skew`、`plan`、`execute`、`cancel`、`leftover`。
+
+| 項目 | 實測結果 |
+|---|---|
+| 造不均 | `--replica-assignment` 把 6 分區副本全放 broker1、2,寫入約 200 MB;`kafka-log-dirs` 顯示 broker3 為 0 MB |
+| 計畫 | `--generate` 第一段輸出存成回退檔;建議的新指派起點隨機、不刻意少搬,只當草稿;執行的是審過的均衡計畫 |
+| 限速搬家 | `--execute --throttle 4000000`:broker 層 `leader/follower.replication.throttled.rate`、topic 層 `*.replication.throttled.replicas`;背景寫入 600 筆(acks=all、冪等)零失敗;約 40 秒完成;`--verify` 完成時自動移除限速;搬完三台各約 132 MB |
+| 取消 | `--cancel`:搬到一半的分區回到搬家前的副本集合(順序可能不同),並自動清除限速 |
+| 忘了收尾 | 搬完不跑 `--verify`:broker 層與 topic 層的限速設定殘留(各 2 筆);再跑 `--verify` 才清掉 |
+
+**踩坑**:`kafka-reassign-partitions` 讀容器內的檔案,`scripts/k.sh bash -c 'cat > /tmp/plan.json; kafka-reassign-partitions …' < 本機檔` 以標準輸入送進去;`kafka-topics --describe` 欄位以 Tab 分隔,比對前先把空白正規化。**沒測**:Self-Balancing(授權待確認)、Tiered Storage、大資料量(數百 GB)的搬家時間與對服務延遲的影響、新增第 4 台 broker 後的搬家。
+
 ## 對應到客戶 RHEL 9 VM 的位置與步驟(手動部署)
 | demo | RHEL 9 VM |
 |---|---|
