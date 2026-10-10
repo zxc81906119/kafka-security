@@ -48,7 +48,7 @@ export const ACTS = [
     scene: ['基本功過關了,但現實不會照教科書走:半夜要有人能建 topic、舊系統不會說 Kafka 的語言、稽核要盤點每條連線、還有一個你不知道的 REST 入口。'] },
   { id: 'week3', title: '第三週:異動、日常維運、傳輸加密、CyberArk、帳號被偷與 Schema Registry', when: '第三週', labs: [15, 16, 17, 18, 19, 20],
     scene: ['人會調動、會離職;而日常維運不能每次都靠指令記憶。第三週,Ming 處理人員異動,並第一次用平台組自己做的維運選單(OP menu)值班。接著把「線上傳輸」補完整:連 AD 的線路、監控元件、使用者連 C3 的入口。最後,資安要求所有密碼不能再放在檔案裡——行裡的 CyberArk 登場。'] },
-  { id: 'week4', title: '第四週:平台韌性與監控', when: '第四週', labs: [21, 22],
+  { id: 'week4', title: '第四週:平台韌性與監控', when: '第四週', labs: [21, 22, 23],
     scene: ['前三週都在精簡環境裡做。主管問了一句很現實的話:「如果半夜壞一台,會怎樣?壞兩台呢?」Ming 決定不憑印象回答,切到 3 台 controller、3 台 broker 的環境,一台一台停給大家看。'] }
 ];
 
@@ -145,7 +145,12 @@ export const LAB_STORY = {
       '他先用現成的 telemetry:停 broker,等了兩分多鐘告警才出現。Gary 問:「如果 C3 掛了呢?銀行自己的監控平台看得到嗎?」Ming 改接 Prometheus 官方的 JMX exporter,同樣的實驗,35 秒就出現,而且不經過 C3。',
       '他在報告裡寫清楚:兩條路徑各有用途——telemetry 是 C3 的資料來源,告警該走 JMX exporter;並且記下哪些告警這次沒有觸發過,以及磁碟用量要另外裝 node_exporter。'],
     mission: ['把官方必設的平台告警(URP、離線分區、active controller)真的觸發一次。', '比較兩條指標收集路徑的偵測時間與取捨,並給出建議。', '寫清楚沒測到的告警與缺少的指標。'],
-    recap: ['URP 大於 0:有副本落後或 broker 掉線;離線分區大於 0:分區無法讀寫;active controller 不等於 1:失去多數或腦裂。', 'KRaft 下 ActiveControllerCount 與離線分區是 controller 的指標,controller 也要送指標。', 'telemetry 路徑偵測約 150 到 250 秒,JMX exporter 約 35 秒;銀行自有監控建議走 JMX exporter,告警不依賴 C3。', '要有「監控的監控」:抓不到 exporter 也要告警。', '磁碟用量要另外用 node_exporter;unclean leader election 告警這次沒有觸發過。'] }
+    recap: ['URP 大於 0:有副本落後或 broker 掉線;離線分區大於 0:分區無法讀寫;active controller 不等於 1:失去多數或腦裂。', 'KRaft 下 ActiveControllerCount 與離線分區是 controller 的指標,controller 也要送指標。', 'telemetry 路徑偵測約 150 到 250 秒,JMX exporter 約 35 秒;銀行自有監控建議走 JMX exporter,告警不依賴 C3。', '要有「監控的監控」:抓不到 exporter 也要告警。', '磁碟用量要另外用 node_exporter;unclean leader election 告警這次沒有觸發過。'] },
+  23: { scene: ['告警上線的第一週,Prometheus 發出了一則 Ming 沒見過的訊息:某個端點送出的憑證只剩 20 天。原來憑證到期也是會「出事」的東西,而他之前只有選單裡一個列出日期的功能。',
+      'Ming 先比較了怎麼監控:Kafka 自己的憑證到期指標沒有填值,JMX 也沒有;最後用 blackbox 從外面真的握一次手,看 client 會看到什麼,再用選單的檔案巡檢補上 client 憑證與 CA。',
+      '換憑證時他學到三件事:動態重載不用重啟,但 MDS 不在範圍內;SAN 不一樣會被拒絕;別的 CA 簽的憑證 broker 照收、client 全掛,所以要預檢、先換一台、並且回退不能走剛被弄壞的那條路。他在變更紀錄寫下:換完之後,靜態設定也要同步。'],
+    mission: ['建立憑證到期監控,涵蓋對外與內部 mTLS 端點。', '不停機換憑證,並驗證全程寫入不中斷。', '實測會出事的情境,把預檢、金絲雀與帶外回退寫成流程。'],
+    recap: ['憑證到期要從外面看(blackbox 探測實際送出的鏈),Kafka 自己的到期指標沒有填值;client 憑證與 CA 靠檔案巡檢。', '探測內部 mTLS 埠只用無權限的 client 憑證,不放 super user 的私鑰。', '動態 keystore 重載不重啟,但只涵蓋 Kafka 的 listener(MDS 要重啟),keystore 設定只能逐台設。', '流程:預檢 → 金絲雀 → 以 client 角度驗證 → 其餘;回退走不經 CLIENT 埠的帶外路徑。', '動態設定存在 metadata,靜態設定要同步,否則兩處不一致。'] }
 };
 
 export const EPILOGUE = {

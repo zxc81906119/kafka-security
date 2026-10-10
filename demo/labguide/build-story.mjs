@@ -213,7 +213,7 @@ add(...table([
   ['broker1 / broker2(MDS)', '8091 / 8092', 'HTTPS;Basic(AD)或 client 憑證;Admin REST(/kafka/v3)共用此埠'],
   ['REST Proxy', '8086', 'HTTPS;人 Basic、legacy app client 憑證'],
   ['Control Center', '9022(9021 只給容器內健康檢查)', 'HTTPS;人用 AD 帳密;C3 自己用 CN=c3 憑證'],
-  ['Prometheus / Alertmanager', '只在容器內(9090 / 9093)', 'HTTPS + Basic(c3 / prom-pw、c3 / am-pw;測試值)'],
+  ['Prometheus / Alertmanager', '只在容器內(9090 / 9093)', 'HTTPS + Basic;帳號依用途分開(Prometheus:c3、telemetry、ops;Alertmanager:c3、prometheus、opmenu、ops;測試值)'],
 ], [2600, 2900, 3526], { size: 17 }));
 add(...image('../labguide/img/arch-identity.png', '身分路徑:人走 AD、服務走 SCRAM、元件走憑證換 token、legacy app 經 REST Proxy'));
 

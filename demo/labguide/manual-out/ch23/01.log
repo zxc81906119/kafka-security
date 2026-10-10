@@ -1,0 +1,12 @@
+各端點「實際送出」的憑證(TLS 握手收到的):
+  broker1:9094 → 4474B9BA75C8AEC73D198B55BD22276108461BA0 到期 Jan 12 03:10:37 2029 GMT 
+  broker2:9094 → 4474B9BA75C8AEC73D198B55BD22276108461BA0 到期 Jan 12 03:10:37 2029 GMT 
+  broker3:9094 → 4474B9BA75C8AEC73D198B55BD22276108461BA0 到期 Jan 12 03:10:37 2029 GMT 
+  broker1:8091 → 4474B9BA75C8AEC73D198B55BD22276108461BA0 到期 Jan 12 03:10:37 2029 GMT 
+磁碟上的檔案 certs/server.pem:4474B9BA75C8AEC73D198B55BD22276108461BA0 到期 Jan 12 03:10:37 2029 GMT 
+OP menu 第 17 項(檔案巡檢)的前幾列:
+  ca.pem                           Oct  5 09:48:10 2036 GMT   90 天以上
+  client-bootstrap.pem             Jan 10 09:48:11 2029 GMT   90 天以上
+  client-c3.pem                    Jan 10 09:48:11 2029 GMT   90 天以上
+  client-legacy-orders.pem         Jan 10 09:48:12 2029 GMT   90 天以上
+判定:現況各端點送出的憑證與磁碟檔案是同一張(序號相同),OP menu 的檔案巡檢能看到剩餘時間分級

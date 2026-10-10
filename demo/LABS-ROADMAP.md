@@ -109,3 +109,18 @@
 | 監控指標 | telemetry 可取得的指標未知,可能需要 jmx_exporter(下載) |
 | Connect | 內建 connector 是否足夠示範未知,可能需要下載 connector 與映像 |
 | CSFLE、Self-Balancing、Tiered Storage、Cluster Linking | 授權不明或缺授權,維持「未驗證」 |
+
+## 腳本可讀性整理(2026-10-10 使用者要求)
+
+目標:讓「會基本指令、不熟 bash 技巧的維運工程師」進來就看得懂,不必靠原作者維護。決定:白話說明模式預設開啟(`EXPLAIN=0` 可關);先套用在新寫的腳本當示範,**示範通過、使用者確認 OK 後,再推到前面的 Lab**。
+
+| 階段 | 內容 | 驗證 |
+|---|---|---|
+| 0(已完成) | `scripts/lib/{common,prom,kafka}.sh`、`prom-value.mjs`、`prom-alerts.mjs`、`CONTRIBUTING.md`、`scripts/check.sh` | `check.sh` |
+| 1 示範 | `ha-lab.sh`、`monitor-lab.sh`、`cert-lab.sh`、`ha.sh`、`jmx-setup.sh` 改成新風格(標頭樣板、`say`、共用函式、拆長行) | 第 21 到 23 章整章 0 失敗 |
+| 2 | 前面所有舊腳本補標頭樣板與註解(不改行為) | `check.sh` |
+| 3 | 第 1 到 14 章劇本與腳本:加白話說明、拆長行、換共用工具 | 每章整章 0 失敗 |
+| 4 | 第 15 到 20 章(含 `secret-protection.sh`、`ch18`) | 每章整章 0 失敗 |
+| 5 | OP menu | 安全回歸 31/31 |
+
+原則:不重寫邏輯、一批一驗證、不一次改很多再一起測。新 Lab(24 起)從一開始就用新風格。

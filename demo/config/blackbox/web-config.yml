@@ -1,0 +1,10 @@
+# blackbox exporter 的 web 設定(Prometheus exporter-toolkit):HTTPS + 要求並驗證 client 憑證(mTLS)。
+# 為什麼 blackbox 要比一般 exporter 更嚴:它依 URL 的 ?target= 參數替人去連任何位址,而且探測模組裡帶有 client 憑證——
+# 誰連得到它,誰就能叫它去敲任何端點、並間接用到那張憑證(Prometheus 官方安全文件特別警告 blackbox / SNMP exporter)。
+# 所以:只有持行內 CA 簽發的 client 憑證(Prometheus 的 monitor 憑證)才能呼叫;網路層另外只開給 Prometheus。
+tls_server_config:
+  cert_file: /etc/blackbox/server.pem
+  key_file: /etc/blackbox/server.key
+  min_version: TLS12
+  client_auth_type: RequireAndVerifyClientCert
+  client_ca_file: /etc/blackbox/ca.pem

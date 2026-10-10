@@ -8,8 +8,8 @@ alerting:
   alertmanagers:
     - scheme: https
       basic_auth:
-        username: c3
-        password: am-pw
+        username: prometheus
+        password: prom-am-pw
       tls_config:
         ca_file: /etc/tls/ca.pem
       static_configs:

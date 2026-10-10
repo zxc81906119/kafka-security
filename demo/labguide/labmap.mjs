@@ -60,6 +60,9 @@ export const MAPS = [
   { n: 22, prove: '官方必設的平台告警真的會響:URP、離線分區、active controller;指標收集兩條路徑實測比較(telemetry 約 150–250 秒,JMX exporter 約 35 秒)', use: ['cli', 'broker', 'prom', 'am'],
     flows: [['停 1 台 broker', 'URP > 0 → Prometheus 規則', '✔ KafkaUnderReplicatedPartitions 觸發 → Alertmanager;恢復後解除'], ['單副本 topic 的 broker 掉線', 'OfflinePartitionsCount > 0', '✔ KafkaOfflinePartitions 觸發'], ['停 1 台 / 2 台 controller', 'ControllerMissing / ActiveControllerCount ≠ 1', '✔ 失去多數時 active controller 數為 0 → 告警'], ['telemetry vs JMX exporter', '偵測時間與依賴', '✔ JMX 約 35 秒、不依賴 C3 → 銀行自有監控建議走 JMX']] },
 
+  { n: 23, prove: '憑證到期要從外面看(blackbox 探測實際送出的鏈);不停機換憑證要預檢、先換一台、回退走帶外路徑', use: ['cli', 'broker', 'prom', 'am', 'certs'],
+    flows: [['blackbox 探測 12 個端點', '實際 TLS 握手(內部 mTLS 用無權限 client 憑證)', '✔ 剩餘天數 → < 30 天告警'], ['動態換 CLIENT 埠憑證', '預檢 → 金絲雀 → 其餘', '✔ 不重啟、寫入零失敗;✘ MDS 不在範圍,要重啟'], ['SAN 不同的憑證', 'broker 驗證 DN / SAN', '✘ 拒絕'], ['別的 CA 簽的憑證', 'broker 不檢查鏈是否被信任', '✘ client 全失敗 → 帶外路徑回退'], ['重啟後', '動態設定存在 metadata', '✔ 仍是新憑證 → 靜態設定要同步']] },
+
 ];
 
 const esc = s => s.replace(/&/g, '&amp;').replace(/</g, '&lt;');

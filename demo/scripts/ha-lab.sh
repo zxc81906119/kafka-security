@@ -21,7 +21,7 @@ perf() { # perf <topic> <筆數> <acks> [每秒筆數]:印 sent 數;其餘輸出
   :
   ./scripts/k.sh kafka-producer-perf-test --topic "$1" --num-records "$2" --throughput "${4:--1}" --record-size 100 --command-config $TOK \
     --producer-props bootstrap.servers=$BS acks="$3" delivery.timeout.ms="${DELIVERY_MS:-20000}" request.timeout.ms=8000 > "$PERF_OUT" 2>&1
-  grep -oE '^[0-9]+ records sent' "$PERF_OUT" | tail -1 | awk '{print $1}'
+  grep -aoE '^[0-9]+ records sent' "$PERF_OUT" | tail -1 | awk '{print $1}'
 }
 healthy() { # healthy <容器...>:等到全部 healthy(最多 150 秒)
   local c i; for c in "$@"; do for i in $(seq 1 30); do docker ps --format '{{.Names}} {{.Status}}' | grep -q "^$c .*(healthy)" && break; sleep 5; done; done
@@ -56,7 +56,7 @@ brokers-down)
   b0=$(total ha.test); echo "目前 topic 筆數:$b0"; echo "停 broker2、broker3(只剩 broker1)"; docker stop broker2 broker3 >/dev/null; sleep 25
   isrline ha.test
   DELIVERY_MS=15000 s_all=$(perf ha.test 50 all); echo "acks=all 寫入 50 筆:成功 ${s_all:-0} 筆(ISR 1 < min.isr 2,被拒絕,producer 重試到逾時)"
-  grep -oE "NotEnoughReplicas|TimeoutException: Expiring [0-9]+ record" "$PERF_OUT" | sort | uniq -c | head -2 | sed 's/^/   /'
+  grep -aoE "NotEnoughReplicas|TimeoutException: Expiring [0-9]+ record" "$PERF_OUT" | sort | uniq -c | head -2 | sed 's/^/   /'
   s_one=$(perf ha.test 50 1); b1=$(total ha.test)
   echo "acks=1 寫入 50 筆:producer 回報成功 ${s_one:-0} 筆;但 consumer 看得到的筆數仍是 $b1(原本 $b0)——高水位沒有前進,這 50 筆讀不到"
   echo -n "用 consumer group 讀取:"; ./scripts/k.sh kafka-console-consumer --bootstrap-server broker1:9094 --command-config $TOK --topic ha.test --group g-ha-down --from-beginning --timeout-ms 15000 2>&1 | grep -c -E "TimeoutException" | sed 's/^1$/ 逾時(內部 topic __consumer_offsets 的 min.isr 也不足,加入不了群組)/; s/^0$/ 有回應/'
@@ -96,8 +96,8 @@ rolling)
     case "$c" in broker*) isr_full && echo "  重啟 $c → 健康,URP=0" || echo "  重啟 $c → 健康,但 URP 未回 0";; *) sleep 10; echo "  重啟 $c → 健康";; esac
   done
   wait $PP
-  sent=$(grep -oE '^[0-9]+ records sent' "$PERF_OUT" | tail -1 | awk '{print $1}'); have=$(total ha.roll)
-  fails=$(grep -cE "ERROR|Expiring|expired|Failed to send" "$PERF_OUT" || true)
+  sent=$(grep -aoE '^[0-9]+ records sent' "$PERF_OUT" | tail -1 | awk '{print $1}'); have=$(total ha.roll)
+  fails=$(grep -acE "ERROR|Expiring|expired|Failed to send" "$PERF_OUT" || true)
   echo "producer 回報送出 ${sent:-?} 筆;topic 實際 $have 筆;送出失敗 $fails 筆"
   [ "${sent:-}" = "$N" ] && [ "$have" = "$N" ] && [ "$fails" = 0 ] && echo "判定:滾動重啟 3 台 broker 與 3 台 controller 期間,producer 零失敗、零遺失($N = $have)" || echo "判定:不符合(送出 ${sent:-?}、topic $have、失敗 $fails)"
   KQ describe --status | grep -E "LeaderId"

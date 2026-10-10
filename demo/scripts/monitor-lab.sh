@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # 第 22 章:官方列的平台告警真的被觸發。需要 HA 模式(scripts/ha.sh on)且 prometheus、alertmanager 已啟動(docker compose --profile c3 up -d prometheus alertmanager)。
 #   scripts/monitor-lab.sh jmx-endpoint  確認每個 broker 與 controller 都開了 JMX exporter(7778 埠),關鍵指標都在;顯示 agent 的 SHA-1(與 Maven Central 相符)
+#   scripts/monitor-lab.sh protect       監控端點的保護:JMX exporter(HTTPS + Basic 帳密)、blackbox(HTTPS + mTLS)、Prometheus 驗證憑證鏈抓取
 #   scripts/monitor-lab.sh rules       7 條平台告警規則已載入並評估,基準狀態沒有告警
 #   scripts/monitor-lab.sh urp         停 1 台 broker → KafkaUnderReplicatedPartitions 觸發、送到 Alertmanager;恢復後解除
 #   scripts/monitor-lab.sh offline     RF=1 的 topic 所在 broker 掉線 → KafkaOfflinePartitions 觸發;恢復後解除
@@ -21,11 +22,11 @@ BS=broker1:9094,broker2:9094,broker3:9094
 KT() { timeout 60 ./scripts/k.sh kafka-topics --bootstrap-server $BS --command-config $TOK "$@" 2>&1 | grep -v -E "^WARNING|SLF4J"; }
 NAMES="KafkaUnderReplicatedPartitions KafkaUnderMinIsrPartitions KafkaOfflinePartitions KafkaActiveControllerCountNotOne KafkaControllerMissing KafkaUncleanLeaderElection KafkaBrokerFenced"
 firing() { # 目前 firing 的平台告警名稱(逗號分隔;沒有印 -)
-  local out; out=$(bash $DC -u c3:prom-pw https://prometheus:9090/api/v1/alerts 2>/dev/null | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{try{const i=s.indexOf("{");const j=JSON.parse(s.slice(i,s.lastIndexOf("}")+1));console.log(j.data.alerts.filter(a=>a.state==="firing"&&/^Kafka/.test(a.labels.alertname)&&a.labels.alertname!=="KafkaAuthFailuresBurst").map(a=>a.labels.alertname).sort().join(",")||"-")}catch(e){console.log("?")}})')
+  local out; out=$(bash $DC -u ops:ops-prom-pw https://prometheus:9090/api/v1/alerts 2>/dev/null | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{try{const i=s.indexOf("{");const j=JSON.parse(s.slice(i,s.lastIndexOf("}")+1));console.log(j.data.alerts.filter(a=>a.state==="firing"&&/^Kafka/.test(a.labels.alertname)&&a.labels.alertname!=="KafkaAuthFailuresBurst").map(a=>a.labels.alertname).sort().join(",")||"-")}catch(e){console.log("?")}})')
   echo "$out"
 }
 am_has() { # Alertmanager 是否收到某告警(1/0)
-  bash $DC -u c3:am-pw https://alertmanager:9093/api/v2/alerts 2>/dev/null | grep -c "\"alertname\":\"$1\"" | sed 's/^0$/0/; s/^[1-9].*$/1/'
+  bash $DC -u ops:ops-am-pw https://alertmanager:9093/api/v2/alerts 2>/dev/null | grep -c "\"alertname\":\"$1\"" | sed 's/^0$/0/; s/^[1-9].*$/1/'
 }
 wait_fire() { # wait_fire <告警名> <最多秒數>:等到該告警 firing;印耗時
   local n="$1" max="$2" t0=$(date +%s) f
@@ -41,25 +42,57 @@ healthy() { local c i; for c in "$@"; do for i in $(seq 1 30); do docker ps --fo
 
 case "${1:-}" in
 jmx-endpoint)
+  PW=$(cat config/c3/jmx_exporter.pw)
   sha=$(sha1sum config/jmx/jmx_prometheus_javaagent.jar | awk '{print $1}'); ver=$(cat config/jmx/jmx_prometheus_javaagent.jar.version 2>/dev/null)
   echo "agent:jmx_prometheus_javaagent $ver,SHA-1 $sha(下載時已與 Maven Central 的 .sha1 比對)"
-  echo "JVM 參數(broker1):$(docker inspect broker1 --format '{{range .Config.Env}}{{println .}}{{end}}' | grep '^KAFKA_OPTS=' | cut -c1-140)"
+  echo "JVM 參數(broker1):$(docker inspect broker1 --format '{{range .Config.Env}}{{println .}}{{end}}' | grep '^KAFKA_OPTS=' | cut -c1-150)"
   miss=0
   for n in broker1 broker2 broker3 controller1 controller2 controller3; do
-    out=$(docker exec $n sh -c '(exec 3<>/dev/tcp/localhost/7778 && printf "GET /metrics HTTP/1.0\r\n\r\n" >&3 && cat <&3) 2>/dev/null')
-    c=$(echo "$out" | grep -c '^kafka_'); echo "  $n:7778/metrics → $c 個 kafka_ 指標"; [ "$c" -gt 5 ] || miss=1
+    c=$(bash $DC -u Prometheus:$PW https://$n:7778/metrics 2>/dev/null | grep -c '^kafka_'); echo "  $n:7778(HTTPS + Basic)→ $c 個 kafka_ 指標"; [ "$c" -gt 50 ] || miss=1
   done
-  echo "broker1 的關鍵指標:"; docker exec broker1 sh -c '(exec 3<>/dev/tcp/localhost/7778 && printf "GET /metrics HTTP/1.0\r\n\r\n" >&3 && cat <&3) 2>/dev/null' | grep -E '^kafka_server_replicamanager_(underreplicatedpartitions|underminisrpartitioncount) ' | sed 's/^/  /'
-  echo "controller1 的關鍵指標:"; docker exec controller1 sh -c '(exec 3<>/dev/tcp/localhost/7778 && printf "GET /metrics HTTP/1.0\r\n\r\n" >&3 && cat <&3) 2>/dev/null' | grep -E '^kafka_controller_kafkacontroller_(offlinepartitionscount|activecontrollercount) ' | sed 's/^/  /'
-  [ "$miss" = 0 ] && echo "判定:6 個節點都開了 JMX exporter(7778 埠),URP、離線分區、active controller 等關鍵指標都在"
+  echo "broker1 的關鍵指標:"; bash $DC -u Prometheus:$PW https://broker1:7778/metrics 2>/dev/null | grep -E '^kafka_server_replicamanager_(underreplicatedpartitions|underminisrpartitioncount) ' | sed 's/^/  /'
+  echo "controller1 的關鍵指標:"; bash $DC -u Prometheus:$PW https://controller1:7778/metrics 2>/dev/null | grep -E '^kafka_controller_kafkacontroller_(offlinepartitionscount|activecontrollercount) ' | sed 's/^/  /'
+  [ "$miss" = 0 ] && echo "判定:6 個節點都開了 JMX exporter(7778 埠,HTTPS + Basic 帳密),URP、離線分區、active controller 等關鍵指標都在"
+  ;;
+protect)
+  PW=$(cat config/c3/jmx_exporter.pw)
+  echo "① 6 個節點的 JMX exporter(HTTPS + Basic 帳密):"
+  bad=0
+  for n in broker1 broker2 broker3 controller1 controller2 controller3; do
+    a=$(bash $DC https://$n:7778/metrics 2>/dev/null | tail -1); b=$(bash $DC -u Prometheus:wrong-pw https://$n:7778/metrics 2>/dev/null | tail -1); c=$(bash $DC -u Prometheus:$PW https://$n:7778/metrics 2>/dev/null | tail -1); h=$(bash $DC http://$n:7778/metrics 2>/dev/null | tail -1)
+    echo "  $n:不帶帳密 $a;錯密碼 $b;正確 $c;明文 http $h"
+    [ "$a" = "[HTTP 401]" ] && [ "$b" = "[HTTP 401]" ] && [ "$c" = "[HTTP 200]" ] && [ "$h" = "[HTTP 000]" ] || bad=1
+  done
+  echo "② blackbox exporter(HTTPS + mTLS,要求並驗證 client 憑證;它能替人連任何端點,所以比一般 exporter 更嚴):"
+  P='https://blackbox-exporter:9115/probe?module=tls_connect&target=broker1:9094'
+  n1=$(bash $DC "$P" 2>/dev/null | tail -1)
+  n2=$(bash $DC --cert /certs/client-rogue.pem --key /certs/client-rogue.key "$P" 2>/dev/null | tail -1)
+  n3=$(bash $DC --cert /certs/client-monitor.pem --key /certs/client-monitor.key "$P" 2>/dev/null | tail -1)
+  ok=$(bash $DC --cert /certs/client-monitor.pem --key /certs/client-monitor.key "$P" 2>/dev/null | grep -c '^probe_success 1')
+  echo "  不帶 client 憑證 $n1;不是行內 CA 簽的 client 憑證(rogue)$n2;Prometheus 的 monitor 憑證 $n3(probe_success 1:$ok)"
+  echo "  (HTTP 000 = TLS 握手被拒,請求根本沒送進去)"
+  [ "$n1" = "[HTTP 000]" ] && [ "$n2" = "[HTTP 000]" ] && [ "$n3" = "[HTTP 200]" ] && [ "$ok" = 1 ] || bad=1
+  d=$(bash $DC -u ops:ops-prom-pw -G --data-urlencode 'query=count(up{job=~"kafka-jmx|tls-expiry|tls-expiry-mtls"} == 0)' https://prometheus:9090/api/v1/query 2>/dev/null | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{try{const i=s.indexOf("{");const j=JSON.parse(s.slice(i,s.lastIndexOf("}")+1));console.log(j.data.result.length?j.data.result[0].value[1]:"0")}catch(e){console.log("?")}})')
+  t=$(bash $DC -u ops:ops-prom-pw -G --data-urlencode 'query=count(up{job=~"kafka-jmx|tls-expiry|tls-expiry-mtls"} == 1)' https://prometheus:9090/api/v1/query 2>/dev/null | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{try{const i=s.indexOf("{");const j=JSON.parse(s.slice(i,s.lastIndexOf("}")+1));console.log(j.data.result.length?j.data.result[0].value[1]:"0")}catch(e){console.log("?")}})')
+  echo "③ Prometheus 以 https(驗證憑證鏈)+ 帳密 / mTLS 抓取:目標 up=1 的有 $t 個,up=0 的有 $d 個"
+  [ "$d" = 0 ] && [ "$t" -ge 18 ] || bad=1
+  echo "④ Prometheus 與 Alertmanager 的帳號依用途分開(機制仍是 HTTPS + Basic):"
+  pa=""; for u in c3:prom-pw telemetry:telemetry-pw ops:ops-prom-pw nobody:x; do pa="$pa $u→$(bash $DC -u $u https://prometheus:9090/-/healthy 2>/dev/null | tail -1)"; done
+  aa=""; for u in c3:am-pw prometheus:prom-am-pw opmenu:am-opmenu-pw ops:ops-am-pw nobody:x; do aa="$aa $u→$(bash $DC -u $u https://alertmanager:9093/-/healthy 2>/dev/null | tail -1)"; done
+  echo "  Prometheus:$pa"; echo "  Alertmanager:$aa"
+  tk=$(docker inspect broker1 --format '{{range .Config.Env}}{{println .}}{{end}}' | grep -c 'C3PLUSPLUS_API_KEY=telemetry'); ak=$(grep -A2 'basic_auth' config/c3/prometheus-generated.yml | grep -c 'username: prometheus')
+  echo "  broker 的 telemetry reporter 用 telemetry 帳號:$([ "$tk" = 1 ] && echo 是 || echo 否);Prometheus 送告警用 prometheus 帳號:$([ "$ak" = 1 ] && echo 是 || echo 否)"
+  case "$pa$aa" in *"nobody:x→[HTTP 401]"*"nobody:x→[HTTP 401]"*) ;; *) bad=1;; esac
+  [ "$(echo "$pa" | grep -o 'HTTP 200' | wc -l)" = 3 ] && [ "$(echo "$aa" | grep -o 'HTTP 200' | wc -l)" = 4 ] && [ "$tk" = 1 ] && [ "$ak" = 1 ] || bad=1
+  [ "$bad" = 0 ] && echo "判定:監控端點全部受保護:6 個 exporter 都是 HTTPS + Basic(不帶帳密與錯密碼 401、明文無回應),blackbox 要求 mTLS(沒有或不被信任的 client 憑證握手被拒),Prometheus 正常抓取;Prometheus 與 Alertmanager 的帳號依用途分開(各自有效、未知帳號 401)"
   ;;
 rules)
   t0=$(date +%s); ok=0
   while [ $(( $(date +%s) - t0 )) -lt 240 ]; do
-    out=$(bash $DC -u c3:prom-pw https://prometheus:9090/api/v1/rules 2>/dev/null | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{const i=s.indexOf("{");const j=JSON.parse(s.slice(i,s.lastIndexOf("}")+1));const g=j.data.groups.find(x=>x.name==="'$GROUP'");if(!g){console.log("0 0");return}console.log(g.rules.length+" "+g.rules.filter(r=>r.health==="ok").length)})')
+    out=$(bash $DC -u ops:ops-prom-pw https://prometheus:9090/api/v1/rules 2>/dev/null | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{const i=s.indexOf("{");const j=JSON.parse(s.slice(i,s.lastIndexOf("}")+1));const g=j.data.groups.find(x=>x.name==="'$GROUP'");if(!g){console.log("0 0");return}console.log(g.rules.length+" "+g.rules.filter(r=>r.health==="ok").length)})')
     [ "$out" = "7 7" ] && { ok=1; break; }; sleep 10
   done
-  bash $DC -u c3:prom-pw https://prometheus:9090/api/v1/rules 2>/dev/null | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{const i=s.indexOf("{");const j=JSON.parse(s.slice(i,s.lastIndexOf("}")+1));const g=j.data.groups.find(x=>x.name==="'$GROUP'");for(const r of g.rules)console.log("  "+r.name.padEnd(36)+r.health.padEnd(6)+(r.state||""))})'
+  bash $DC -u ops:ops-prom-pw https://prometheus:9090/api/v1/rules 2>/dev/null | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{const i=s.indexOf("{");const j=JSON.parse(s.slice(i,s.lastIndexOf("}")+1));const g=j.data.groups.find(x=>x.name==="'$GROUP'");for(const r of g.rules)console.log("  "+r.name.padEnd(36)+r.health.padEnd(6)+(r.state||""))})'
   echo "目前 firing 的平台告警:$(firing)"
   [ "$ok" = 1 ] && [ "$(firing)" = "-" ] && echo "判定:7 條平台告警規則已載入並評估(health ok),基準狀態沒有告警(來源:$SRC)"
   ;;

@@ -43,4 +43,7 @@ step mon-controller-jmx "【B:controller】同樣的 controller 實驗" \
   "docker stop controller3 controller2;等 KafkaJmxControllerMissing 與 KafkaJmxActiveControllerCountNotOne" \
   'SRC=jmx bash "$MON" controller 2>&1' '判定:controller 掉線觸發'
 
+step mon-protect "【監控端點的保護】一般企業(含金融業)的做法:exporter 一律 TLS + 驗證、能 mTLS 就 mTLS、密碼不寫在設定裡、網路層只開給 Prometheus。JMX exporter 1.0.1 只支援 HTTPS + Basic(PBKDF2-HMAC-SHA512 雜湊),所以 6 個節點都用這個,密碼隨機產生、Prometheus 以 password_file 讀取;blackbox exporter 能替人去連任何位址(Prometheus 官方特別警告),所以用 HTTPS + mTLS,只有持行內 CA 簽發的 monitor client 憑證才能呼叫" \
+  "curl https://<節點>:7778/metrics(不帶帳密 / 錯密碼 / 正確 / 明文 http);curl https://blackbox-exporter:9115/probe(不帶憑證 / rogue 憑證 / monitor 憑證);Prometheus up" \
+  'bash "$MON" protect 2>&1' '判定:監控端點全部受保護' 
 ch_end

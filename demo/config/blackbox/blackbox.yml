@@ -8,3 +8,15 @@ modules:
       tls: true
       tls_config:
         ca_file: /etc/blackbox/ca.pem        # 用行內 CA 驗證鏈;驗證失敗 probe_success=0(憑證過期、不被信任都會)
+  # INTERNAL(9092)與 CONTROLLER(9093)埠要求 client 憑證(mTLS)。探測只需要完成 TLS 握手,
+  # 所以用一張「行內 CA 簽發、沒有任何授權」的 client 憑證(legacy-other)——握手成功即可讀到對方送出的憑證;授權層會擋掉它,不能做任何事。
+  # 不要把內部憑證(CN=kafka-internal,super user)的私鑰放進探測容器:那等於給監控元件叢集管理員權限。
+  tls_mtls:
+    prober: tcp
+    timeout: 5s
+    tcp:
+      tls: true
+      tls_config:
+        ca_file: /etc/blackbox/ca.pem
+        cert_file: /etc/blackbox/probe-client.pem
+        key_file: /etc/blackbox/probe-client.key
