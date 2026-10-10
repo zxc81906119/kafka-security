@@ -316,6 +316,23 @@ gary 在 C3 指派 `orders-read` → DeveloperRead;LDAP 介面把 ming 從 devel
 
 **踩坑**:abortTransaction 前沒 `flush()`,緩衝區的訊息被直接丟掉(abort 的訊息根本沒寫進 log);`grep -o '重複='` 會先匹配到「不重複=」;`group.protocol=classic` 才能比較兩種 assignor。**沒測**:新 consumer protocol(KIP-848)、consume-transform-produce 的 exactly-once、Streams、僵屍 producer 隔離。
 
+## 第 26 章(進階)Grafana 全元件監控:官方儀表板、主機指標、consumer lag(`./demo.sh 26`,需 HA 模式與 Prometheus;約 12 分鐘)
+
+**準備**:`scripts/ha.sh on` → `docker compose --profile c3 up -d prometheus alertmanager blackbox-exporter` → `scripts/grafana.sh on`(備妥密碼檔、官方儀表板、AD 查詢帳號、kafka-exporter 帳號與 ACL,啟動 grafana / node-exporter / kafka-exporter;Grafana 在 https://localhost:3000)。
+
+| 項目 | 實測結果 |
+|---|---|
+| Grafana | 只收 HTTPS(明文回 400);`GF_AUTH_LDAP` 走 LDAPS,bind 帳號 `svc-grafana-ldap`(與 broker 的 `svc-kafka-ldap` 分開);群組對映 cluster-admin→Admin、ops→Editor、其餘 Viewer(`config/grafana/ldap.toml`,用 `group_search_filter` 依成員查群組,因 OpenLDAP 沒有 memberOf);本機 admin 只留 break-glass;`/metrics` 要 Basic |
+| 資料來源 | Prometheus,帳號 `grafana`(`web-config-prom.yml` 新增,只做查詢),密碼用 `$__file`,用行內 CA 驗證 |
+| 官方儀表板 | jmx-monitoring-stacks 固定 commit `f376263`,5 個 KRaft 儀表板(cluster、topics、kraft、platform overview、rbac)校驗 SHA-256 後原樣載入。為對得上標籤,`jmx-scrape.ha.tpl` 的 job 改成 `kafka-broker` / `kafka-controller` 並加 `env: demo`(`ops_rules_jmx.yml`、monitor-lab 同步) |
+| 儀表板有資料嗎 | `scripts/lib/dash-coverage.mjs` 逐個查詢經 Grafana 跑:150 個約 108 個有資料(topics 14/14、cluster 69/85、platform 8/23、rbac 7/10、kraft 10/18)。沒資料:Tiered Storage、SR、Connect(沒部署);offline partitions 在 controller;`jvm_memory_bytes_max`(exporter 1.x 改名);raft-metrics、socket-server-metrics、confluent-auth-store-metrics 官方設定沒有輸出(原因未查) |
+| node_exporter | `prom/node-exporter`,HTTPS + mTLS(`config/grafana/node-web-config.yml`);容器看到的是 Docker VM 的磁碟(`/mnt/docker-desktop-disk` 等 ext4);Windows Docker Desktop 掛 `/:/host:ro` 不能加 `rslave` |
+| kafka_exporter | `danielqsj/kafka-exporter` 1.10.0(社群專案);`--sasl.mechanism=scram-sha512`(寫 sha512 會啟動失敗);自己的網頁 mTLS(`--server.tls.mutual-auth-enabled`);Kafka 帳號 `kafka-exporter` 的 SCRAM 憑證 + ACL Describe / DescribeConfigs(topic *、group *、cluster),讀訊息被拒 |
+| lag 告警 | g-lag 落後 4000 筆:約 178 秒觸發 `KafkaConsumerLagHigh`(門檻 1000、for 2m、範例值),追上後約 77 秒解除 |
+| 告警規則 | `config/c3/ops_rules_host.yml`:NodeDiskUsageHigh(80%,依 ext4/xfs 裝置)、NodeExporterDown、KafkaConsumerLagHigh、KafkaExporterDown |
+
+**踩坑**:`kafka-acls --topic *` 沒加引號會被 shell 展開成目前目錄的檔名,建出錯誤的 ACL(已清除,`kafka_acls` 函式註明要用 `'*'`);server 憑證要補 SAN(grafana、node-exporter、kafka-exporter)後 exporter 才不會 `bad certificate`(`make-certs.sh` 對既有環境同 key 重簽);Grafana 的檔案 provisioning 只在啟動時讀目錄,新增儀表板要重啟 Grafana(`grafana.sh on` 先放檔再啟動);`ldap.toml` 只展開環境變數,所以 bind 密碼由容器啟動指令從密碼檔讀入。**沒測**:磁碟告警實際觸發、Grafana 高可用與外部資料庫、raft 指標缺漏原因、Loki / Tempo(Lab 27 規劃)。
+
 ## 對應到客戶 RHEL 9 VM 的位置與步驟(手動部署)
 | demo | RHEL 9 VM |
 |---|---|

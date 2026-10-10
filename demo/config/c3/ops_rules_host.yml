@@ -1,0 +1,39 @@
+# 第 26 章:主機與 consumer lag 告警(補第 22 章沒有的指標)。
+#   ① node_exporter:磁碟用量等主機指標(telemetry 與 JMX 都沒有)。容器環境看到的是 Docker 主機(VM)的磁碟;正式環境每台 VM 一個 node_exporter。
+#   ② kafka_exporter(社群專案):consumer lag。門檻是範例值,每個應用的可容忍 lag 不同,要依業務訂。
+# 指標不存在時(沒啟動 grafana profile)這些規則不會觸發。
+groups:
+- name: kafka-host
+  interval: 30s
+  rules:
+  - alert: NodeDiskUsageHigh
+    expr: 1 - (max by (instance, device) (node_filesystem_avail_bytes{fstype=~"ext4|xfs"}) / max by (instance, device) (node_filesystem_size_bytes{fstype=~"ext4|xfs"})) > 0.80
+    for: 5m
+    labels: { severity: warning, kind: host }
+    annotations:
+      summary: "{{ $labels.instance }} 的磁碟 {{ $labels.device }} 用量 {{ $value | humanizePercentage }}(門檻 80%)"
+      description: "broker 的資料目錄寫滿會讓 broker 當掉。先查是哪個 topic 長最快(kafka_log_log_size),再決定擴容、縮保留期或搬分區(第 24 章)。"
+  - alert: NodeExporterDown
+    expr: up{job="node"} == 0
+    for: 2m
+    labels: { severity: warning, kind: host }
+    annotations:
+      summary: "{{ $labels.instance }} 的 node_exporter 抓不到"
+      description: "監控的監控:磁碟告警失效中。"
+- name: kafka-lag
+  interval: 30s
+  rules:
+  - alert: KafkaConsumerLagHigh
+    expr: sum by (consumergroup, topic) (kafka_consumergroup_lag) > 1000
+    for: 2m
+    labels: { severity: warning, kind: lag }
+    annotations:
+      summary: "group {{ $labels.consumergroup }} 在 {{ $labels.topic }} 落後 {{ $value }} 筆(門檻 1000,範例值)"
+      description: "consumer 處理太慢或停了。先看該 group 的成員數與 rebalance 次數(第 25 章)。"
+  - alert: KafkaExporterDown
+    expr: up{job="kafka-exporter"} == 0
+    for: 2m
+    labels: { severity: warning, kind: lag }
+    annotations:
+      summary: "kafka_exporter 抓不到"
+      description: "監控的監控:consumer lag 告警失效中。"

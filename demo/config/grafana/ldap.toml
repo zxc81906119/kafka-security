@@ -1,0 +1,37 @@
+# Grafana 登入走 AD(LDAPS 636),與其他元件同一套帳號與群組:AD 是唯一的使用者與群組來源。
+#   - bind 帳號 svc-grafana-ldap 唯讀,和 broker 用的 svc-kafka-ldap 分開(出事時可單獨停用)
+#   - 使用者名稱 = CN(客戶 AD 的慣例);登入時輸入 GARY、YUJIE、MING(大小寫不拘)
+#   - 群組用「依成員查群組」的方式取得(group_search_filter);真實 AD 也可改用 memberOf
+[[servers]]
+host = "openldap"
+port = 636
+use_ssl = true
+start_tls = false
+ssl_skip_verify = false
+root_ca_cert = "/etc/tls/ca.pem"
+bind_dn = "cn=svc-grafana-ldap,ou=system,dc=corp,dc=demo"
+bind_password = "${LDAP_BIND_PW}"   # ldap.toml 只支援環境變數展開;由容器的啟動指令從密碼檔讀入,不出現在 docker inspect
+search_filter = "(cn=%s)"
+search_base_dns = ["ou=users,dc=corp,dc=demo"]
+group_search_filter = "(&(objectClass=groupOfNames)(member=%s))"
+group_search_filter_user_attribute = "dn"
+group_search_base_dns = ["ou=groups,dc=corp,dc=demo"]
+
+[servers.attributes]
+name = "cn"
+username = "cn"
+email = "mail"
+member_of = "dn"
+
+# 群組對映 Grafana 角色(由上往下,第一個符合的生效)
+[[servers.group_mappings]]
+group_dn = "cn=cluster-admin,ou=groups,dc=corp,dc=demo"
+org_role = "Admin"
+
+[[servers.group_mappings]]
+group_dn = "cn=ops,ou=groups,dc=corp,dc=demo"
+org_role = "Editor"
+
+[[servers.group_mappings]]
+group_dn = "*"
+org_role = "Viewer"

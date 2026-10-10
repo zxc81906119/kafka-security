@@ -1,0 +1,37 @@
+#!/usr/bin/env bash
+# 第 26 章(進階):Grafana 全元件監控——官方儀表板、node_exporter(主機)、kafka_exporter(consumer lag)、AD 登入
+# 需要 HA 模式與 Prometheus、Alertmanager:scripts/ha.sh on;docker compose --profile c3 up -d prometheus alertmanager blackbox-exporter
+# 實測結果摘要:
+#   Grafana 只收 HTTPS、AD(LDAPS)登入並依群組對映角色;資料來源用只讀的 grafana 帳號連 Prometheus
+#   官方 jmx-monitoring-stacks 的 5 個 KRaft 儀表板不改一個字匯入(為此把抓取 job 改成官方慣例的 kafka-broker / kafka-controller + env 標籤):150 個查詢約 108 個有資料(107 到 108,隨環境略有出入)
+#   node_exporter、kafka_exporter 走 mTLS;kafka_exporter 的 Kafka 帳號只有 Describe(讀不到訊息);lag 告警實測觸發與解除
+source "$(dirname "$0")/../scripts/lib-ev.sh"
+ch_begin ch26 "Grafana 全元件監控:官方儀表板、主機指標、consumer lag"
+GS="$DEMO_ROOT/scripts/grafana.sh"
+GL="$DEMO_ROOT/scripts/grafana-lab.sh"
+
+step grafana-on "【啟動】備妥密碼、官方儀表板(固定 commit、校驗 SHA-256)、AD 的唯讀查詢帳號、kafka_exporter 專用的 Kafka 帳號(只有 Describe),啟動 Grafana、node_exporter、kafka_exporter" \
+  "scripts/grafana.sh on" \
+  'bash "$GS" on 2>&1 | tail -3' '\[grafana\] 完成'
+
+step grafana-stack "【Grafana 就緒】只收 HTTPS;資料來源 Prometheus(帳號 grafana)連得通;5 個官方儀表板與 1 個自製儀表板都載入" \
+  "curl https://grafana:3000/api/health;/api/datasources/uid/Prometheus/health;/api/search" \
+  'bash "$GL" stack 2>&1' '判定:Grafana 只收 HTTPS'
+
+step grafana-dash "【官方儀表板用得起來嗎】把每個儀表板的每個 PromQL 查詢都跑一次,數有幾個有資料" \
+  "node scripts/lib/dash-coverage.mjs(經 Grafana 的資料來源代理查詢)" \
+  'bash "$GL" dashboards 2>&1' '判定:官方儀表板不改一個字就能用'
+
+step grafana-host "【主機指標】node_exporter 要求 mTLS;磁碟用量進了 Prometheus;磁碟告警規則已載入" \
+  "curl --cert … https://node-exporter:9100/metrics;PromQL node_filesystem_*" \
+  'bash "$GL" host 2>&1' '判定:node_exporter 要求 mTLS'
+
+step grafana-lag "【consumer lag】kafka_exporter 的帳號只有 Describe;讓 consumer 落後 4000 筆 → KafkaConsumerLagHigh 觸發 → 追上後解除" \
+  "kafka-console-consumer --group g-lag --max-messages 2000;PromQL kafka_consumergroup_lag" \
+  'bash "$GL" lag 2>&1' '判定:kafka_exporter 只有 Describe 權限'
+
+step grafana-login "【AD 登入】GARY(cluster-admin 群組)是 Admin,YUJIE、MING 是 Viewer;錯密碼、匿名、沒帶帳密的 /metrics 都是 401" \
+  "curl -u gary:… https://grafana:3000/api/org/users" \
+  'bash "$GL" login 2>&1' '判定:AD 帳號登入 Grafana'
+
+ch_end

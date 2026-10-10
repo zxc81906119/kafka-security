@@ -35,7 +35,7 @@ groups:
       description: "0 代表 controller 失去多數;大於 1 代表腦裂。官方列為必設告警。"
   - alert: KafkaJmxControllerMissing
     # 3 是這個環境的 controller 數。抓不到的 controller 視為掉線。
-    expr: count(up{job=~"kafka-jmx.*", role="controller"} == 1) < 3
+    expr: count(up{job=~"kafka-(broker|controller)", role="controller"} == 1) < 3
     for: 0m
     labels: { severity: warning, kind: platform, source: jmx }
     annotations:
@@ -51,7 +51,7 @@ groups:
       description: "代表選了不同步的副本當 leader,可能遺失已確認的資料。官方要求此值為 0。"
   - alert: KafkaJmxScrapeDown
     # 「監控的監控」:抓不到 broker 的 exporter,代表之後所有告警都可能是瞎的;broker 掉線時也會觸發(同時代表該 broker 沒在回應)
-    expr: count(up{job=~"kafka-jmx.*", role="broker"} == 0) > 0
+    expr: count(up{job=~"kafka-(broker|controller)", role="broker"} == 0) > 0
     for: 1m
     labels: { severity: warning, kind: platform, source: jmx }
     annotations:

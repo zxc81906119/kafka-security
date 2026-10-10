@@ -30,6 +30,7 @@ declare -A CH=(
   [23]="ch23-cert-rotation.sh|(進階)憑證到期監控與不停機換憑證(需 HA 模式、Prometheus、blackbox-exporter;不在 all 內)"
   [24]="ch24-reassign.sh|(進階)容量與再平衡:分區重新指派加限速(需 HA 模式;不在 all 內)"
   [25]="ch25-app-reliability.sh|(進階)應用程式端的可靠性:冪等 producer、at-least-once、rebalance、靜態成員、交易(需 HA 模式;首次會下載 JDK 映像;不在 all 內)"
+  [26]="ch26-grafana.sh|(進階)Grafana 全元件監控:官方儀表板、主機指標(node_exporter)、consumer lag(kafka_exporter)、AD 登入(需 HA 模式與 Prometheus;不在 all 內)"
 )
 run_ch() {
   local n="$1"; local f="${CH[$n]%%|*}"
@@ -42,13 +43,13 @@ run_ch() {
 case "${1:-menu}" in
   reset) ./scripts/reset.sh ;;
   all) for n in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 17 18 19 20; do run_ch "$n"; done ;;
-  [0-9]|1[0-9]|2[0-5]) run_ch "$1" ;;
+  [0-9]|1[0-9]|2[0-6]) run_ch "$1" ;;
   *)
     while true; do
       echo; echo "═══ Confluent 安全方案 Demo ═══"
-      for n in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 17 18 19 20 21 22 23 24 25; do printf "  %2s) %s\n" "$n" "${CH[$n]#*|}"; done
+      for n in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 17 18 19 20 21 22 23 24 25 26; do printf "  %2s) %s\n" "$n" "${CH[$n]#*|}"; done
       echo "   r) 重置   q) 離開"
       read -r -p "選擇章節: " c
-      case "$c" in q) break ;; r) ./scripts/reset.sh ;; [0-9]|1[0-9]|2[0-5]) run_ch "$c" ;; esac
+      case "$c" in q) break ;; r) ./scripts/reset.sh ;; [0-9]|1[0-9]|2[0-6]) run_ch "$c" ;; esac
     done ;;
 esac

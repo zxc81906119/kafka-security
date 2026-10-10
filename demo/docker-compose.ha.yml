@@ -129,3 +129,77 @@ services:
       - ./certs/ca.pem:/etc/blackbox/ca.pem:ro
       - ./certs/client-legacy-other.pem:/etc/blackbox/probe-client.pem:ro    # 無權限的 client 憑證,只用來完成 mTLS 握手
       - ./certs/client-legacy-other.key:/etc/blackbox/probe-client.key:ro
+
+  # ===== 第 26 章:Grafana 與主機 / consumer lag 指標(profile grafana;用 scripts/grafana.sh on 啟動,會先備妥密碼與帳號) =====
+  grafana:
+    image: grafana/grafana:latest                     # 測試版本 13.2.3(記錄在 DESIGN-BASIS);正式環境請釘定版本
+    container_name: grafana
+    hostname: grafana
+    profiles: ["grafana"]
+    # 啟動前才從密碼檔讀 LDAP bind 密碼進環境變數(ldap.toml 只能展開環境變數);密碼不寫在 compose,docker inspect 看不到
+    entrypoint: ["/bin/sh", "-c", "export LDAP_BIND_PW=$$(cat /etc/grafana/secrets/ldap-bind.pw); exec /run.sh"]
+    ports: ["3000:3000"]
+    environment:
+      GF_SERVER_PROTOCOL: https
+      GF_SERVER_CERT_FILE: /etc/tls/server.pem
+      GF_SERVER_CERT_KEY: /etc/tls/server.key
+      GF_SERVER_DOMAIN: localhost
+      GF_SECURITY_ADMIN_USER: admin                         # 本機 admin 只留給 break-glass(AD 掛了還能進來),日常用 AD 帳號登入
+      GF_SECURITY_ADMIN_PASSWORD__FILE: /etc/grafana/secrets/admin.pw
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_AUTH_ANONYMOUS_ENABLED: "false"
+      GF_AUTH_LDAP_ENABLED: "true"
+      GF_AUTH_LDAP_CONFIG_FILE: /etc/grafana/ldap.toml
+      GF_AUTH_LDAP_ALLOW_SIGN_UP: "true"                    # 第一次用 AD 帳號登入時自動建立 Grafana 使用者(角色由群組對映決定)
+      GF_ANALYTICS_REPORTING_ENABLED: "false"
+      GF_ANALYTICS_CHECK_FOR_UPDATES: "false"
+      GF_SECURITY_DISABLE_GRAVATAR: "true"
+      GF_METRICS_ENABLED: "true"
+      GF_METRICS_BASIC_AUTH_USERNAME: Prometheus
+      GF_METRICS_BASIC_AUTH_PASSWORD__FILE: /etc/grafana/secrets/metrics.pw
+    volumes:
+      - ./config/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./config/grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - ./config/grafana/ldap.toml:/etc/grafana/ldap.toml:ro
+      - ./config/grafana/secrets:/etc/grafana/secrets:ro
+      - ./certs:/etc/tls:ro
+    mem_limit: 512m
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --no-check-certificate -O- https://localhost:3000/api/health | grep -q ok"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
+
+  node-exporter:
+    image: prom/node-exporter:latest
+    container_name: node-exporter
+    hostname: node-exporter
+    profiles: ["grafana"]
+    command:
+      - --path.rootfs=/host
+      - --web.config.file=/etc/node-exporter/web-config.yml
+      - --web.listen-address=:9100
+    volumes:
+      - /:/host:ro                                          # 容器環境看到的是 Docker 主機(VM)的磁碟與 CPU;正式環境每台 VM 各裝一個
+      - ./config/grafana/node-web-config.yml:/etc/node-exporter/web-config.yml:ro
+      - ./certs:/etc/tls:ro
+    pid: host
+
+  kafka-exporter:
+    image: danielqsj/kafka-exporter:latest                  # 社群專案(不是 Confluent 或 Prometheus 官方);測試版本 1.10.0
+    container_name: kafka-exporter
+    hostname: kafka-exporter
+    profiles: ["grafana"]
+    # 密碼從檔案讀進指令列(不寫在 compose)。連 broker 用 SCRAM 帳號 kafka-exporter(只有 Describe 權限的 ACL);自己的網頁走 HTTPS + mTLS
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - exec kafka_exporter --kafka.server=broker1:9094 --kafka.server=broker2:9094 --kafka.server=broker3:9094
+        --sasl.enabled --sasl.mechanism=scram-sha512 --sasl.username=kafka-exporter --sasl.password="$$(cat /etc/secrets/kafka-exporter.pw)"
+        --tls.enabled --tls.ca-file=/etc/tls/ca.pem --tls.server-name=broker1
+        --server.tls.enabled --server.tls.cert-file=/etc/tls/server.pem --server.tls.key-file=/etc/tls/server.key
+        --server.tls.mutual-auth-enabled --server.tls.ca-file=/etc/tls/ca.pem
+        --topic.filter='^[^_].*' --group.filter='.*'
+    volumes:
+      - ./certs:/etc/tls:ro
+      - ./config/grafana/secrets:/etc/secrets:ro

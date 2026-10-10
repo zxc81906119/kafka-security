@@ -1,0 +1,12 @@
+# 儀表板由檔案載入(官方儀表板 + 本專案自己的一個):檔案放在 /var/lib/grafana/dashboards,
+# 官方的由 scripts/grafana.sh 依固定 commit 下載並校驗 SHA-256(不進版本庫)。
+apiVersion: 1
+providers:
+  - name: confluent
+    folder: Confluent Platform
+    type: file
+    disableDeletion: true
+    allowUiUpdates: false
+    options:
+      path: /var/lib/grafana/dashboards
+      foldersFromFilesStructure: false
