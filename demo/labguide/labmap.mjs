@@ -63,6 +63,8 @@ export const MAPS = [
   { n: 23, prove: '憑證到期要從外面看(blackbox 探測實際送出的鏈);不停機換憑證要預檢、先換一台、回退走帶外路徑', use: ['cli', 'broker', 'prom', 'am', 'certs'],
     flows: [['blackbox 探測 12 個端點', '實際 TLS 握手(內部 mTLS 用無權限 client 憑證)', '✔ 剩餘天數 → < 30 天告警'], ['動態換 CLIENT 埠憑證', '預檢 → 金絲雀 → 其餘', '✔ 不重啟、寫入零失敗;✘ MDS 不在範圍,要重啟'], ['SAN 不同的憑證', 'broker 驗證 DN / SAN', '✘ 拒絕'], ['別的 CA 簽的憑證', 'broker 不檢查鏈是否被信任', '✘ client 全失敗 → 帶外路徑回退'], ['重啟後', '動態設定存在 metadata', '✔ 仍是新憑證 → 靜態設定要同步']] },
 
+  { n: 24, prove: '分區搬家要先存回退檔、用審過的計畫、限速、以 --verify 收尾;取消會回到搬家前;沒收尾的限速設定會殘留', use: ['cli', 'broker'],
+    flows: [['資料全擠在兩台', 'kafka-log-dirs 看每台資料量', '✘ 第三台是空的'], ['限速搬家(4 MB/s)', 'reassign --execute --throttle → --verify', '✔ 背景寫入零失敗;完成後限速自動移除'], ['搬到一半 --cancel', '回到搬家前的副本配置', '✔ 限速一併清除'], ['搬完不跑 --verify', 'broker 與 topic 的 throttled.* 設定殘留', '✘ 之後的複製流量被默默限速 → ✔ --verify 清除']] },
 ];
 
 const esc = s => s.replace(/&/g, '&amp;').replace(/</g, '&lt;');

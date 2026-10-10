@@ -1,0 +1,32 @@
+# 【取消搬家】以 1 MB/s 慢慢搬,搬到一半 --cancel:回到搬家前的副本配置,限速一併清除
+$ kafka-reassign-partitions --execute --throttle 1000000;--cancel
+▶ 以 1 MB/s 慢慢搬回『擠在兩台』的指派,搬到一半 --cancel:應該回到搬家前的均衡指派,且限速一併清掉
+搬家前的指派:
+ Partition: 0 Leader: 11 Replicas: 11,12 Isr: 11,12
+ Partition: 1 Leader: 12 Replicas: 12,13 Isr: 12,13
+ Partition: 2 Leader: 11 Replicas: 13,11 Isr: 11,13
+ Partition: 3 Leader: 12 Replicas: 11,12 Isr: 12,11
+ Partition: 4 Leader: 12 Replicas: 12,13 Isr: 12,13
+ Partition: 5 Leader: 13 Replicas: 13,11 Isr: 11,13
+The inter-broker throttle limit was set to 1000000 B/s
+Successfully started partition reassignments for cap.skew-0,cap.skew-1,cap.skew-2,cap.skew-3,cap.skew-4,cap.skew-5
+搬到一半(Adding/Removing 表示還在複製):
+ Partition: 0 Leader: 11 Replicas: 11,12 Isr: 11,12
+ Partition: 1 Leader: 12 Replicas: 12,11,13 Isr: 12,13
+ Partition: 2 Leader: 11 Replicas: 11,12,13 Isr: 11,13
+ Partition: 3 Leader: 12 Replicas: 12,11 Isr: 12,11
+ Partition: 4 Leader: 12 Replicas: 11,12,13 Isr: 12,13
+ Partition: 5 Leader: 13 Replicas: 12,11,13 Isr: 11,13
+Successfully cancelled partition reassignments for: cap.skew-1,cap.skew-2,cap.skew-4,cap.skew-5
+None of the specified partition moves are active.Clearing broker-level throttles on brokers 11,12,13
+Clearing topic-level throttles on topic cap.skew
+取消後的指派:
+ Partition: 0 Leader: 11 Replicas: 11,12 Isr: 11,12
+ Partition: 1 Leader: 12 Replicas: 12,13 Isr: 12,13
+ Partition: 2 Leader: 11 Replicas: 11,13 Isr: 11,13
+ Partition: 3 Leader: 12 Replicas: 12,11 Isr: 12,11
+ Partition: 4 Leader: 12 Replicas: 12,13 Isr: 12,13
+ Partition: 5 Leader: 13 Replicas: 11,13 Isr: 11,13
+取消後:broker 11 的限速設定 0 筆、topic cap.skew 的限速設定 0 筆
+沒有進行中的搬家
+判定:--cancel 讓搬到一半的搬家回到搬家前的指派(前後一致),限速也一併清除

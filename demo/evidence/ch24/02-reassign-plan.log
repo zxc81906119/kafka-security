@@ -1,0 +1,19 @@
+# 【回退檔與計畫】先把目前的指派存成回退檔;看工具建議的新指派(--generate,只是草稿);寫出審過的均衡計畫
+$ kafka-reassign-partitions --generate --topics-to-move-json-file … --broker-list 11,12,13
+▶ 先把『目前的指派』存成回退檔——搬家出問題時,拿它就能搬回原樣。再看工具建議的新指派,最後寫出審過的計畫
+回退檔 /tmp/cap-rollback.json:目前的指派(6 個分區)
+工具建議的新指派(--generate;只是草稿,起點是隨機的、也不會刻意減少搬動量):
+  "partition":0,"replicas":[11,12]
+  "partition":1,"replicas":[12,13]
+  "partition":2,"replicas":[13,11]
+  "partition":3,"replicas":[12,13]
+  "partition":4,"replicas":[13,11]
+  "partition":5,"replicas":[11,12]
+審過、要執行的計畫 /tmp/cap-plan.json(輪流放在三台,每台一樣多):
+  "partition":0,"replicas":[11,12]
+  "partition":1,"replicas":[12,13]
+  "partition":2,"replicas":[13,11]
+  "partition":3,"replicas":[11,12]
+  "partition":4,"replicas":[12,13]
+  "partition":5,"replicas":[13,11]
+判定:已存回退檔(搬家前的指派)並寫出均衡計畫;--generate 只當草稿,正式執行的是審過的計畫
