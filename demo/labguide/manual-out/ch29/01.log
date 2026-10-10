@@ -1,0 +1,17 @@
+▶ worker(client 憑證 CN=connect)的角色:自己的內部 topic(connect- 開頭)、group connect-cluster、授權查詢(SecurityAdmin)
+  bind User:connect ResourceOwner Topic:connect-(PREFIXED) ->  [HTTP 204] 
+  bind User:connect ResourceOwner Group:connect-cluster(LITERAL) ->  [HTTP 204] 
+  bind User:connect DeveloperRead Topic:_confluent-command(LITERAL) ->  [HTTP 204] 
+  bind User:connect DeveloperWrite Topic:_confluent-command(LITERAL) ->  [HTTP 204] 
+   bind User:connect SecurityAdmin  -> [HTTP 204]
+▶ 連接器 orders-sink 的服務帳號 SVC-ORDERS-SINK:只讀 orders.sink、group connect-orders- 開頭(連接器的 group 固定叫 connect-<連接器名稱>)、只寫自己的 DLQ
+  bind User:SVC-ORDERS-SINK DeveloperRead Topic:orders.sink(LITERAL) ->  [HTTP 204] 
+  bind User:SVC-ORDERS-SINK DeveloperRead Group:connect-orders-(PREFIXED) ->  [HTTP 204] 
+  bind User:SVC-ORDERS-SINK DeveloperWrite Topic:orders.sink.dlq(LITERAL) ->  [HTTP 204] 
+▶ 使用者(AD 群組)對連接器的角色:topic-admin 管全部、orders-write 只管 orders- 開頭的連接器
+   bind Group:topic-admin ResourceOwner Connector:* -> [HTTP 204]
+   bind Group:orders-write ResourceOwner Connector:orders- -> [HTTP 204]
+▶ 啟動 Connect worker
+▶ 等 REST 與授權就緒(gary 可以列出連接器)
+   1 秒後:gary 能列出連接器
+   [connect] 就緒:https://localhost:8083(AD 帳密,Basic)

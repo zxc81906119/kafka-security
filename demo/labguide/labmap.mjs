@@ -73,6 +73,8 @@ export const MAPS = [
     flows: [['平台容器日誌', 'Alloy → Kafka(otel-logs)→ Alloy → Loki(mTLS)', '✔ 6 個節點都進 Loki'], ['Loki 停機 1 分鐘', '日誌留在 Kafka', '✔ 恢復後 980 行 = 980 行'], ['Java 程式掛 OpenTelemetry agent', 'trace context 放進訊息標頭', '✔ 一個 trace 串起 publish 與 process'], ['YUJIE 讀沒有權限的 topic', '稽核事件 → Kafka → Loki', '✘ 被拒 → ✔ Loki 查得到 granted false'], ['alloy-producer / alloy-consumer', 'ACL 寫讀分開', '✔ 各做各的 → ✘ 越權被拒']] },
   { n: 28, prove: 'schema 演進要靠相容性模式把關:選哪個模式取決於誰先上線;TRANSITIVE 擋住舊資料重播的問題;授權(403)與相容性(409)是兩道獨立的關卡;RecordNameStrategy 讓前綴授權失效;資料契約規則只在 client 端執行', use: ['cli', 'broker', 'ad', 'certs'],
     flows: [['加有預設值的欄位', 'BACKWARD 相容性檢查', '✔ 200;✘ 加必填欄位 / 改型別 409'], ['BACKWARD / FORWARD / FULL', '同樣三種改法', '✔ 結果不同:先升級哪一端決定用哪個'], ['只比最新版 vs 比全部版本', 'BACKWARD vs BACKWARD_TRANSITIVE', '✘ 漏掉 v1 → ✔ TRANSITIVE 擋住'], ['yujie 改 orders / payments', '相容性 vs RBAC', '✘ 409(不相容)/ ✘ 403(沒權限)'], ['RecordNameStrategy', 'subject 變成 demo.Order', '✘ orders. 前綴授權不涵蓋 → 403'], ['CEL 規則 amount >= 0', 'client 端序列化器執行', '✔ 100 寫入 → ✘ -5 在寫入端被擋']] },
+  { n: 29, prove: 'Connect 的安全:連接器的建立與查看跟著 AD 群組;每個連接器用自己的最小權限服務帳號;壞資料用容錯加 DLQ 分流;密碼用 config provider 不落地', use: ['cli', 'broker', 'ad', 'certs'],
+    flows: [['yujie / ming 管連接器', 'MDS 授權(Connector 資源)', '✔ yujie 只能 orders-;✘ ming 空清單、403'], ['連接器讀 topic', '各用自己的 AD 服務帳號', '✔ 有授權的 topic;✘ 用 worker 身分或越權的 topic 被擋'], ['壞資料', 'errors.tolerance + DLQ', '✘ 沒容錯就 FAILED → ✔ 好的照寫、壞的進 DLQ 附原因'], ['連接器密碼', '寫進設定 vs ${file:…}', '✘ 直接寫:connect-configs 明文 → ✔ provider:只有引用']] },
 ];
 
 const esc = s => s.replace(/&/g, '&amp;').replace(/</g, '&lt;');

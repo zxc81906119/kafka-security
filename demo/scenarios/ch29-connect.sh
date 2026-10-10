@@ -1,0 +1,35 @@
+#!/usr/bin/env bash
+# 第 29 章(進階):Kafka Connect 的安全與可靠性——RBAC、連接器各用自己的身分、壞資料(DLQ)、密碼不落地(config provider)
+# 需要 HA 模式:scripts/ha.sh on;記憶體吃緊時先 scripts/observability.sh off、docker stop control-center schema-registry
+# 實測結果摘要:
+#   RBAC:AD 群組決定誰能建立、看到連接器(yujie 只能管 orders- 開頭;ming 空清單、403;沒帳密 401)
+#   身分:連接器用自己的 AD 服務帳號 SVC-ORDERS-SINK(只能讀 orders.sink);用 worker 身分或讀沒授權的 topic 都 TopicAuthorizationException
+#   DLQ:沒容錯的連接器遇第一筆壞資料就 FAILED;errors.tolerance=all + DLQ 好的照寫、壞的進 DLQ 並附錯誤標頭
+#   密碼:用 ${file:…} 引用密碼檔,connect-configs topic 裡沒有密碼;直接寫進設定的以明文存在 topic
+#   外掛:Confluent 映像不含 FileStream 連接器,用 Apache Kafka 的 connect-file(Maven Central,校驗 SHA-1)
+source "$(dirname "$0")/../scripts/lib-ev.sh"
+ch_begin ch29 "Kafka Connect 的安全與可靠性"
+CS="$DEMO_ROOT/scripts/connect-setup.sh"
+CL="$DEMO_ROOT/scripts/connect-lab.sh"
+
+step connect-on "【啟動】備妥 worker 的憑證與角色、連接器的 AD 服務帳號與角色、使用者(群組)對連接器的角色、外掛與密碼檔,啟動 Connect worker(REST 走 HTTPS,RBAC)" \
+  "scripts/connect-setup.sh on" \
+  'bash "$CS" on 2>&1 | tail -3' '\[connect\] 就緒'
+
+step connect-rbac "【誰能管連接器】AD 群組決定:yujie 只能管 orders- 開頭的連接器;ming 看不到也建不了;沒帳密 401" \
+  "POST /connectors(yujie / ming);GET /connectors" \
+  'bash "$CL" rbac 2>&1' '判定:連接器的建立、查看依 AD 群組授權'
+
+step connect-identity "【連接器的身分】每個連接器用自己的 AD 服務帳號(最小權限);用 worker 身分或讀沒授權的 topic 都被擋" \
+  "consumer.override.sasl.jaas.config(連接器自己的帳號);GET /connectors/<名稱>/status" \
+  'bash "$CL" identity 2>&1' '判定:連接器各用自己的最小權限身分'
+
+step connect-dlq "【壞資料】沒有容錯的連接器遇到第一筆壞資料就 FAILED;errors.tolerance=all 加 DLQ,好的照寫、壞的進 DLQ 並附錯誤原因" \
+  "errors.tolerance=all;errors.deadletterqueue.topic.name;errors.deadletterqueue.context.headers.enable=true" \
+  'bash "$CL" dlq 2>&1' '判定:沒有容錯的連接器遇到第一筆壞資料就 FAILED'
+
+step connect-secrets "【密碼不落地】用 \${file:…} 引用密碼檔:connect-configs topic 沒有密碼;直接寫進設定的密碼以明文存在 topic" \
+  "config.providers=file(FileConfigProvider);kafka-console-consumer --topic connect-configs" \
+  'bash "$CL" secrets 2>&1' '判定:用 config provider 引用密碼檔'
+
+ch_end

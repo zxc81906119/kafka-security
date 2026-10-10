@@ -1,0 +1,7 @@
+▶ 寫 8 筆進 orders.sink(5 筆好的 JSON、3 筆壞的)。對照:沒有容錯的連接器遇到壞資料就停;有容錯加 DLQ 的好的繼續、壞的進 DLQ
+orders-strict(errors.tolerance=none,預設):RUNNING/FAILED
+   錯誤:org.apache.kafka.connect.errors.ConnectException: Tolerance exceeded in error handler\n\tat org.apache.kafka.connect.runtime.errors.RetryWithToleranceOperator.execAndHandleError(Ret
+orders-dlq(errors.tolerance=all + DLQ):狀態 RUNNING/RUNNING;寫進檔案的好資料 5 筆
+DLQ topic orders.sink.dlq 共 3 筆(壞資料 3 筆)
+DLQ 訊息的錯誤標頭:__connect.errors.stage:VALUE_CONVERTER __connect.errors.exception.class.name:org.apache.kafka.connect.errors.DataException 
+判定:沒有容錯的連接器遇到第一筆壞資料就 FAILED;有容錯加 DLQ 的 5 筆好資料照寫、3 筆壞資料進 DLQ 並附錯誤階段與原因

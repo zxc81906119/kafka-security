@@ -58,3 +58,5 @@ demo/config/c3/grafana_scrape.yml
 demo/config/c3/grafana_metrics.pw
 demo/config/observability/secrets/
 demo/config/observability/otel-javaagent.jar*
+demo/config/connect/plugins/
+demo/config/connect/secrets/

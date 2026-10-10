@@ -1,0 +1,9 @@
+# 【連接器的身分】每個連接器用自己的 AD 服務帳號(最小權限);用 worker 身分或讀沒授權的 topic 都被擋
+$ consumer.override.sasl.jaas.config(連接器自己的帳號);GET /connectors/<名稱>/status
+▶ 連接器用自己的 AD 服務帳號 SVC-ORDERS-SINK(只能讀 orders.sink);對照:用 worker 身分、或去讀沒授權的 topic,都會失敗
+orders-own(自己的服務帳號,讀 orders.sink):RUNNING/RUNNING
+orders-worker(沒覆寫身分 = 用 worker 的身分讀 orders.sink):RUNNING/FAILED
+   錯誤:org.apache.kafka.common.errors.TopicAuthorizationException: Not authorized to access topics: [orders.sink]\n
+orders-wide(自己的服務帳號,但去讀沒授權的 payments.events):RUNNING/FAILED
+   錯誤:org.apache.kafka.common.errors.TopicAuthorizationException: Not authorized to access topics: [payments.events]\n
+判定:連接器各用自己的最小權限身分:有授權的 topic 正常;worker 身分沒有資料 topic 的讀取權,越權的 topic 讀不到(TopicAuthorizationException)

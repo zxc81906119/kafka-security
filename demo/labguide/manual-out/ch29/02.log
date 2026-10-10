@@ -1,0 +1,9 @@
+▶ AD 群組決定誰能做什麼:yujie(orders-write)只能管 orders- 開頭的連接器;ming 什麼都看不到;gary(topic-admin)管全部;沒帳密 401
+yujie 建立 orders-rbac:[HTTP 201]
+yujie 建立 payments-rbac(名稱不在她的範圍):[HTTP 403]
+ming 建立連接器:[HTTP 403]
+ming 列出連接器:[](空清單 = 授權過濾掉了,連名稱都看不到)
+ming 讀 orders-rbac 的狀態:[HTTP 403]
+不帶帳密:[HTTP 401]
+gary 列出連接器:["orders-rbac"]
+判定:連接器的建立、查看依 AD 群組授權:yujie 只能管 orders- 開頭的(201 / 403)、ming 看不到也建不了、沒帳密 401

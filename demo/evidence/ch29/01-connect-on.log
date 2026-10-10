@@ -1,0 +1,5 @@
+# 【啟動】備妥 worker 的憑證與角色、連接器的 AD 服務帳號與角色、使用者(群組)對連接器的角色、外掛與密碼檔,啟動 Connect worker(REST 走 HTTPS,RBAC)
+$ scripts/connect-setup.sh on
+▶ 等 REST 與授權就緒(gary 可以列出連接器)
+   1 秒後:gary 能列出連接器
+   [connect] 就緒:https://localhost:8083(AD 帳密,Basic)
