@@ -1,0 +1,14 @@
+▶ 6 分區的 topic,c1 先加入群組(拿到全部 6 個分區),過一會 c2 加入。比較兩種分配策略下 c1 的事件
+【eager】c1 的事件(REVOKED = 被收回、ASSIGNED = 被指派):
+  [ 5s] c1         ASSIGNED [0, 1, 2, 3, 4, 5]
+  [29s] c1         REVOKED  [0, 1, 2, 3, 4, 5]
+  [29s] c1         ASSIGNED [0, 1, 2]
+  [45s] c1         REVOKED  [0, 1, 2]
+【cooperative】c1 的事件(REVOKED = 被收回、ASSIGNED = 被指派):
+  [ 5s] c1         ASSIGNED [0, 1, 2, 3, 4, 5]
+  [26s] c1         REVOKED  [3, 4, 5]
+  [26s] c1         ASSIGNED []
+  [29s] c1         ASSIGNED []
+  [45s] c1         REVOKED  [0, 1, 2]
+c2 加入時,c1 第一次被收回的分區數:eager 6 個、cooperative 3 個
+判定:c2 加入時,eager 收回全部 6 個分區(整個群組暫停再重分配);cooperative 只收回要交給 c2 的 3 個,其餘持續消費

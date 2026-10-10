@@ -65,6 +65,8 @@ export const MAPS = [
 
   { n: 24, prove: '分區搬家要先存回退檔、用審過的計畫、限速、以 --verify 收尾;取消會回到搬家前;沒收尾的限速設定會殘留', use: ['cli', 'broker'],
     flows: [['資料全擠在兩台', 'kafka-log-dirs 看每台資料量', '✘ 第三台是空的'], ['限速搬家(4 MB/s)', 'reassign --execute --throttle → --verify', '✔ 背景寫入零失敗;完成後限速自動移除'], ['搬到一半 --cancel', '回到搬家前的副本配置', '✔ 限速一併清除'], ['搬完不跑 --verify', 'broker 與 topic 的 throttled.* 設定殘留', '✘ 之後的複製流量被默默限速 → ✔ --verify 清除']] },
+  { n: 25, prove: '應用程式端的可靠性:冪等擋掉重送重複、手動提交是 at-least-once、cooperative 與靜態成員降低 rebalance 影響、交易 abort 要用 read_committed 才看不到', use: ['cli', 'broker'],
+    flows: [['broker 凍結 5 秒,producer 逾時重送', '關閉冪等 → broker 收到兩份', '✘ 1500 筆變 1505 → ✔ 開冪等 0 重複'], ['consumer 處理後、提交前當機', 'offset 沒提交 → 重啟從上次位置再讀', '✘ 同一批 100 筆處理兩次(at-least-once)'], ['新成員加入群組', 'eager 全收 / cooperative 只收要換的', '✘ 6 個分區全停 → ✔ 只動 3 個'], ['成員滾動重啟', '動態成員每次觸發 rebalance / 靜態成員不觸發', '✘ 多 2 次 → ✔ 0 次'], ['交易 abort', 'abort 的訊息仍在 log', '✔ read_committed 看不到 → ✘ read_uncommitted 看得到']] },
 ];
 
 const esc = s => s.replace(/&/g, '&amp;').replace(/</g, '&lt;');

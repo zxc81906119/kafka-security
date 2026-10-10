@@ -424,6 +424,7 @@ C.push(H1('第 5 章  應用開發'),
     ['partition.assignment.strategy', 'RangeAssignor, CooperativeStickyAssignor', '偏好 cooperative 以降低 rebalance 影響'],
     ['group.instance.id', 'null;設定後重啟不立即 rebalance,需等 session timeout', '長駐服務可用靜態成員'],
   ], [2.6, 2.8, 3.6]),
+  P('{測} 本案實測(Lab 25,Java 單檔程式,HA 環境):(1)broker 暫停 5 秒造成逾時重送,**明設關閉冪等**時 1500 筆變 1505(5 筆重複),開啟冪等為 0 重複(預設本來就是開啟,不要手動關);(2)手動提交的 consumer 在處理後、提交前當機,重啟後同一批 100 筆被再處理一次,所以處理必須能容許重複;(3)新成員加入時 eager(Range)收回全部 6 個分區,cooperative 只收回要換人的 3 個;(4)成員滾動重啟時,動態成員讓其他成員多經歷兩次 rebalance,靜態成員(`group.instance.id`)在 session timeout 內重啟為 0 次;(5)交易 abort 的訊息仍寫在 log,`read_committed` 看不到、`read_uncommitted` 看得到。程式用 super user 身分以便專注行為,正式應用請用自己的身分與最小權限。'),
   P('{推} consumer 端的 DLQ、冪等處理與提交策略,官方沒有找到專章;一般做法是「處理要冪等,重複訊息不造成重複效果」。{社}'),
   H2('5.4 Schema Registry 與資料契約'),
   T(['主題', '內容', '依據'], [

@@ -1,35 +1,35 @@
 [
  {
-  "lab": "ch24",
-  "step": "24.1 造出不均:資料全擠在兩台",
+  "lab": "ch25",
+  "step": "25.1 冪等 producer:broker 凍結造成逾時重送",
   "M": "ok",
   "A": "-",
   "E": "ok"
  },
  {
-  "lab": "ch24",
-  "step": "24.2 回退檔與計畫:--generate 只是草稿",
+  "lab": "ch25",
+  "step": "25.2 at-least-once:處理後、提交前當機",
   "M": "ok",
   "A": "-",
   "E": "ok"
  },
  {
-  "lab": "ch24",
-  "step": "24.3 限速搬家:寫入不中斷,--verify 收尾",
+  "lab": "ch25",
+  "step": "25.3 rebalance:eager 與 cooperative",
   "M": "ok",
   "A": "-",
   "E": "ok"
  },
  {
-  "lab": "ch24",
-  "step": "24.4 取消搬到一半的搬家",
+  "lab": "ch25",
+  "step": "25.4 靜態成員:滾動部署不觸發 rebalance",
   "M": "ok",
   "A": "-",
   "E": "ok"
  },
  {
-  "lab": "ch24",
-  "step": "24.5 忘了收尾:限速設定殘留",
+  "lab": "ch25",
+  "step": "25.5 交易:abort 的訊息誰看得到",
   "M": "ok",
   "A": "-",
   "E": "ok"

@@ -11,9 +11,11 @@
 | 22 | 平台監控與告警(含監控端點保護、帳號分開) | 完成(main) |
 | 23 | 憑證到期監控與不停機換憑證 | 完成(main) |
 | 24 | 容量與再平衡(分區重新指派加限速) | 完成 |
-| 25 | producer / consumer 可靠性(Java 單檔程式;依賴 HA) | 待做 |
-| 26 | Schema 演進與資料契約 | 待做 |
-| 27 | Connect:DLQ、設定檔祕密、RBAC(可能需下載 connector) | 待做 |
+| 25 | producer / consumer 可靠性(Java 單檔程式;依賴 HA) | 完成 |
+| 26 | 指標與儀表板:Grafana + 官方 jmx-monitoring-stacks 儀表板;node_exporter(磁碟等主機指標)、kafka_exporter(consumer lag,社群專案,先實測能否連 TLS+帳密);JMX exporter 擴到 Schema Registry、Connect(使用者 2026-10-10 要求,C3 只看 broker 與 controller) | 待做 |
+| 27 | 日誌與追蹤:Loki + Grafana Alloy(broker/controller 日誌)、Tempo + OpenTelemetry Collector(trace);日誌與 trace 以 Kafka 當傳輸緩衝(OTel Collector 的 Kafka exporter/receiver,要實測 TLS+授權;topic 最小權限)。映像約 1.5 GB,分開啟停 | 待做 |
+| 28 | Schema 演進與資料契約 | 待做 |
+| 29 | Connect:DLQ、設定檔祕密、RBAC(可能需下載 connector) | 待做 |
 
 > 編號說明:原規劃 Lab 27–29 因批 B(升級與 DR)暫不做,改成連續編號 25–27;故事順序依「監控 → 憑證 → 容量 → 應用開發」。
 

@@ -1,0 +1,8 @@
+# 【交易】commit 一批、abort 一批:read_committed 只看得到 commit 的,read_uncommitted 連 abort 的都看得到
+$ java TxnProducer.java <topic> 10 commit|abort;java Counter.java <topic> read_committed|read_uncommitted
+▶ 交易 producer 各寫 10 筆:一個 commit、一個 abort。再用兩種隔離等級的 consumer 數筆數
+交易已提交(commit):10 筆
+交易已放棄(abort):10 筆
+counter isolation=read_committed 總筆數=10 不重複=10 重複=0
+counter isolation=read_uncommitted 總筆數=20 不重複=20 重複=0
+判定:abort 的 10 筆仍寫在 log 裡:read_committed 看不到(只讀到 commit 的 10 筆),read_uncommitted 看得到(20 筆)。要用交易的 consumer 一定要設 read_committed

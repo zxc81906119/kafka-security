@@ -1,0 +1,14 @@
+# 【冪等 producer】送 1500 筆時把 leader broker 暫停 5 秒,逾時的請求會重送:關閉冪等會寫出重複訊息,開啟冪等則不會
+$ java Producer.java <topic> 1500 200 false|true;docker pause <leader>;java Counter.java
+▶ 準備:下載 JDK 映像與 Kafka jar(只有第一次)
+▶ 送 1500 筆(acks=all、retries 無限、request.timeout=2 秒),送到一半把 leader broker 暫停 5 秒。逾時的請求會重送——但原本那個請求其實已經到了 broker
+【關閉冪等 enable.idempotence=false】
+ 第 1 次:
+  暫停 broker3(leader)5 秒,模擬網路卡住 / 程序凍結
+  producer idempotent=false 確認成功=1500 失敗=0
+  counter isolation=read_committed 總筆數=1505 不重複=1500 重複=5
+【開啟冪等 enable.idempotence=true】
+  暫停 broker3(leader)5 秒,模擬網路卡住 / 程序凍結
+  producer idempotent=true 確認成功=1500 失敗=0
+  counter isolation=read_committed 總筆數=1500 不重複=1500 重複=0
+判定:關閉冪等時逾時重送寫出 5 筆重複;開啟冪等後重複為 0(producer 用序號讓 broker 丟掉重送的批次)
