@@ -203,3 +203,49 @@ services:
     volumes:
       - ./certs:/etc/tls:ro
       - ./config/grafana/secrets:/etc/secrets:ro
+
+  # ===== 第 27 章:日誌與追蹤(profile observability;用 scripts/observability.sh on 啟動,會先備妥 Kafka 帳號、ACL 與 topic) =====
+  loki:
+    image: grafana/loki:latest                       # 測試版本 3.7.8
+    container_name: loki
+    hostname: loki
+    profiles: ["observability"]
+    command: ["-config.file=/etc/loki/loki.yml"]
+    volumes:
+      - ./config/observability/loki.yml:/etc/loki/loki.yml:ro
+      - ./certs:/etc/tls:ro
+      - loki-data:/loki
+    mem_limit: 384m
+
+  tempo:
+    image: grafana/tempo:latest                      # 測試版本 3.0.0
+    container_name: tempo
+    hostname: tempo
+    profiles: ["observability"]
+    command: ["-config.file=/etc/tempo/tempo.yml"]
+    volumes:
+      - ./config/observability/tempo.yml:/etc/tempo/tempo.yml:ro
+      - ./certs:/etc/tls:ro
+      - tempo-data:/var/tempo
+    mem_limit: 384m
+
+  alloy:
+    image: grafana/alloy:latest                      # 測試版本 1.20.1
+    container_name: alloy
+    hostname: alloy
+    profiles: ["observability"]
+    # 密碼從檔案讀進環境變數(sys.env),不寫在 compose;docker.sock 唯讀掛載只為了讀測試容器的日誌(正式環境讀檔案,不需要)
+    entrypoint: ["/bin/sh", "-c", "export ALLOY_PRODUCER_PW=$$(cat /etc/secrets/alloy-producer.pw) ALLOY_CONSUMER_PW=$$(cat /etc/secrets/alloy-consumer.pw); exec /bin/alloy run --server.http.listen-addr=0.0.0.0:12345 --storage.path=/var/lib/alloy/data /etc/alloy/config.alloy"]
+    volumes:
+      - ./config/observability/config.alloy:/etc/alloy/config.alloy:ro
+      - ./config/observability/secrets:/etc/secrets:ro
+      - ./certs:/etc/tls:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - alloy-data:/var/lib/alloy/data
+    mem_limit: 512m
+    user: "0"
+
+volumes:
+  loki-data:
+  tempo-data:
+  alloy-data:

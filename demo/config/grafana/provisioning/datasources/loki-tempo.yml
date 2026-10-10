@@ -1,0 +1,31 @@
+# 第 27 章:Loki(日誌)與 Tempo(trace)資料來源。兩者都要求 mTLS,Grafana 帶行內 CA 簽發的 client 憑證($__file 從檔案讀)。
+# 沒有啟動 observability profile 時,這兩個資料來源的健康檢查會失敗,不影響其他功能。
+apiVersion: 1
+datasources:
+  - name: Loki
+    uid: Loki
+    type: loki
+    access: proxy
+    url: https://loki:3100
+    editable: false
+    jsonData:
+      tlsAuth: true
+      tlsAuthWithCACert: true
+      maxLines: 1000
+    secureJsonData:
+      tlsCACert: $__file{/etc/tls/ca.pem}
+      tlsClientCert: $__file{/etc/tls/client-monitor.pem}
+      tlsClientKey: $__file{/etc/tls/client-monitor.key}
+  - name: Tempo
+    uid: Tempo
+    type: tempo
+    access: proxy
+    url: https://tempo:3200
+    editable: false
+    jsonData:
+      tlsAuth: true
+      tlsAuthWithCACert: true
+    secureJsonData:
+      tlsCACert: $__file{/etc/tls/ca.pem}
+      tlsClientCert: $__file{/etc/tls/client-monitor.pem}
+      tlsClientKey: $__file{/etc/tls/client-monitor.key}

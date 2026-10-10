@@ -1,0 +1,31 @@
+# Tempo(單機、檔案儲存,測試用):trace 儲存與查詢。
+#   - OTLP gRPC 入口(4317)與查詢 API(3200)都要 mTLS,只有 Alloy(寫入)與 Grafana(查詢)能連
+#   - 保留時間用預設(Tempo 3.0 的區塊保留設定位置與 2.x 不同,本 Lab 沒有調整);正式環境用物件儲存
+stream_over_http_enabled: true
+server:
+  http_listen_port: 3200
+  log_level: warn
+  http_tls_config:
+    cert_file: /etc/tls/server.pem
+    key_file: /etc/tls/server.key
+    client_auth_type: RequireAndVerifyClientCert
+    client_ca_file: /etc/tls/ca.pem
+distributor:
+  receivers:
+    otlp:
+      protocols:
+        grpc:
+          endpoint: 0.0.0.0:4317
+          tls:
+            cert_file: /etc/tls/server.pem
+            key_file: /etc/tls/server.key
+            client_ca_file: /etc/tls/ca.pem
+storage:
+  trace:
+    backend: local
+    wal:
+      path: /var/tempo/wal
+    local:
+      path: /var/tempo/blocks
+usage_report:
+  reporting_enabled: false

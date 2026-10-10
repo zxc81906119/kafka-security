@@ -39,6 +39,12 @@ if [ -f certs/.done ]; then
     docker run --rm -v "$OUT:/certs" --entrypoint sh alpine/openssl -c "cd /certs; openssl x509 -req -in server.csr -CA ca.pem -CAkey ca.key -CAcreateserial -out server.pem -days 825 -sha256 -extfile san.cnf -extensions v3 2>/dev/null; openssl pkcs12 -export -in server.pem -inkey server.key -certfile ca.pem -name server -out server.keystore.p12 -passout pass:$PASS; chmod 644 server.pem server.keystore.p12"
     echo "server 憑證 SAN 已補 grafana / node-exporter / kafka-exporter(同 key、同 CA)"
   fi
+  # 已有 CA:Loki 與 Tempo 啟用 TLS(第 27 章),server 憑證 SAN 要有它們的名稱,同一把 key、同一個 CA 重簽
+  if ! grep -q "DNS:loki" certs/san.cnf 2>/dev/null; then
+    sed -i "s/DNS:kafka-exporter,/DNS:kafka-exporter,DNS:loki,DNS:tempo,/" certs/san.cnf
+    docker run --rm -v "$OUT:/certs" --entrypoint sh alpine/openssl -c "cd /certs; openssl x509 -req -in server.csr -CA ca.pem -CAkey ca.key -CAcreateserial -out server.pem -days 825 -sha256 -extfile san.cnf -extensions v3 2>/dev/null; openssl pkcs12 -export -in server.pem -inkey server.key -certfile ca.pem -name server -out server.keystore.p12 -passout pass:$PASS; chmod 644 server.pem server.keystore.p12"
+    echo "server 憑證 SAN 已補 loki / tempo(同 key、同 CA)"
+  fi
   # 已有 CA:HA 環境(第 21 章:broker3、controller2、controller3)需要的 SAN,同一把 key、同一個 CA 重簽
   if ! grep -q "DNS:broker3" certs/san.cnf 2>/dev/null; then
     sed -i "s/DNS:broker2,/DNS:broker2,DNS:broker3,DNS:controller2,DNS:controller3,/" certs/san.cnf
@@ -77,7 +83,7 @@ prompt=no
 CN=kafka.demo.local
 O=Demo
 [v3]
-subjectAltName=DNS:kafka.demo.local,DNS:localhost,DNS:controller1,DNS:controller2,DNS:controller3,DNS:broker1,DNS:broker2,DNS:broker3,DNS:restproxy,DNS:control-center,DNS:openldap,DNS:prometheus,DNS:alertmanager,DNS:conjur,DNS:schema-registry,DNS:blackbox-exporter,DNS:grafana,DNS:node-exporter,DNS:kafka-exporter,IP:127.0.0.1
+subjectAltName=DNS:kafka.demo.local,DNS:localhost,DNS:controller1,DNS:controller2,DNS:controller3,DNS:broker1,DNS:broker2,DNS:broker3,DNS:restproxy,DNS:control-center,DNS:openldap,DNS:prometheus,DNS:alertmanager,DNS:conjur,DNS:schema-registry,DNS:blackbox-exporter,DNS:grafana,DNS:node-exporter,DNS:kafka-exporter,DNS:loki,DNS:tempo,IP:127.0.0.1
 extendedKeyUsage=serverAuth,clientAuth
 EOF
 openssl genrsa -out server.key 2048 2>/dev/null

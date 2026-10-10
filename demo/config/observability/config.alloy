@@ -1,0 +1,231 @@
+// Grafana Alloy:把日誌與 trace 經過 Kafka(當傳輸緩衝)送進 Loki 與 Tempo。
+//
+//   日誌:  Docker 容器日誌 ──► Kafka topic otel-logs ──► Loki
+//   trace: 應用程式(OTLP) ──► Kafka topic otel-traces ──► Tempo
+//   稽核:  Kafka topic confluent-audit-log-events ──► Loki(稽核事件也能在 Grafana 查)
+//
+// 為什麼中間放 Kafka:Loki 或 Tempo 掛掉、升級、卡住時,資料留在 Kafka 裡,恢復後補上,不會掉(第 27.3 實測)。
+// 寫入與讀取用兩個不同的 Kafka 帳號(最小權限):alloy-producer 只能寫 otel-*,alloy-consumer 只能讀 otel-* 與稽核 topic。
+// 正式環境的日誌來源是檔案(local.file_match + loki.source.file),不需要掛 Docker socket;這裡為了測試容器才用 docker。
+
+// ---------- 日誌來源:平台容器的日誌 ----------
+discovery.docker "platform" {
+  host = "unix:///var/run/docker.sock"
+  filter {
+    name   = "name"
+    values = ["broker1", "broker2", "broker3", "controller1", "controller2", "controller3"]
+  }
+}
+
+discovery.relabel "platform" {
+  targets = discovery.docker.platform.targets
+  rule {
+    source_labels = ["__meta_docker_container_name"]
+    regex         = "/(.*)"
+    target_label  = "container"
+  }
+  rule {
+    target_label = "job"
+    replacement  = "kafka-platform"
+  }
+}
+
+loki.source.docker "platform" {
+  host       = "unix:///var/run/docker.sock"
+  targets    = discovery.relabel.platform.output
+  forward_to = [loki.process.platform.receiver]
+}
+
+// 第一次啟動時 Docker 會把容器從啟動以來的全部日誌交出來(可能數十萬行),只留最近 15 分鐘的,避免一次灌爆佇列
+loki.process "platform" {
+  stage.drop {
+    older_than          = "15m"
+    drop_counter_reason = "too_old"
+  }
+  forward_to = [otelcol.receiver.loki.platform.receiver]
+}
+
+otelcol.receiver.loki "platform" {
+  output {
+    logs = [otelcol.exporter.kafka.logs.input]
+  }
+}
+
+// ---------- 寫進 Kafka(alloy-producer:只能寫 otel-logs、otel-traces) ----------
+otelcol.exporter.kafka "logs" {
+  brokers          = ["broker1:9094", "broker2:9094", "broker3:9094"]
+  protocol_version = "3.6.0"
+  sending_queue {
+    enabled        = true
+    queue_size     = 5000
+    block_on_overflow = true   // 佇列滿時讓來源等,不要丟資料
+  }
+  logs {
+    topic    = "otel-logs"
+    encoding = "otlp_json"
+  }
+  authentication {
+    sasl {
+      mechanism = "SCRAM-SHA-512"
+      username  = "alloy-producer"
+      password  = sys.env("ALLOY_PRODUCER_PW")
+    }
+  }
+  tls {
+    ca_file = "/etc/tls/ca.pem"
+  }
+}
+
+otelcol.exporter.kafka "traces" {
+  brokers          = ["broker1:9094", "broker2:9094", "broker3:9094"]
+  protocol_version = "3.6.0"
+  sending_queue {
+    enabled        = true
+    queue_size     = 5000
+    block_on_overflow = true   // 佇列滿時讓來源等,不要丟資料
+  }
+  traces {
+    topic    = "otel-traces"
+    encoding = "otlp_proto"
+  }
+  authentication {
+    sasl {
+      mechanism = "SCRAM-SHA-512"
+      username  = "alloy-producer"
+      password  = sys.env("ALLOY_PRODUCER_PW")
+    }
+  }
+  tls {
+    ca_file = "/etc/tls/ca.pem"
+  }
+}
+
+// ---------- 應用程式的 trace 入口(OTLP,gRPC 4317 / HTTP 4318;demo 網路內) ----------
+otelcol.receiver.otlp "apps" {
+  grpc {
+    endpoint = "0.0.0.0:4317"
+  }
+  http {
+    endpoint = "0.0.0.0:4318"
+  }
+  output {
+    traces = [otelcol.exporter.kafka.traces.input]
+  }
+}
+
+// ---------- 從 Kafka 讀出(alloy-consumer:只能讀 otel-*、稽核 topic,group 限定 alloy-*) ----------
+otelcol.receiver.kafka "logs" {
+  brokers          = ["broker1:9094", "broker2:9094", "broker3:9094"]
+  protocol_version = "3.6.0"
+  group_id         = "alloy-logs"
+  initial_offset   = "earliest"
+  logs {
+    topics   = ["otel-logs"]
+    encoding = "otlp_json"
+  }
+  authentication {
+    sasl {
+      mechanism = "SCRAM-SHA-512"
+      username  = "alloy-consumer"
+      password  = sys.env("ALLOY_CONSUMER_PW")
+    }
+  }
+  tls {
+    ca_file = "/etc/tls/ca.pem"
+  }
+  output {
+    logs = [otelcol.exporter.loki.default.input]
+  }
+}
+
+otelcol.receiver.kafka "traces" {
+  brokers          = ["broker1:9094", "broker2:9094", "broker3:9094"]
+  protocol_version = "3.6.0"
+  group_id         = "alloy-traces"
+  initial_offset   = "earliest"
+  traces {
+    topics   = ["otel-traces"]
+    encoding = "otlp_proto"
+  }
+  authentication {
+    sasl {
+      mechanism = "SCRAM-SHA-512"
+      username  = "alloy-consumer"
+      password  = sys.env("ALLOY_CONSUMER_PW")
+    }
+  }
+  tls {
+    ca_file = "/etc/tls/ca.pem"
+  }
+  output {
+    traces = [otelcol.exporter.otlp.tempo.input]
+  }
+}
+
+otelcol.receiver.kafka "audit" {
+  brokers          = ["broker1:9094", "broker2:9094", "broker3:9094"]
+  protocol_version = "3.6.0"
+  group_id         = "alloy-audit"
+  initial_offset   = "latest"
+  logs {
+    topics   = ["confluent-audit-log-events"]
+    encoding = "text"   // 稽核事件是一行 JSON;用 text 讓內文是字串(raw 會變成 base64)
+  }
+  authentication {
+    sasl {
+      mechanism = "SCRAM-SHA-512"
+      username  = "alloy-consumer"
+      password  = sys.env("ALLOY_CONSUMER_PW")
+    }
+  }
+  tls {
+    ca_file = "/etc/tls/ca.pem"
+  }
+  output {
+    logs = [otelcol.processor.attributes.audit.input]
+  }
+}
+
+// 稽核事件加上標籤,在 Loki 用 {job="kafka-audit"} 查
+otelcol.processor.attributes "audit" {
+  action {
+    key    = "job"
+    value  = "kafka-audit"
+    action = "insert"
+  }
+  action {
+    key    = "loki.attribute.labels"
+    value  = "job"
+    action = "insert"
+  }
+  output {
+    logs = [otelcol.exporter.loki.default.input]
+  }
+}
+
+// ---------- 送進 Loki 與 Tempo(mTLS) ----------
+otelcol.exporter.loki "default" {
+  forward_to = [loki.write.default.receiver]
+}
+
+loki.write "default" {
+  endpoint {
+    url = "https://loki:3100/loki/api/v1/push"
+    tls_config {
+      ca_file   = "/etc/tls/ca.pem"
+      cert_file = "/etc/tls/client-monitor.pem"
+      key_file  = "/etc/tls/client-monitor.key"
+    }
+  }
+}
+
+otelcol.exporter.otlp "tempo" {
+  client {
+    endpoint = "tempo:4317"
+    tls {
+      ca_file   = "/etc/tls/ca.pem"
+      cert_file = "/etc/tls/client-monitor.pem"
+      key_file  = "/etc/tls/client-monitor.key"
+    }
+  }
+}
