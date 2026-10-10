@@ -1,49 +1,63 @@
 [
  {
-  "lab": "ch21",
-  "step": "21.1 quorum:3 個 voter、1 個 leader",
+  "lab": "ch22",
+  "step": "22.1 路徑 A(telemetry):規則已載入,基準沒有告警",
   "M": "ok",
   "A": "-",
   "E": "ok"
  },
  {
-  "lab": "ch21",
-  "step": "21.2 副本 3、min.insync.replicas 2 的 topic",
+  "lab": "ch22",
+  "step": "22.2 A:停 1 台 broker → URP 告警",
   "M": "ok",
   "A": "-",
   "E": "ok"
  },
  {
-  "lab": "ch21",
-  "step": "21.3 停 1 台 broker:寫入不中斷",
+  "lab": "ch22",
+  "step": "22.3 A:離線分區告警",
   "M": "ok",
   "A": "-",
   "E": "ok"
  },
  {
-  "lab": "ch21",
-  "step": "21.4 停 2 台 broker:acks=all 被擋、acks=1 看似成功卻讀不到",
+  "lab": "ch22",
+  "step": "22.4 A:controller 掉線與失去多數",
   "M": "ok",
   "A": "-",
   "E": "ok"
  },
  {
-  "lab": "ch21",
-  "step": "21.5 停 1 台 controller:叢集照常",
+  "lab": "ch22",
+  "step": "22.5 路徑 B:JMX exporter 已在每個節點開 7778 埠",
   "M": "ok",
   "A": "-",
   "E": "ok"
  },
  {
-  "lab": "ch21",
-  "step": "21.6 停 2 台 controller:控制面停擺,資料面撐著",
+  "lab": "ch22",
+  "step": "22.6 B:同一組規則,指標換成 JMX 名稱",
   "M": "ok",
   "A": "-",
   "E": "ok"
  },
  {
-  "lab": "ch21",
-  "step": "21.7 滾動重啟:全部節點依序重啟,寫入零失敗",
+  "lab": "ch22",
+  "step": "22.7 B:停 1 台 broker → URP(約 35 秒)",
+  "M": "ok",
+  "A": "-",
+  "E": "ok"
+ },
+ {
+  "lab": "ch22",
+  "step": "22.8 B:離線分區",
+  "M": "ok",
+  "A": "-",
+  "E": "ok"
+ },
+ {
+  "lab": "ch22",
+  "step": "22.9 B:controller 掉線與失去多數",
   "M": "ok",
   "A": "-",
   "E": "ok"

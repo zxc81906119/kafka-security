@@ -1,0 +1,9 @@
+停 controller3(剩 2/3 仍有多數)
+   24 秒後 KafkaJmxControllerMissing 觸發(目前 firing:KafkaJmxControllerMissing,KafkaUnderReplicatedPartitions)
+再停 controller2(只剩 1/3,失去多數)
+   35 秒後 KafkaJmxActiveControllerCountNotOne 觸發(目前 firing:KafkaBrokerFenced,KafkaJmxActiveControllerCountNotOne,KafkaJmxControllerMissing,KafkaOfflinePartitions)
+Alertmanager 收到 KafkaJmxActiveControllerCountNotOne:1(1=是)
+恢復 controller2、controller3
+   24 秒後 KafkaJmxActiveControllerCountNotOne 解除
+   2 秒後 KafkaJmxControllerMissing 解除
+判定:controller 掉線觸發 ControllerMissing;失去多數時 active controller 數不是 1 的告警觸發,恢復後都解除(來源:jmx)

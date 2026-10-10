@@ -1,0 +1,36 @@
+# 第 23 章:憑證到期告警。兩個來源互補:
+#   ① blackbox 探測:各 TLS 端點「實際送出的」憑證(CLIENT 埠 9094、MDS 8091 到 8093 等);客戶端憑證與 CA 檔案不在此範圍(用 OP menu 第 17 項的檔案巡檢)
+#   ② telemetry 的 mtls_earliest_cert_expiration_ms:controller 內部 mTLS 憑證(INTERNAL/CONTROLLER 埠要求 client 憑證,blackbox 握手不了)
+# 門檻是範例值:警告 30 天、嚴重 7 天;正式環境依換憑證的作業時間調整(換一張要走變更單,就要留夠天數)。
+groups:
+- name: kafka-cert
+  interval: 30s
+  rules:
+  - alert: KafkaTlsCertExpiringSoon
+    expr: (probe_ssl_earliest_cert_expiry{job="tls-expiry"} - time()) / 86400 < 30
+    for: 0m
+    labels: { severity: warning, kind: cert }
+    annotations:
+      summary: "{{ $labels.instance }} 送出的憑證剩 {{ $value | printf \"%.1f\" }} 天到期"
+      description: "依變更流程排換憑證。Kafka 的 CLIENT 埠可不停機換(動態 keystore);MDS 等其他入口要重啟。"
+  - alert: KafkaTlsCertExpiringCritical
+    expr: (probe_ssl_earliest_cert_expiry{job="tls-expiry"} - time()) / 86400 < 7
+    for: 0m
+    labels: { severity: critical, kind: cert }
+    annotations:
+      summary: "{{ $labels.instance }} 送出的憑證剩 {{ $value | printf \"%.1f\" }} 天到期(嚴重)"
+      description: "立刻換。過期後 client 無法連線。"
+  - alert: KafkaTlsProbeFailed
+    expr: probe_success{job="tls-expiry"} == 0
+    for: 2m
+    labels: { severity: warning, kind: cert }
+    annotations:
+      summary: "{{ $labels.instance }} 的 TLS 探測失敗"
+      description: "憑證已過期、不被信任(鏈驗證失敗)、或該埠不通。broker 掉線時也會出現。"
+  - alert: KafkaMtlsChannelCertExpiringSoon
+    expr: (io_confluent_kafka_server_raft_channel_mtls_earliest_cert_expiration_ms / 1000 - time()) / 86400 < 30
+    for: 0m
+    labels: { severity: warning, kind: cert }
+    annotations:
+      summary: "內部 mTLS 憑證剩 {{ $value | printf \"%.1f\" }} 天到期"
+      description: "broker 與 controller 之間用的共用內部憑證。過期會讓 controller quorum 與 broker 互連失敗,後果比 client 端憑證嚴重。"

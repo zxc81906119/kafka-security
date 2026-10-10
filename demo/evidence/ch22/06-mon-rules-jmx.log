@@ -1,0 +1,11 @@
+# 【B】同一組 7 條告警,指標換成 JMX 的名稱(config/c3/ops_rules_jmx.yml);另加「監控的監控」KafkaJmxScrapeDown(抓不到 exporter)。每 15 秒抓、每 15 秒評估
+$ GET /api/v1/rules(kafka-platform-jmx)
+  KafkaJmxUnderReplicatedPartitions   ok    inactive
+  KafkaJmxUnderMinIsrPartitions       ok    inactive
+  KafkaJmxOfflinePartitions           ok    inactive
+  KafkaJmxActiveControllerCountNotOne ok    inactive
+  KafkaJmxControllerMissing           ok    inactive
+  KafkaJmxUncleanLeaderElection       ok    inactive
+  KafkaJmxScrapeDown                  ok    inactive
+目前 firing 的平台告警:-
+判定:7 條平台告警規則已載入並評估(health ok),基準狀態沒有告警(來源:jmx)

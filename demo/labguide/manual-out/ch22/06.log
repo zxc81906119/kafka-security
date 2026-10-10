@@ -1,0 +1,9 @@
+KafkaJmxUnderReplicatedPartitions   ok    inactive
+  KafkaJmxUnderMinIsrPartitions       ok    inactive
+  KafkaJmxOfflinePartitions           ok    inactive
+  KafkaJmxActiveControllerCountNotOne ok    inactive
+  KafkaJmxControllerMissing           ok    inactive
+  KafkaJmxUncleanLeaderElection       ok    inactive
+  KafkaJmxScrapeDown                  ok    inactive
+目前 firing 的平台告警:-
+判定:7 條平台告警規則已載入並評估(health ok),基準狀態沒有告警(來源:jmx)

@@ -46,3 +46,5 @@ demo/config/conjur/identity-broker/
 
 # --- Conjur 輪替隔離紀錄 ---
 demo/config/conjur/quarantine-*
+demo/config/jmx/*.jar*
+demo/config/c3/jmx_scrape.yml

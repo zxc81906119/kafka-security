@@ -1,0 +1,8 @@
+# 【A:URP】停 1 台 broker → KafkaUnderReplicatedPartitions 觸發並送到 Alertmanager;恢復後解除。時間是這條路徑的特性:指標每 60 秒送一次、規則每 60 秒評估一次
+$ docker stop broker3;等告警 firing;docker start broker3;等告警解除
+停 broker3
+   91 秒後 KafkaUnderReplicatedPartitions 觸發(目前 firing:KafkaJmxUnderReplicatedPartitions,KafkaUnderReplicatedPartitions)
+Alertmanager 收到 KafkaUnderReplicatedPartitions:1(1=是)
+恢復 broker3;等 ISR 補齊後告警應解除
+   102 秒後 KafkaUnderReplicatedPartitions 解除
+判定:停 1 台 broker 觸發 URP 告警並送到 Alertmanager,恢復後解除(來源:telemetry)

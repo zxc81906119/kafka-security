@@ -48,7 +48,7 @@ export const ACTS = [
     scene: ['基本功過關了,但現實不會照教科書走:半夜要有人能建 topic、舊系統不會說 Kafka 的語言、稽核要盤點每條連線、還有一個你不知道的 REST 入口。'] },
   { id: 'week3', title: '第三週:異動、日常維運、傳輸加密、CyberArk、帳號被偷與 Schema Registry', when: '第三週', labs: [15, 16, 17, 18, 19, 20],
     scene: ['人會調動、會離職;而日常維運不能每次都靠指令記憶。第三週,Ming 處理人員異動,並第一次用平台組自己做的維運選單(OP menu)值班。接著把「線上傳輸」補完整:連 AD 的線路、監控元件、使用者連 C3 的入口。最後,資安要求所有密碼不能再放在檔案裡——行裡的 CyberArk 登場。'] },
-  { id: 'week4', title: '第四週:平台韌性', when: '第四週', labs: [21],
+  { id: 'week4', title: '第四週:平台韌性與監控', when: '第四週', labs: [21, 22],
     scene: ['前三週都在精簡環境裡做。主管問了一句很現實的話:「如果半夜壞一台,會怎樣?壞兩台呢?」Ming 決定不憑印象回答,切到 3 台 controller、3 台 broker 的環境,一台一台停給大家看。'] }
 ];
 
@@ -140,7 +140,12 @@ export const LAB_STORY = {
       '停 1 台 broker,寫入不中斷,但副本不足的分區數(URP)變成大於 0——他把它記成一條要設告警的指標。停到只剩 1 台時,acks=all 全被擋;更嚇人的是 acks=1 的 producer 回報「成功」,consumer 卻一筆也看不到,要等 broker 回來才出現。',
       '接著是 controller:停 1 台沒事;停 2 台,建 topic 和 describe 都沒回應,但既有 topic 還能讀寫。最後他背景寫入 2400 筆,依序重啟 3 台 broker 與 3 台 controller,active controller 最後,結果送出與實際筆數都是 2400。'],
     mission: ['確認 3 台 controller 的 quorum 與容錯範圍。', '實際停 1 台與 2 台 broker,看寫入與讀取的差別。', '實際停 1 台與 2 台 controller,看控制面與資料面的差別。', '用滾動重啟驗證「重啟不等於停機」。'],
-    recap: ['副本 3 加 min.isr 2:允許壞 1 台 broker、不允許壞 2 台;壞 2 台時 acks=all 被擋,acks=1 會讓應用誤以為成功(讀不到)。', 'URP 大於 0 是要告警的訊號;ISR 低於 min.isr 時寫入被拒。', 'controller 3 台容忍 1 台;失去多數時控制面停擺,資料面只是暫時撐著,不是可依賴的容錯。', '滾動重啟的順序:broker 一台一台(等 URP 回 0)、controller 非 active 先、active 最後。', '測試環境用靜態 quorum 簡化;正式環境建議動態 quorum,並實際演練。'] }
+    recap: ['副本 3 加 min.isr 2:允許壞 1 台 broker、不允許壞 2 台;壞 2 台時 acks=all 被擋,acks=1 會讓應用誤以為成功(讀不到)。', 'URP 大於 0 是要告警的訊號;ISR 低於 min.isr 時寫入被拒。', 'controller 3 台容忍 1 台;失去多數時控制面停擺,資料面只是暫時撐著,不是可依賴的容錯。', '滾動重啟的順序:broker 一台一台(等 URP 回 0)、controller 非 active 先、active 最後。', '測試環境用靜態 quorum 簡化;正式環境建議動態 quorum,並實際演練。'] },
+  22: { scene: ['上週的停機實驗讓主管更不安:「你停一台才知道它壞,半夜誰會知道?」Ming 把官方列為必設的幾條告警真的觸發一次:URP、離線分區、active controller。',
+      '他先用現成的 telemetry:停 broker,等了兩分多鐘告警才出現。Gary 問:「如果 C3 掛了呢?銀行自己的監控平台看得到嗎?」Ming 改接 Prometheus 官方的 JMX exporter,同樣的實驗,35 秒就出現,而且不經過 C3。',
+      '他在報告裡寫清楚:兩條路徑各有用途——telemetry 是 C3 的資料來源,告警該走 JMX exporter;並且記下哪些告警這次沒有觸發過,以及磁碟用量要另外裝 node_exporter。'],
+    mission: ['把官方必設的平台告警(URP、離線分區、active controller)真的觸發一次。', '比較兩條指標收集路徑的偵測時間與取捨,並給出建議。', '寫清楚沒測到的告警與缺少的指標。'],
+    recap: ['URP 大於 0:有副本落後或 broker 掉線;離線分區大於 0:分區無法讀寫;active controller 不等於 1:失去多數或腦裂。', 'KRaft 下 ActiveControllerCount 與離線分區是 controller 的指標,controller 也要送指標。', 'telemetry 路徑偵測約 150 到 250 秒,JMX exporter 約 35 秒;銀行自有監控建議走 JMX exporter,告警不依賴 C3。', '要有「監控的監控」:抓不到 exporter 也要告警。', '磁碟用量要另外用 node_exporter;unclean leader election 告警這次沒有觸發過。'] }
 };
 
 export const EPILOGUE = {

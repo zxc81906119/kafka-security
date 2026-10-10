@@ -1,0 +1,8 @@
+# 【A:離線分區】只有 1 份副本的 topic,所在 broker 掉線 → KafkaOfflinePartitions 觸發(官方列為必設告警);恢復後解除
+$ kafka-topics --create --replica-assignment 13;docker stop broker3;等告警
+這個 topic 只有 1 份副本、放在 broker3(id 13);停 broker3
+   103 秒後 KafkaOfflinePartitions 觸發(目前 firing:KafkaBrokerFenced,KafkaJmxOfflinePartitions,KafkaJmxScrapeDown,KafkaJmxUnderReplicatedPartitions,KafkaOfflinePartitions,KafkaUnderReplicatedPa
+Alertmanager 收到 KafkaOfflinePartitions:1(1=是)
+恢復 broker3
+   159 秒後 KafkaOfflinePartitions 解除
+判定:單副本 topic 所在的 broker 掉線,觸發離線分區告警並送到 Alertmanager,恢復後解除(來源:telemetry)

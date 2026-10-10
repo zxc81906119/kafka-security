@@ -1,0 +1,9 @@
+KafkaUnderReplicatedPartitions      ok    inactive
+  KafkaUnderMinIsrPartitions          ok    inactive
+  KafkaOfflinePartitions              ok    inactive
+  KafkaActiveControllerCountNotOne    ok    inactive
+  KafkaControllerMissing              ok    inactive
+  KafkaUncleanLeaderElection          ok    inactive
+  KafkaBrokerFenced                   ok    inactive
+目前 firing 的平台告警:-
+判定:7 條平台告警規則已載入並評估(health ok),基準狀態沒有告警(來源:telemetry)

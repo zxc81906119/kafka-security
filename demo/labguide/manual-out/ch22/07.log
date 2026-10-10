@@ -1,0 +1,6 @@
+停 broker3
+   24 秒後 KafkaJmxUnderReplicatedPartitions 觸發(目前 firing:KafkaJmxUnderReplicatedPartitions)
+Alertmanager 收到 KafkaJmxUnderReplicatedPartitions:1(1=是)
+恢復 broker3;等 ISR 補齊後告警應解除
+   24 秒後 KafkaJmxUnderReplicatedPartitions 解除
+判定:停 1 台 broker 觸發 URP 告警並送到 Alertmanager,恢復後解除(來源:jmx)

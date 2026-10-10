@@ -57,6 +57,9 @@ export const MAPS = [
     flows: [['無帳密 / 密碼錯', 'Schema Registry(交 MDS 驗證)', '✘ 401'], ['yujie 註冊 orders. / payments. 的 schema', 'SR → MDS 授權(subject role)', '✔ orders. 200 → ✘ payments. 403;列表只看到自己有權限的'], ['gary / yujie / ming 對 KEK', 'SR → MDS 授權(Kek:<名稱> role)', '✔ security 群組可建 → yujie 只能讀 → ✘ ming 無 role 403'], ['註冊帶 ENCRYPT 規則的 schema', 'Schema Registry 授權檢查', '✘ 402 需要企業版 + CSFLE 加購授權(加密與解密未驗證)'], ['讀 topic 原始位元組', 'kafka-console-consumer', '✘ 卡號是明文 → 上線前一定要這樣檢查']] },
   { n: 21, prove: 'HA 叢集(3 controller、3 broker、副本 3、min.isr 2):少 1 台不影響,少 2 台 broker 時 acks=all 被擋、acks=1 讀不到;controller 失去多數時控制面停擺;滾動重啟零遺失', use: ['cli', 'broker'],
     flows: [['停 1 台 broker', 'ISR 剩 2 ≥ min.isr 2', '✔ acks=all 寫入不中斷;URP>0 要告警'], ['停 2 台 broker', 'ISR 1 < min.isr 2', '✘ acks=all 被拒;acks=1 回報成功卻讀不到'], ['停 1 台 controller', '剩 2/3 仍有多數', '✔ 建 topic、寫入正常'], ['停 2 台 controller', '失去多數', '✘ 建 topic 與 describe 沒回應 → ✔ 既有 topic 讀寫仍可'], ['滾動重啟 3 broker + 3 controller', 'URP=0 才做下一台;active controller 最後', '✔ 背景寫入 2400 = 2400,零失敗']] },
+  { n: 22, prove: '官方必設的平台告警真的會響:URP、離線分區、active controller;指標收集兩條路徑實測比較(telemetry 約 150–250 秒,JMX exporter 約 35 秒)', use: ['cli', 'broker', 'prom', 'am'],
+    flows: [['停 1 台 broker', 'URP > 0 → Prometheus 規則', '✔ KafkaUnderReplicatedPartitions 觸發 → Alertmanager;恢復後解除'], ['單副本 topic 的 broker 掉線', 'OfflinePartitionsCount > 0', '✔ KafkaOfflinePartitions 觸發'], ['停 1 台 / 2 台 controller', 'ControllerMissing / ActiveControllerCount ≠ 1', '✔ 失去多數時 active controller 數為 0 → 告警'], ['telemetry vs JMX exporter', '偵測時間與依賴', '✔ JMX 約 35 秒、不依賴 C3 → 銀行自有監控建議走 JMX']] },
+
 ];
 
 const esc = s => s.replace(/&/g, '&amp;').replace(/</g, '&lt;');

@@ -1,0 +1,8 @@
+# 【B:離線分區】同樣的單副本 topic 實驗
+$ docker stop broker3;等 KafkaJmxOfflinePartitions
+這個 topic 只有 1 份副本、放在 broker3(id 13);停 broker3
+   36 秒後 KafkaJmxOfflinePartitions 觸發(目前 firing:KafkaBrokerFenced,KafkaJmxOfflinePartitions,KafkaJmxUnderReplicatedPartitions,KafkaUnderReplicatedPartitions)
+Alertmanager 收到 KafkaJmxOfflinePartitions:1(1=是)
+恢復 broker3
+   24 秒後 KafkaJmxOfflinePartitions 解除
+判定:單副本 topic 所在的 broker 掉線,觸發離線分區告警並送到 Alertmanager,恢復後解除(來源:jmx)

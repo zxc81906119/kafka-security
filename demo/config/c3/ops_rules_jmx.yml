@@ -1,0 +1,57 @@
+# 第 22 章:平台維運告警(JMX exporter 版)。與 ops_rules.yml(telemetry 版)是同一組告警,指標名稱不同;正式環境只留自己用的那一條路徑。
+# JMX 版每 15 秒抓一次、每 15 秒評估,比 telemetry(60 秒)快。告警名稱加 Jmx 以便同時存在時分辨。
+groups:
+- name: kafka-platform-jmx
+  interval: 15s
+  rules:
+  - alert: KafkaJmxUnderReplicatedPartitions
+    expr: sum(kafka_server_replicamanager_underreplicatedpartitions) > 0
+    for: 0m
+    labels: { severity: warning, kind: platform, source: jmx }
+    annotations:
+      summary: "有 {{ $value }} 個分區的副本不足(URP)"
+      description: "有 broker 掉線或追不上。滾動重啟時暫時出現屬正常,每台重啟後要等回 0 才做下一台。"
+  - alert: KafkaJmxUnderMinIsrPartitions
+    expr: sum(kafka_server_replicamanager_underminisrpartitioncount) > 0
+    for: 0m
+    labels: { severity: critical, kind: platform, source: jmx }
+    annotations:
+      summary: "有 {{ $value }} 個分區的 ISR 低於 min.insync.replicas"
+      description: "acks=all 的 producer 寫入會被拒絕。"
+  - alert: KafkaJmxOfflinePartitions
+    expr: sum(kafka_controller_kafkacontroller_offlinepartitionscount) > 0
+    for: 0m
+    labels: { severity: critical, kind: platform, source: jmx }
+    annotations:
+      summary: "有 {{ $value }} 個分區沒有 leader(離線)"
+      description: "該分區無法讀寫。官方列為必設告警。"
+  - alert: KafkaJmxActiveControllerCountNotOne
+    expr: sum(kafka_controller_kafkacontroller_activecontrollercount) != 1
+    for: 0m
+    labels: { severity: critical, kind: platform, source: jmx }
+    annotations:
+      summary: "active controller 數量是 {{ $value }}(應該恰好 1)"
+      description: "0 代表 controller 失去多數;大於 1 代表腦裂。官方列為必設告警。"
+  - alert: KafkaJmxControllerMissing
+    # 3 是這個環境的 controller 數。抓不到的 controller 視為掉線。
+    expr: count(up{job="kafka-jmx", role="controller"} == 1) < 3
+    for: 0m
+    labels: { severity: warning, kind: platform, source: jmx }
+    annotations:
+      summary: "只有 {{ $value }} 台 controller 的 JMX 指標抓得到(應為 3)"
+      description: "有 controller 掉線或 exporter 掛了。剩 2 台仍有多數,再掉 1 台就失去 quorum。"
+  - alert: KafkaJmxUncleanLeaderElection
+    expr: sum(increase(kafka_controller_controllerstats_uncleanleaderelectionspersec_total[10m])) > 0
+    for: 0m
+    labels: { severity: critical, kind: platform, source: jmx }
+    annotations:
+      summary: "發生 unclean leader election"
+      description: "代表選了不同步的副本當 leader,可能遺失已確認的資料。官方要求此值為 0。"
+  - alert: KafkaJmxScrapeDown
+    # 「監控的監控」:抓不到 broker 的 exporter,代表之後所有告警都可能是瞎的;broker 掉線時也會觸發(同時代表該 broker 沒在回應)
+    expr: count(up{job="kafka-jmx", role="broker"} == 0) > 0
+    for: 1m
+    labels: { severity: warning, kind: platform, source: jmx }
+    annotations:
+      summary: "有 {{ $value }} 台 broker 的 JMX exporter 抓不到"
+      description: "broker 掉線,或 agent 沒載入、埠被擋。"

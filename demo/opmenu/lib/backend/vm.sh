@@ -60,7 +60,7 @@ be_service_restart() { local host="${1%%:*}" svc="${1##*:}"; v_any_svc "$1" >/de
 be_service_logs()    { local host="${1%%:*}" svc="${1##*:}" n="${2:-50}"; v_any_svc "$1" >/dev/null || return 1; v_number "$n" >/dev/null || return 1; _ssh "$host" "sudo journalctl -u '$svc' -n $n --no-pager"; }
 be_clean_logs()      { local host="${1%%:*}" d="${2:-14}"; v_host "$host" >/dev/null || return 1; v_number "$d" >/dev/null || return 1; _ssh "$host" "sudo '$OPMENU_CLEAN_LOGS_CMD' $d"; }
 be_disk_usage() { for h in $OPMENU_HOSTS; do printf '%-28s ' "$h"; _ssh "$h" "df -h '$OPMENU_DATA_DIR' 2>/dev/null | tail -1 | awk '{print \"磁碟用量 \" \$5 \"  剩餘 \" \$4}'"; done; }
-be_cert_list() { for f in "$OPMENU_CERT_DIR"/*.pem; do [ -f "$f" ] || continue; openssl x509 -in "$f" -noout >/dev/null 2>&1 || continue; printf '%-32s %s\n' "$(basename "$f")" "$(openssl x509 -in "$f" -noout -enddate | cut -d= -f2)"; done; }
+be_cert_list() { for f in "$OPMENU_CERT_DIR"/*.pem; do [ -f "$f" ] || continue; openssl x509 -in "$f" -noout >/dev/null 2>&1 || continue; local st; if ! openssl x509 -in "$f" -noout -checkend 0 >/dev/null; then st="已過期"; elif ! openssl x509 -in "$f" -noout -checkend 604800 >/dev/null; then st="剩不到 7 天 ⚠⚠"; elif ! openssl x509 -in "$f" -noout -checkend 2592000 >/dev/null; then st="剩不到 30 天 ⚠"; elif ! openssl x509 -in "$f" -noout -checkend 7776000 >/dev/null; then st="剩不到 90 天"; else st="90 天以上"; fi; printf '%-32s %-26s %s\n' "$(basename "$f")" "$(openssl x509 -in "$f" -noout -enddate | cut -d= -f2)" "$st"; done; }
 be_hosts() { echo "$OPMENU_HOSTS"; }
 be_collect_diag() { local d="$1"; mkdir -p "$d"; for h in $OPMENU_HOSTS; do _ssh "$h" "sudo journalctl -u 'confluent-*' -n 500 --no-pager" > "$d/$h.log" 2>&1; done; }
 

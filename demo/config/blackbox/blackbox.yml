@@ -1,0 +1,10 @@
+# 第 23 章:Prometheus 官方 blackbox exporter,用 TLS 連線探測「實際送出的憑證」。
+# probe_ssl_earliest_cert_expiry = 憑證鏈中最早到期的時間(Unix 秒);probe_success = TLS 握手(含鏈驗證)是否成功。
+modules:
+  tls_connect:
+    prober: tcp
+    timeout: 5s
+    tcp:
+      tls: true
+      tls_config:
+        ca_file: /etc/blackbox/ca.pem        # 用行內 CA 驗證鏈;驗證失敗 probe_success=0(憑證過期、不被信任都會)

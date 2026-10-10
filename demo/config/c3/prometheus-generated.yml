@@ -24,6 +24,16 @@ rule_files:
   - 'trigger_rules-generated.yml'
   # 第 19 章:安全事件告警(認證失敗、連線數接近上限)
   - 'security_rules.yml'
+  # 第 22 章:平台維運告警(URP、離線分區、active controller 等)
+  - 'ops_rules.yml'
+  # 第 22 章:同樣的告警,指標來自 JMX exporter(銀行自有監控的建議收集路徑)
+  - 'ops_rules_jmx.yml'
+  # 第 23 章:憑證到期告警(blackbox 探測 + 內部 mTLS 憑證指標)
+  - 'ops_rules_cert.yml'
+
+# 第 22 章:JMX exporter 的抓取設定(HA 模式才有這個檔;沒有檔案時這行不匹配任何東西)
+scrape_config_files:
+  - 'jmx_scrape*.yml'
 
 # A scrape configuration containing exactly one endpoint to scrape:
 # Here it's Prometheus itself.

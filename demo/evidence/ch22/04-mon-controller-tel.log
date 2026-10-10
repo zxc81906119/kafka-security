@@ -1,0 +1,11 @@
+# 【A:controller】停 1 台 controller → KafkaControllerMissing;再停 1 台(失去多數)→ KafkaActiveControllerCountNotOne(官方列為必設告警);恢復後都解除
+$ docker stop controller3;docker stop controller2;等告警;docker start
+停 controller3(剩 2/3 仍有多數)
+   294 秒後 KafkaControllerMissing 觸發(目前 firing:KafkaControllerMissing,KafkaJmxControllerMissing)
+再停 controller2(只剩 1/3,失去多數)
+   113 秒後 KafkaActiveControllerCountNotOne 觸發(目前 firing:KafkaActiveControllerCountNotOne,KafkaControllerMissing,KafkaJmxActiveControllerCountNotOne,KafkaJmxControllerMissing)
+Alertmanager 收到 KafkaActiveControllerCountNotOne:1(1=是)
+恢復 controller2、controller3
+   114 秒後 KafkaActiveControllerCountNotOne 解除
+   57 秒後 KafkaControllerMissing 解除
+判定:controller 掉線觸發 ControllerMissing;失去多數時 active controller 數不是 1 的告警觸發,恢復後都解除(來源:telemetry)

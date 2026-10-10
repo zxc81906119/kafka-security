@@ -1,0 +1,28 @@
+# JMX exporter 設定(第 22 章):只匯出「告警與維運」需要的 MBean,不匯出全部——匯出越多,每次被抓取越慢、指標越多越難管。
+# 屬性名稱轉小寫;命名規則:kafka_<domain>_<type>_<name>。正式環境依客戶要看的指標增減。
+lowercaseOutputName: true
+lowercaseOutputLabelNames: true
+whitelistObjectNames:
+  - "kafka.server:type=ReplicaManager,name=*"
+  - "kafka.server:type=raft-metrics"
+  - "kafka.controller:type=KafkaController,name=*"
+  - "kafka.controller:type=ControllerStats,name=*"
+  - "kafka.server:type=BrokerTopicMetrics,name=*"
+  - "kafka.server:type=socket-server-metrics,*"
+rules:
+  - pattern: 'kafka\.(\w+)<type=(.+), name=(.+)><>Value'
+    name: kafka_$1_$2_$3
+    type: GAUGE
+  - pattern: 'kafka\.(\w+)<type=(.+), name=(.+)><>Count'
+    name: kafka_$1_$2_$3_total
+    type: COUNTER
+  - pattern: 'kafka\.server<type=raft-metrics><>([\w-]+)'
+    name: kafka_server_raft_metrics_$1
+    type: GAUGE
+    # 屬性名稱的 - 會被轉成 _
+  - pattern: 'kafka\.server<type=socket-server-metrics, listener=(.+), networkProcessor=(.+)><>(failed-authentication-total|successful-authentication-total)'
+    name: kafka_server_socket_server_$3
+    type: COUNTER
+    labels:
+      listener: $1
+      networkprocessor: $2

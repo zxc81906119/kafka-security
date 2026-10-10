@@ -1,0 +1,17 @@
+# 【路徑 B:JMX exporter】Prometheus 官方的 Java agent(從 Maven Central 下載、校驗 SHA-1),每個 broker 與 controller 在 7778 埠開 /metrics。只匯出告警需要的 MBean(config/jmx/kafka.yml),不匯出全部
+$ JVM 參數 -javaagent:…=7778:kafka.yml;curl <節點>:7778/metrics
+agent:jmx_prometheus_javaagent 1.0.1,SHA-1 f9c53eb0aa1828c3c9cd7647238563e43a4ed68c(下載時已與 Maven Central 的 .sha1 比對)
+JVM 參數(broker1):KAFKA_OPTS=-Ddemo.cpsec=1 -javaagent:/opt/jmx/jmx_prometheus_javaagent.jar=7778:/opt/jmx/kafka.yml
+  broker1:7778/metrics → 88 個 kafka_ 指標
+  broker2:7778/metrics → 88 個 kafka_ 指標
+  broker3:7778/metrics → 88 個 kafka_ 指標
+  controller1:7778/metrics → 81 個 kafka_ 指標
+  controller2:7778/metrics → 81 個 kafka_ 指標
+  controller3:7778/metrics → 81 個 kafka_ 指標
+broker1 的關鍵指標:
+  kafka_server_replicamanager_underminisrpartitioncount 0.0
+  kafka_server_replicamanager_underreplicatedpartitions 0.0
+controller1 的關鍵指標:
+  kafka_controller_kafkacontroller_activecontrollercount 1.0
+  kafka_controller_kafkacontroller_offlinepartitionscount 0.0
+判定:6 個節點都開了 JMX exporter(7778 埠),URP、離線分區、active controller 等關鍵指標都在

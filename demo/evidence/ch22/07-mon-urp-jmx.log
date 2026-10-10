@@ -1,0 +1,8 @@
+# 【B:URP】同樣停 1 台 broker:這次約 35 秒就觸發(A 約 150 秒)
+$ docker stop broker3;等 KafkaJmxUnderReplicatedPartitions
+停 broker3
+   35 秒後 KafkaJmxUnderReplicatedPartitions 觸發(目前 firing:KafkaJmxUnderReplicatedPartitions)
+Alertmanager 收到 KafkaJmxUnderReplicatedPartitions:1(1=是)
+恢復 broker3;等 ISR 補齊後告警應解除
+   34 秒後 KafkaJmxUnderReplicatedPartitions 解除
+判定:停 1 台 broker 觸發 URP 告警並送到 Alertmanager,恢復後解除(來源:jmx)

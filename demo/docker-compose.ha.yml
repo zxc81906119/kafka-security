@@ -20,21 +20,50 @@ x-ha-rf: &ha-rf
 
 x-ha-ctrl: &ha-ctrl
   <<: *ha-rf
+  KAFKA_HEAP_OPTS: "-Xms384m -Xmx384m"
   KAFKA_CONFLUENT_METADATA_BOOTSTRAP_SERVERS: broker1:9092,broker2:9092,broker3:9092
   KAFKA_CONFLUENT_SECURITY_EVENT_LOGGER_EXPORTER_KAFKA_BOOTSTRAP_SERVERS: broker1:9092,broker2:9092,broker3:9092
 
+# 第 22 章:controller 也把指標送到 Prometheus(KRaft 下 ActiveControllerCount、OfflinePartitionsCount 只有 controller 有)
+x-ha-ctrl-telemetry: &ha-ctrl-telemetry
+  KAFKA_METRIC_REPORTERS: io.confluent.telemetry.reporter.TelemetryReporter
+  KAFKA_CONFLUENT_TELEMETRY_EXPORTER_C3PLUSPLUS_TYPE: "http"
+  KAFKA_CONFLUENT_TELEMETRY_EXPORTER_C3PLUSPLUS_ENABLED: "true"
+  KAFKA_CONFLUENT_TELEMETRY_EXPORTER_C3PLUSPLUS_CLIENT_BASE_URL: "https://prometheus:9090/api/v1/otlp"
+  KAFKA_CONFLUENT_TELEMETRY_EXPORTER_C3PLUSPLUS_CLIENT_COMPRESSION: "gzip"
+  KAFKA_CONFLUENT_TELEMETRY_EXPORTER_C3PLUSPLUS_API_KEY: "c3"            # api.key / api.secret 就是 Prometheus 的 Basic 帳密
+  KAFKA_CONFLUENT_TELEMETRY_EXPORTER_C3PLUSPLUS_API_SECRET: "prom-pw"
+  KAFKA_CONFLUENT_TELEMETRY_EXPORTER_C3PLUSPLUS_HTTPS_SSL_TRUSTSTORE_LOCATION: /etc/kafka/secrets/truststore.p12
+  KAFKA_CONFLUENT_TELEMETRY_EXPORTER_C3PLUSPLUS_HTTPS_SSL_TRUSTSTORE_TYPE: PKCS12
+  KAFKA_CONFLUENT_TELEMETRY_EXPORTER_C3PLUSPLUS_HTTPS_SSL_TRUSTSTORE_PASSWORD: changeit
+  KAFKA_CONFLUENT_TELEMETRY_EXPORTER_C3PLUSPLUS_BUFFER_PENDING_BATCHES_MAX: "80"
+  KAFKA_CONFLUENT_TELEMETRY_EXPORTER_C3PLUSPLUS_BUFFER_BATCH_ITEMS_MAX: "4000"
+  KAFKA_CONFLUENT_TELEMETRY_EXPORTER_C3PLUSPLUS_BUFFER_INFLIGHT_SUBMISSIONS_MAX: "10"
+  KAFKA_CONFLUENT_TELEMETRY_METRICS_COLLECTOR_INTERVAL_MS: "60000"
+  KAFKA_CONFLUENT_TELEMETRY_REMOTECONFIG_CONFLUENT_ENABLED: "false"
+  KAFKA_CONFLUENT_TELEMETRY_EXPORTER_C3PLUSPLUS_METRICS_INCLUDE: "io.confluent.kafka.server.controller.(?!.*delta).*|io.confluent.kafka.server.raft.(?!.*delta).*|io.confluent.kafka.server.kafka.controller.(?!.*delta).*"
+
+# 第 22 章:JMX exporter(Prometheus 官方 Java agent)——每個 broker 與 controller 在 7778 埠開 /metrics,供 Prometheus 抓取。
+# agent 與設定由 scripts/jmx-setup.sh 下載到 config/jmx/(scripts/ha.sh on 會自動執行)。
+x-ha-jmx: &ha-jmx
+  KAFKA_OPTS: "-Ddemo.cpsec=1 -javaagent:/opt/jmx/jmx_prometheus_javaagent.jar=7778:/opt/jmx/kafka.yml"
+
 services:
   controller1:
+    volumes:
+      - ./config/jmx:/opt/jmx:ro
     environment:
-      <<: *ha-ctrl
+      <<: [*ha-ctrl, *ha-ctrl-telemetry, *ha-jmx]
   controller2:
     extends: { file: docker-compose.yml, service: controller1 }
     container_name: controller2
     hostname: controller2
     healthcheck:
       test: ["CMD-SHELL", "timeout 3 bash -c 'exec 3<>/dev/tcp/controller2/9093'"]
+    volumes:
+      - ./config/jmx:/opt/jmx:ro
     environment:
-      <<: *ha-ctrl
+      <<: [*ha-ctrl, *ha-ctrl-telemetry, *ha-jmx]
       KAFKA_NODE_ID: 2
       KAFKA_LISTENERS: CONTROLLER://controller2:9093
   controller3:
@@ -43,17 +72,23 @@ services:
     hostname: controller3
     healthcheck:
       test: ["CMD-SHELL", "timeout 3 bash -c 'exec 3<>/dev/tcp/controller3/9093'"]
+    volumes:
+      - ./config/jmx:/opt/jmx:ro
     environment:
-      <<: *ha-ctrl
+      <<: [*ha-ctrl, *ha-ctrl-telemetry, *ha-jmx]
       KAFKA_NODE_ID: 3
       KAFKA_LISTENERS: CONTROLLER://controller3:9093
 
   broker1:
+    volumes:
+      - ./config/jmx:/opt/jmx:ro
     environment:
-      <<: *ha-rf
+      <<: [*ha-rf, *ha-jmx]
   broker2:
+    volumes:
+      - ./config/jmx:/opt/jmx:ro
     environment:
-      <<: *ha-rf
+      <<: [*ha-rf, *ha-jmx]
   broker3:
     extends: { file: docker-compose.yml, service: broker2 }
     container_name: broker3
@@ -68,10 +103,22 @@ services:
     ports: !override
       - "${HOST_PORT_MDS3:-8093}:8093"
       - "${HOST_PORT_BROKER3:-19294}:9094"
+    volumes:
+      - ./config/jmx:/opt/jmx:ro
     environment:
-      <<: *ha-rf
+      <<: [*ha-rf, *ha-jmx]
       KAFKA_NODE_ID: 13
       KAFKA_LISTENERS: INTERNAL://broker3:9092,CLIENT://0.0.0.0:9094
       KAFKA_ADVERTISED_LISTENERS: INTERNAL://broker3:9092,CLIENT://broker3:9094
       KAFKA_CONFLUENT_METADATA_SERVER_LISTENERS: https://0.0.0.0:8093
       KAFKA_CONFLUENT_METADATA_SERVER_ADVERTISED_LISTENERS: https://broker3:8093
+
+  # 第 23 章:TLS 憑證到期探測(只在需要時用 --profile c3 一起啟動)
+  blackbox-exporter:
+    image: prom/blackbox-exporter:v0.25.0
+    container_name: blackbox-exporter
+    profiles: ["c3"]
+    command: ["--config.file=/etc/blackbox/blackbox.yml"]
+    volumes:
+      - ./config/blackbox/blackbox.yml:/etc/blackbox/blackbox.yml:ro
+      - ./certs/ca.pem:/etc/blackbox/ca.pem:ro

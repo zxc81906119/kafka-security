@@ -1,0 +1,11 @@
+# 【路徑 A:telemetry】7 條平台告警規則已載入 Prometheus 並評估,基準狀態沒有告警(規則 config/c3/ops_rules.yml)
+$ GET /api/v1/rules(Prometheus);GET /api/v1/alerts
+  KafkaUnderReplicatedPartitions      ok    inactive
+  KafkaUnderMinIsrPartitions          ok    inactive
+  KafkaOfflinePartitions              ok    inactive
+  KafkaActiveControllerCountNotOne    ok    inactive
+  KafkaControllerMissing              ok    inactive
+  KafkaUncleanLeaderElection          ok    inactive
+  KafkaBrokerFenced                   ok    inactive
+目前 firing 的平台告警:-
+判定:7 條平台告警規則已載入並評估(health ok),基準狀態沒有告警(來源:telemetry)
