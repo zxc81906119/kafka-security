@@ -45,6 +45,12 @@ if [ -f certs/.done ]; then
     docker run --rm -v "$OUT:/certs" --entrypoint sh alpine/openssl -c "cd /certs; openssl x509 -req -in server.csr -CA ca.pem -CAkey ca.key -CAcreateserial -out server.pem -days 825 -sha256 -extfile san.cnf -extensions v3 2>/dev/null; openssl pkcs12 -export -in server.pem -inkey server.key -certfile ca.pem -name server -out server.keystore.p12 -passout pass:$PASS; chmod 644 server.pem server.keystore.p12"
     echo "server 憑證 SAN 已補 loki / tempo(同 key、同 CA)"
   fi
+  # 已有 CA:Kafka Connect 的 REST 走 HTTPS(第 29 章),server 憑證 SAN 要有 connect,同一把 key、同一個 CA 重簽
+  if ! grep -q "DNS:connect," certs/san.cnf 2>/dev/null; then
+    sed -i "s/DNS:tempo,/DNS:tempo,DNS:connect,/" certs/san.cnf
+    docker run --rm -v "$OUT:/certs" --entrypoint sh alpine/openssl -c "cd /certs; openssl x509 -req -in server.csr -CA ca.pem -CAkey ca.key -CAcreateserial -out server.pem -days 825 -sha256 -extfile san.cnf -extensions v3 2>/dev/null; openssl pkcs12 -export -in server.pem -inkey server.key -certfile ca.pem -name server -out server.keystore.p12 -passout pass:$PASS; chmod 644 server.pem server.keystore.p12"
+    echo "server 憑證 SAN 已補 connect(同 key、同 CA)"
+  fi
   # 已有 CA:HA 環境(第 21 章:broker3、controller2、controller3)需要的 SAN,同一把 key、同一個 CA 重簽
   if ! grep -q "DNS:broker3" certs/san.cnf 2>/dev/null; then
     sed -i "s/DNS:broker2,/DNS:broker2,DNS:broker3,DNS:controller2,DNS:controller3,/" certs/san.cnf
@@ -57,7 +63,7 @@ if [ -f certs/.done ]; then
     echo "內部憑證 SAN 已補 broker3 / controller2 / controller3(同 key、同 CA)"
   fi
   # 已有 CA:僅補產缺少的 client 憑證
-  for n in c3 restproxy bootstrap legacy-orders schema-registry monitor; do
+  for n in c3 restproxy bootstrap legacy-orders schema-registry monitor connect; do
     if [ ! -f certs/client-$n.keystore.p12 ]; then
       docker run --rm -v "$OUT:/certs" --entrypoint sh alpine/openssl -c "cd /certs; openssl genrsa -out client-$n.key 2048 2>/dev/null; openssl req -new -key client-$n.key -subj \"/CN=$n/O=Demo\" -out client-$n.csr; openssl x509 -req -in client-$n.csr -CA ca.pem -CAkey ca.key -CAcreateserial -out client-$n.pem -days 825 -sha256 2>/dev/null; openssl pkcs12 -export -in client-$n.pem -inkey client-$n.key -certfile ca.pem -name $n -out client-$n.keystore.p12 -passout pass:$PASS; chmod 644 client-$n.*"
       echo "補產 client 憑證: $n"
@@ -83,7 +89,7 @@ prompt=no
 CN=kafka.demo.local
 O=Demo
 [v3]
-subjectAltName=DNS:kafka.demo.local,DNS:localhost,DNS:controller1,DNS:controller2,DNS:controller3,DNS:broker1,DNS:broker2,DNS:broker3,DNS:restproxy,DNS:control-center,DNS:openldap,DNS:prometheus,DNS:alertmanager,DNS:conjur,DNS:schema-registry,DNS:blackbox-exporter,DNS:grafana,DNS:node-exporter,DNS:kafka-exporter,DNS:loki,DNS:tempo,IP:127.0.0.1
+subjectAltName=DNS:kafka.demo.local,DNS:localhost,DNS:controller1,DNS:controller2,DNS:controller3,DNS:broker1,DNS:broker2,DNS:broker3,DNS:restproxy,DNS:control-center,DNS:openldap,DNS:prometheus,DNS:alertmanager,DNS:conjur,DNS:schema-registry,DNS:blackbox-exporter,DNS:grafana,DNS:node-exporter,DNS:kafka-exporter,DNS:loki,DNS:tempo,DNS:connect,IP:127.0.0.1
 extendedKeyUsage=serverAuth,clientAuth
 EOF
 openssl genrsa -out server.key 2048 2>/dev/null
@@ -91,7 +97,7 @@ openssl req -new -key server.key -out server.csr -config san.cnf
 openssl x509 -req -in server.csr -CA ca.pem -CAkey ca.key -CAcreateserial -out server.pem -days 825 -sha256 -extfile san.cnf -extensions v3 2>/dev/null
 openssl pkcs12 -export -in server.pem -inkey server.key -certfile ca.pem -name server -out server.keystore.p12 -passout pass:'"$PASS"'
 # --- 對照用:兩張不同 DN 的 client 憑證 ---
-for n in c3 restproxy bootstrap legacy-orders schema-registry monitor; do
+for n in c3 restproxy bootstrap legacy-orders schema-registry monitor connect; do
   openssl genrsa -out client-$n.key 2048 2>/dev/null
   openssl req -new -key client-$n.key -subj "/CN=$n/O=Demo" -out client-$n.csr
   openssl x509 -req -in client-$n.csr -CA ca.pem -CAkey ca.key -CAcreateserial -out client-$n.pem -days 825 -sha256 2>/dev/null

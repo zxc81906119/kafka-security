@@ -363,6 +363,20 @@ gary 在 C3 指派 `orders-read` → DeveloperRead;LDAP 介面把 ming 從 devel
 
 **踩坑**:相容性檢查用 `/versions/latest` 時 TRANSITIVE 也只比最新版;實驗 topic 要替 svc-orders 補 Write 的 ACL(否則先遇到 TopicAuthorizationException,看不到 schema 的結果);`kafka-avro-console-producer` 的 SR 帳密從標準輸入進容器(`scripts/schema-produce.sh`)。**沒測**:消費端規則與 DLQ、migration rules、Protobuf / JSON Schema、CI 外掛、Schema Linking;CEL 規則的正式授權範圍。
 
+## 第 29 章(進階)Kafka Connect 的安全與可靠性(`./demo.sh 29`,需 HA 模式;約 8 分鐘)
+
+**準備**:`scripts/connect-setup.sh on`(記憶體吃緊先 `scripts/observability.sh off`、`docker stop control-center schema-registry`)。備妥:client 憑證 CN=connect、server 憑證 SAN 加 connect、AD 服務帳號 `SVC-ORDERS-SINK`(`ou=svc,ou=users`)、topic `orders.sink` 與 `orders.sink.dlq`、角色綁定、外掛 connect-file 4.3.1(Maven Central 校驗 SHA-1)、密碼檔 `config/connect/secrets/orders-sink.properties`(測試值,正式環境由 CyberArk 提供)。`scripts/connect-lab.sh` 子命令:rbac、identity、dlq、secrets。
+
+| 項目 | 實測結果 |
+|---|---|
+| worker | `cp-server-connect:8.3.2`;REST HTTPS(8083);認證 `InstallBearerOrBasicSecurityHandler`、授權 `ConnectSecurityExtension`(MDS);worker 以 client 憑證換 token(`TokenCertificateLoginCallbackHandler`,同 SR);`CUB_CLASSPATH` 要設,否則啟動前 kafka-ready 認不得 handler;`plugin.path=/plugins,/usr/share/confluent-hub-components`(放 /usr/share/java 掃描數分鐘) |
+| RBAC | worker:ResourceOwner Topic `connect-` PREFIXED、Group `connect-cluster`、`_confluent-command` 讀寫、connect-cluster scope 的 SecurityAdmin;人:Group:topic-admin ResourceOwner Connector `*`、Group:orders-write ResourceOwner Connector `orders-` PREFIXED(scope 含 `connect-cluster`)。yujie 建 orders-* 201、payments-* 403;ming 列表 `[]`、建立 / 讀 403;無帳密 401 |
+| 連接器身分 | `connector.client.config.override.policy=All`;連接器用 `consumer/producer/admin.override.sasl.login.callback.handler.class=TokenUserLoginCallbackHandler` 與 `…sasl.jaas.config`(AD 帳密);SVC-ORDERS-SINK:DeveloperRead Topic orders.sink、Group `connect-orders-` PREFIXED、DeveloperWrite orders.sink.dlq。沒覆寫(worker 身分)讀 orders.sink、自己的帳號讀 payments.events 都是 TopicAuthorizationException |
+| DLQ | strict(tolerance=none):RUNNING/FAILED(Tolerance exceeded in error handler);dlq(all):寫出 5 筆好資料、DLQ 3 筆,標頭 `__connect.errors.stage:VALUE_CONVERTER`、`exception.class.name:DataException` |
+| 密碼 | `config.providers=file`(FileConfigProvider),設定寫 `${file:/etc/connect-secrets/orders-sink.properties:password}`:`connect-configs` topic 找密碼 0 筆;直接寫進設定 ≥1 筆(明文);REST 對 `sasl.jaas.config` 遮成 •••• |
+
+**踩坑**:server 憑證 SAN 缺 connect → `curl` HTTP 000;連接器 task 讀 topic 的歷史壞資料而 FAILED(實驗前要重建 topic);手動試過的舊連接器也寫同一個 DLQ(數字會多);FileStreamSink 的輸出檔留在容器內(實驗前先清)。**沒測**:多 worker 與故障轉移、source 連接器、Avro / SR 轉換器、密碼輪替生效方式、SecurePass provider、外掛供應鏈驗證。
+
 ## 對應到客戶 RHEL 9 VM 的位置與步驟(手動部署)
 | demo | RHEL 9 VM |
 |---|---|

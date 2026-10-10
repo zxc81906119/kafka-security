@@ -27,7 +27,7 @@ current_mode() {
 
 # 清除所有 profile 的容器與資料(失敗也繼續,可能本來就沒有)。
 remove_everything() {
-  docker compose --profile c3 --profile restproxy --profile cyberark --profile sr --profile grafana --profile observability down -v >/dev/null 2>&1 || true
+  docker compose --profile c3 --profile restproxy --profile cyberark --profile sr --profile grafana --profile observability --profile connect down -v >/dev/null 2>&1 || true
 }
 
 # 改 .env:HA 模式加上 COMPOSE_FILE(兩個 compose 檔疊加);基礎模式移除。

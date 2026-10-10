@@ -53,3 +53,14 @@ objectClass: simpleSecurityObject
 cn: svc-grafana-ldap
 description: Read-only LDAP query account (bind DN) used by Grafana login (separate from the broker account so it can be revoked on its own)
 userPassword: ldap-grafana-pw
+
+dn: ou=svc,ou=users,{{ LDAP_BASE_DN }}
+objectClass: organizationalUnit
+ou: svc
+
+dn: cn=SVC-ORDERS-SINK,ou=svc,ou=users,{{ LDAP_BASE_DN }}
+objectClass: inetOrgPerson
+cn: SVC-ORDERS-SINK
+sn: ConnectorOrdersSink
+displayName: Kafka Connect orders-sink connector service account
+userPassword: connector-orders-sink-pw
