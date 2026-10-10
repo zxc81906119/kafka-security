@@ -50,6 +50,8 @@ export const ACTS = [
     scene: ['人會調動、會離職;而日常維運不能每次都靠指令記憶。第三週,Ming 處理人員異動,並第一次用平台組自己做的維運選單(OP menu)值班。接著把「線上傳輸」補完整:連 AD 的線路、監控元件、使用者連 C3 的入口。最後,資安要求所有密碼不能再放在檔案裡——行裡的 CyberArk 登場。'] },
   { id: 'week4', title: '第四週:平台韌性與監控', when: '第四週', labs: [21, 22, 23, 24, 25, 26, 27],
     scene: ['前三週都在精簡環境裡做。主管問了一句很現實的話:「如果半夜壞一台,會怎樣?壞兩台呢?」Ming 決定不憑印象回答,切到 3 台 controller、3 台 broker 的環境,一台一台停給大家看。'] }
+  ,{ id: 'week5', title: '第五週:資料契約與應用協作', when: '第五週', labs: [28],
+    scene: ['平台穩了、看得見了,接下來的麻煩變成人與人之間:訂單團隊和對帳團隊各自改程式、各自上線。Ming 要把『欄位怎麼改才不會互相弄壞』變成機器擋得住的規矩,而不是靠開會。'] }
 ];
 
 // 每個 Lab 的故事:scene 情境、mission 任務、recap 小結(學到的事 + 對應的規矩)
@@ -161,6 +163,11 @@ export const LAB_STORY = {
       '接著補上 node_exporter 與 kafka_exporter。他給 kafka_exporter 一個只有 Describe 權限的帳號,證明它看得到 lag、卻讀不到任何訊息;然後故意讓一個 consumer 落後 4000 筆,看告警響、追上後解除。最後 Grafana 的登入也接上 AD,不另建帳號:Gary 是 Admin,其他人只能看。'],
     mission: ['把 Grafana 接上 Prometheus,匯入官方儀表板並檢查它們真的有資料。', '補上主機磁碟與 consumer lag 的監控與告警。', '讓 Grafana 與兩個 exporter 和其他元件一樣受保護:HTTPS、AD 登入、mTLS、最小權限帳號。'],
     recap: ['匯入成功不等於用得起來:官方儀表板的標籤與指標名稱要和抓取設定對得上(job 名稱、env 標籤、exporter 版本)。', '不改官方儀表板內容;對不上的記下來,或另外寫補充的儀表板。', 'node_exporter 補磁碟、kafka_exporter 補 consumer lag;兩個都用 mTLS 保護,Kafka 帳號只給 Describe。', 'Grafana 的使用者與群組以 AD 為準,本機 admin 只留給 break-glass;告警統一走 Prometheus 與 Alertmanager。', 'kafka_exporter 是社群專案,上線前評估維護狀況;磁碟告警的門檻與 lag 門檻都是範例值。'] },
+  28: { scene: ['訂單團隊來報喜:要在訂單加一個「分行代碼」欄位。對帳團隊的人臉色一變:「你們加必填的,我們的程式就壞了。」過去這種事要靠開會、靠口頭約定,出事了才知道。Ming 想起 Schema Registry 在 Lab 20 只管了「誰能註冊」,還沒管「能不能這樣改」。',
+      '他先試了預設的相容性模式:加有預設值的欄位過,加必填欄位被擋,改型別被擋,錯誤訊息直接指出是哪個欄位。接著他把三種模式攤開來比,發現選哪一個其實是在問:兩個團隊誰先上線?還有一個陷阱——只比最新版的模式,漏掉了 topic 裡還留著的舊資料,重播時才會爆。',
+      '最後兩件事讓他有新的警覺:授權擋(403)與相容性擋(409)是兩道獨立的關卡,除錯要先看錯誤碼;而有團隊想用 RecordNameStrategy,結果 subject 名稱脫離了 topic,前綴授權整個失效。他也試了資料契約規則:金額不得為負,寫入端就被擋——但他在報告裡寫明,這只擋得住用了這個序列化器的程式。'],
+    mission: ['把 schema 的修改規矩變成機器擋得住的相容性規則。', '釐清三種相容性模式與升級順序的關係,以及 TRANSITIVE 的必要性。', '分清楚授權(403)與相容性(409)兩道關卡,評估命名策略對授權設計的影響。', '試用資料契約規則,並寫明它的強制範圍。'],
+    recap: ['相容性模式決定誰先上線:BACKWARD 先升 consumer、FORWARD 先升 producer、FULL 不拘;topic 會被重播就用 TRANSITIVE。', '註冊前用相容性檢查 API(放進 CI),不要等上線才被 409 擋;檢查全部版本要用 /versions 不是 /versions/latest。', '403 是授權(RBAC)、409 是 schema 不相容;兩道關卡獨立。', 'RecordNameStrategy 讓 subject 脫離 topic,按 topic 前綴授權就不夠,選它是架構決定。', '資料契約規則是 client 端序列化器執行,繞過序列化器就繞過規則;broker 端 schema validation 只驗 schema ID。'] },
   27: { scene: ['儀表板上線後,值班的人又問了兩個問題:「出事當下,broker 的日誌在哪裡看?」「訂單慢,是 producer 慢、Kafka 慢,還是 consumer 慢?」Ming 知道指標只回答「有沒有問題」,回答不了「為什麼」,要補日誌和追蹤。',
       '他決定日誌和 trace 都不直接送進 Loki 與 Tempo,而是先寫進 Kafka:「下游維護的時候,資料不能掉。」他做了一個實驗:把 Loki 停掉,期間照常製造日誌,恢復後比對,980 行對 980 行。接著用 OpenTelemetry 的 Java agent 掛上 Lab 25 的兩支程式,程式碼一行沒改,一個 trace 就把寫入端和讀取端串在一起。',
       '最後他把 Lab 10 的稽核事件也接了進來,YUJIE 讀不該讀的 topic 被拒,稽核人員在 Grafana 一個地方就查得到。他也把 Alloy 用的 Kafka 帳號拆成只能寫與只能讀的兩個,讓這一整條觀測管線就算被攻破,碰得到的也只有觀測資料。'],

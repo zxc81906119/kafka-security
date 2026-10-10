@@ -1,0 +1,6 @@
+▶ 三種改法 × 三種模式:X=加有預設值的欄位、Y=刪掉欄位 amount、Z=加必填欄位。每個模式用獨立的 subject 檢查(不實際註冊)
+  BACKWARD  X 加預設欄位:true   Y 刪欄位:true   Z 加必填欄位:false
+  FORWARD   X 加預設欄位:true   Y 刪欄位:false  Z 加必填欄位:true 
+  FULL      X 加預設欄位:true   Y 刪欄位:false  Z 加必填欄位:false
+意義:BACKWARD = 新 schema 的 consumer 讀得懂舊資料(先升級 consumer);FORWARD = 舊 schema 的 consumer 讀得懂新資料(先升級 producer);FULL = 兩者都要
+判定:三種模式對同樣的改法結果不同:BACKWARD 擋『加必填欄位』外都過、FORWARD 擋『刪欄位』、FULL 兩者都擋——先升級哪一端,決定該用哪個模式

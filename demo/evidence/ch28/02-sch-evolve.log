@@ -1,0 +1,11 @@
+# 【演進】BACKWARD 下:加有預設值的欄位過、加必填欄位與改型別被擋(409)、相容性檢查 API 先問
+$ POST /subjects/<subject>/versions;POST /compatibility/subjects/<subject>/versions/latest
+▶ 同一個 subject 連續註冊三種改法:加有預設值的欄位 → 加必填欄位 → 改型別。預設模式 BACKWARD(新 schema 要能讀舊資料)
+全域相容性模式:"compatibilityLevel":"BACKWARD"
+v1 = {id, amount}
+v2 加欄位 memo(有預設值):[HTTP 200] 版本 2
+v3 加欄位 branch(必填、沒預設值):[HTTP 409] "message":"Schema being registered is incompatible with an earlier schema for subject \"
+v3' 把 amount 從 int 改成 string:[HTTP 409] "message":"Schema being registered is incompatible with an earlier schema for subject \"
+相容性檢查 API(不註冊,只問行不行):加有預設值的欄位 → true;加必填欄位 → false
+重新註冊和 v1 一模一樣的 schema:[HTTP 200] 版本 1(已存在的 schema 直接回傳原版本,不會新增版本)
+判定:BACKWARD 下:加有預設值的欄位通過,加必填欄位與改型別被擋(409,訊息指出是哪個欄位);註冊前可用相容性檢查 API 先問

@@ -1,0 +1,7 @@
+▶ 命名策略決定 producer 把 schema 註冊在哪個 subject。預設 TopicNameStrategy = <topic>-value(按 topic 前綴授權有效);RecordNameStrategy = 記錄的全名 demo.Order(和 topic 無關)
+yujie 的 producer(TopicNameStrategy,預設):
+   → 完成(0 個錯誤);subject 列表:"orders.strat-value" 
+yujie 的 producer(RecordNameStrategy):
+   org.apache.kafka.common.errors.AuthorizationException: Error registering Avro schema{"type":"record","name":"Order","namespace":"demo","fields":[{"name":"id","type":"stri
+   Caused by: io.confluent.kafka.schemaregistry.client.rest.exceptions.RestClientException: User is denied operation Write on Subject: demo.Order; error code: 40301
+判定:TopicNameStrategy 的 subject 跟著 topic 名稱,按 orders. 前綴授權有效;RecordNameStrategy 的 subject 是 demo.Order,前綴授權不涵蓋,yujie 被拒(403)——選了 RecordNameStrategy 就要改用依 subject 名稱的授權設計

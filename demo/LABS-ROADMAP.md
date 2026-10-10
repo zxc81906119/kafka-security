@@ -14,7 +14,7 @@
 | 25 | producer / consumer 可靠性(Java 單檔程式;依賴 HA) | 完成 |
 | 26 | 指標與儀表板:Grafana + 官方 jmx-monitoring-stacks 儀表板;node_exporter、kafka_exporter(consumer lag);AD 登入。JMX exporter 擴到 Schema Registry、Connect 未做(使用者 2026-10-10 要求,C3 只看 broker 與 controller) | 完成|
 | 27 | 日誌與追蹤:Loki + Grafana Alloy(broker/controller 日誌、稽核事件)、Tempo + OpenTelemetry Java agent(trace);日誌與 trace 以 Kafka 當傳輸緩衝(實測 TLS+SCRAM 可行,topic 最小權限) | 完成 |
-| 28 | Schema 演進與資料契約 | 待做 |
+| 28 | Schema 演進與資料契約 | 完成 |
 | 29 | Connect:DLQ、設定檔祕密、RBAC(可能需下載 connector) | 待做 |
 
 > 編號說明:原規劃 Lab 27–29 因批 B(升級與 DR)暫不做,改成連續編號 25–27;故事順序依「監控 → 憑證 → 容量 → 應用開發」。

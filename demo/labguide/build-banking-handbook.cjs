@@ -441,6 +441,7 @@ C.push(H1('第 5 章  應用開發'),
     ['標籤', 'Avro 與 JSON 用 `confluent:tags`;Protobuf 用 `confluent.field_meta`', '{官}'],
   ], [1.8, 6.2, 1]),
   P(REC + ':相容性模式用 BACKWARD 或 FULL,並把相容性檢查放進 CI;任何模式都要先確認升級順序。{推} Schema CI/CD(Maven 或 Gradle plugin)的官方頁面沒有找到。'),
+  P('{測} 本案實測(Lab 28):(1)BACKWARD 下加有預設值的欄位通過,加必填欄位與改型別回 409 且訊息指出欄位;註冊前可用相容性檢查 API。(2)同樣三種改法(加預設欄位 / 刪欄位 / 加必填欄位)在 BACKWARD、FORWARD、FULL 下結果不同,對應升級順序。(3)**非 transitive 模式只比最新版**:v1={id}、v2 加有預設值的 a、v3 把 a 改必填,BACKWARD 說可以、BACKWARD_TRANSITIVE 說不行;檢查要用 `/compatibility/subjects/<s>/versions`(不加 `/latest`),加了 `/latest` 即使 TRANSITIVE 也只比最新版。topic 會被重播的場合用 TRANSITIVE。(4)授權擋是 403、相容性擋是 409,兩道獨立關卡。(5)**RecordNameStrategy 讓 subject 變成記錄全名**(`demo.Order`),按 `orders.` 前綴授權就失效(producer 啟動註冊被 403),選它要重新設計 subject 授權。(6)資料契約 CEL 規則(`message.amount >= 0`)在本環境可註冊與執行,amount=-5 在序列化時被擋(Rule failed);**規則由 client 端序列化器執行,不是 broker 強制**,繞過序列化器就繞過規則;規則所需授權範圍要向 Confluent 確認(本環境為試用授權)。未驗證:消費端規則與 DLQ、migration rules、Protobuf / JSON Schema、CI 外掛、Schema Linking。'),
   H2('5.5 欄位級加密(CSFLE)給開發者看的重點'),
   P('流程(信封加密):KEK 在外部 KMS;DEK 由 Schema Registry 的 DEK Registry 以 subject 為範圍管理;producer 端依規則找出標籤欄位、取得或產生 DEK(用 KMS 的 KEK 包起來存回 DEK Registry)、用明文 DEK 加密欄位;consumer 端取回加密的 DEK、向 KMS 解開、解密欄位。加密與解密都在 client,broker 與 Schema Registry 看不到明文。{官}'),
   T(['項目', '內容', '依據'], [

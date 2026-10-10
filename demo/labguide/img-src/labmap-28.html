@@ -1,0 +1,23 @@
+<!doctype html><html lang="zh-Hant"><head><meta charset="utf-8"><style>
+  html,body{margin:0;background:#fff;font-family:"Microsoft JhengHei","Noto Sans TC","PingFang TC",sans-serif;color:#0f2a43}
+  .s{width:1280px;box-sizing:border-box;padding:26px 44px 18px;overflow:hidden}
+  h1{margin:0;font-size:26px}h1 span{color:#6b4fa0}
+  .prove{margin:8px 0 12px;font-size:17px;font-weight:700;background:#f4f0fa;border-left:6px solid #6b4fa0;padding:8px 12px;border-radius:0 8px 8px 0}
+  .lab{font-size:13px;color:#4a5a6a;margin:0 0 4px}
+  .chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px}
+  .chip{font-size:12.5px;padding:3px 9px;border-radius:12px;background:#f1f4f7;color:#9aa6b2;border:1px solid #e1e7ed}
+  .chip.on{background:#0f2a43;color:#fff;border-color:#0f2a43;font-weight:700}
+  .f{display:flex;align-items:center;gap:8px;margin:7px 0}
+  .a,.b,.c{border-radius:8px;padding:7px 10px;font-size:14px;line-height:1.3;box-sizing:border-box}
+  .a{width:300px;flex:none;background:#e8f1fb;border:1px solid #17608f;font-weight:700}
+  .b{flex:1;background:#fff;border:1px solid #c9d3dc}
+  .c{width:380px;flex:none;font-weight:700}
+  .c.ok{background:#e4f3e4;border:1px solid #2e9e49;color:#1f7a34}.c.bad{background:#fbe5e8;border:1px solid #c21a2c;color:#c21a2c}
+  .c.mix{background:#fdf1de;border:1px solid #e8890c;color:#7a4a00}.c.info{background:#eef3f7;border:1px solid #6c7f93;color:#2f3f4f}
+  .ar{color:#4a5a6a;font-size:18px}
+  </style></head><body><div class="s">
+  <h1>Lab 28 地圖 <span>(進階)Schema 演進與資料契約:相容性、命名策略、規則</span></h1>
+  <div class="prove">這堂要證明:schema 演進要靠相容性模式把關:選哪個模式取決於誰先上線;TRANSITIVE 擋住舊資料重播的問題;授權(403)與相容性(409)是兩道獨立的關卡;RecordNameStrategy 讓前綴授權失效;資料契約規則只在 client 端執行</div>
+  <div class="lab">動到的元件(打亮者)</div><div class="chips"><span class="chip ">瀏覽器</span><span class="chip ">Postman</span><span class="chip on">Kafka CLI / curl(kc、hc)</span><span class="chip ">OP menu</span><span class="chip on">憑證</span><span class="chip on">模擬 AD(openldap)</span><span class="chip ">phpLDAPadmin</span><span class="chip ">controller</span><span class="chip on">broker + MDS</span><span class="chip ">REST Proxy</span><span class="chip ">Control Center</span><span class="chip ">Prometheus</span><span class="chip ">Alertmanager</span><span class="chip ">legacy app</span><span class="chip ">CyberArk(Conjur)</span></div>
+  <div class="f"><div class="a">加有預設值的欄位</div><div class="ar">➜</div><div class="b">BACKWARD 相容性檢查</div><div class="ar">➜</div><div class="c mix">✔ 200;✘ 加必填欄位 / 改型別 409</div></div><div class="f"><div class="a">BACKWARD / FORWARD / FULL</div><div class="ar">➜</div><div class="b">同樣三種改法</div><div class="ar">➜</div><div class="c ok">✔ 結果不同:先升級哪一端決定用哪個</div></div><div class="f"><div class="a">只比最新版 vs 比全部版本</div><div class="ar">➜</div><div class="b">BACKWARD vs BACKWARD_TRANSITIVE</div><div class="ar">➜</div><div class="c mix">✘ 漏掉 v1 → ✔ TRANSITIVE 擋住</div></div><div class="f"><div class="a">yujie 改 orders / payments</div><div class="ar">➜</div><div class="b">相容性 vs RBAC</div><div class="ar">➜</div><div class="c bad">✘ 409(不相容)/ ✘ 403(沒權限)</div></div><div class="f"><div class="a">RecordNameStrategy</div><div class="ar">➜</div><div class="b">subject 變成 demo.Order</div><div class="ar">➜</div><div class="c bad">✘ orders. 前綴授權不涵蓋 → 403</div></div><div class="f"><div class="a">CEL 規則 amount >= 0</div><div class="ar">➜</div><div class="b">client 端序列化器執行</div><div class="ar">➜</div><div class="c mix">✔ 100 寫入 → ✘ -5 在寫入端被擋</div></div>
+  </div></body></html>

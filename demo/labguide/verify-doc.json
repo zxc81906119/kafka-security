@@ -1,42 +1,42 @@
 [
  {
-  "lab": "ch27",
-  "step": "27.1 啟動:Kafka 這一側先備妥,再起三個容器",
+  "lab": "ch28",
+  "step": "28.1 演進:哪些改法過、哪些被擋",
   "M": "ok",
   "A": "-",
   "E": "ok"
  },
  {
-  "lab": "ch27",
-  "step": "27.2 日誌流向:容器 → Kafka → Loki",
+  "lab": "ch28",
+  "step": "28.2 三種模式:先升級哪一端",
   "M": "ok",
   "A": "-",
   "E": "ok"
  },
  {
-  "lab": "ch27",
-  "step": "27.3 Kafka 當緩衝:Loki 停機,資料不掉",
+  "lab": "ch28",
+  "step": "28.3 TRANSITIVE:漏掉更早的版本",
   "M": "ok",
   "A": "-",
   "E": "ok"
  },
  {
-  "lab": "ch27",
-  "step": "27.4 trace 跨過 Kafka",
+  "lab": "ch28",
+  "step": "28.4 兩道獨立的關卡:403 與 409",
   "M": "ok",
   "A": "-",
   "E": "ok"
  },
  {
-  "lab": "ch27",
-  "step": "27.5 稽核事件進 Loki",
+  "lab": "ch28",
+  "step": "28.5 命名策略:RecordNameStrategy 讓前綴授權失效",
   "M": "ok",
   "A": "-",
   "E": "ok"
  },
  {
-  "lab": "ch27",
-  "step": "27.6 最小權限:寫與讀分開",
+  "lab": "ch28",
+  "step": "28.6 資料契約:CEL 規則擋壞資料",
   "M": "ok",
   "A": "-",
   "E": "ok"

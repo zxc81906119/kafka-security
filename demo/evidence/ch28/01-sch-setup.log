@@ -1,0 +1,4 @@
+# 【啟動】確認 Schema Registry 在跑且授權就緒(沿用第 20 章的設定)
+$ scripts/sr-setup.sh
+[sr] 等待授權生效(SR 對 MDS 的授權快取)…
+[sr] 就緒(gary 可列 KEK)

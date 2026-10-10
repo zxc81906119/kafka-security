@@ -1,0 +1,6 @@
+# 【TRANSITIVE】BACKWARD 只比最新版,漏掉更早的版本;BACKWARD_TRANSITIVE 比全部舊版
+$ POST /compatibility/subjects/<subject>/versions(不加 /latest)
+▶ v1={id},v2 加有預設值的 a,候選 v3 把 a 改成必填。BACKWARD 只對照最新版(v2,有 a),TRANSITIVE 對照全部舊版(含沒有 a 的 v1)
+候選 v3(a 必填):BACKWARD → true;BACKWARD_TRANSITIVE → false
+為什麼要緊:topic 裡還留著 v1 寫的舊資料,新 consumer 從頭重讀(重播、新服務上線)時會遇到沒有 a 的資料而失敗
+判定:BACKWARD 只比最新版,漏掉更早的版本;BACKWARD_TRANSITIVE 比全部舊版才擋得住。topic 會被重播的場合應該用 TRANSITIVE

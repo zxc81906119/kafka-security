@@ -1,0 +1,7 @@
+# 【兩道關卡】授權(403)與相容性(409)獨立:有權限也不能改壞,相容也不能越權
+$ yujie(orders-write)註冊 orders.* 與 payments.* 的 subject
+▶ yujie(orders-write)註冊:對 orders. 開頭的 subject 改壞 schema → 409(相容性擋);對 payments. 的 subject → 403(授權擋)。兩道關卡獨立
+yujie 在 orders.sch.gates 改型別(有權限、但不相容):[HTTP 409] "message":"Schema being registered is incompatible with an earlier schema for subject \"
+yujie 在 orders.sch.gates 加有預設值的欄位(有權限、相容):[HTTP 200] 版本 2
+yujie 在 payments.sch.gates 註冊(沒有權限):[HTTP 403] "message":"User is denied operation Write on Subject: payments.sch.gates"
+判定:授權與相容性是兩道獨立的關卡:有權限也不能改壞(409),相容也不能越權(403);除錯時先看錯誤碼是哪一道
