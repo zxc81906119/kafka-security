@@ -1,17 +1,17 @@
 # 【到期監控】blackbox exporter 對 12 個端點做 TLS 探測(對外 6 個、內部 mTLS 6 個):剩餘天數與基準狀態。內部 mTLS 埠用一張「無權限」的 client 憑證完成握手——不能把 super user 的內部憑證私鑰放進探測容器
 $ Prometheus: probe_ssl_earliest_cert_expiry、probe_success(job tls-expiry、tls-expiry-mtls)
 ▶ 等 blackbox 探測到 12 個 TLS 端點(最多 180 秒),列出每個端點憑證的剩餘天數,確認目前沒有憑證告警
-  broker1:9094 → 剩 824.8 天
-  broker2:9094 → 剩 824.8 天
-  broker3:9094 → 剩 824.8 天
-  broker1:8091 → 剩 824.8 天
-  broker2:8092 → 剩 824.8 天
-  broker3:8093 → 剩 824.8 天
-  broker1:9092(內部 mTLS)→ 剩 824.3 天
-  broker2:9092(內部 mTLS)→ 剩 824.3 天
-  broker3:9092(內部 mTLS)→ 剩 824.3 天
-  controller1:9093(內部 mTLS)→ 剩 824.3 天
-  controller2:9093(內部 mTLS)→ 剩 824.3 天
-  controller3:9093(內部 mTLS)→ 剩 824.3 天
+  broker1:9094 → 剩 824.9 天
+  broker2:9094 → 剩 824.9 天
+  broker3:9094 → 剩 824.9 天
+  broker1:8091 → 剩 824.9 天
+  broker2:8092 → 剩 824.9 天
+  broker3:8093 → 剩 824.9 天
+  broker1:9092(內部 mTLS)→ 剩 824.2 天
+  broker2:9092(內部 mTLS)→ 剩 824.2 天
+  broker3:9092(內部 mTLS)→ 剩 824.2 天
+  controller1:9093(內部 mTLS)→ 剩 824.2 天
+  controller2:9093(內部 mTLS)→ 剩 824.2 天
+  controller3:9093(內部 mTLS)→ 剩 824.2 天
 目前 firing 的憑證告警:-
 判定:12 個 TLS 端點(6 個對外、6 個內部 mTLS)的探測都成功並有剩餘天數,基準狀態沒有憑證告警

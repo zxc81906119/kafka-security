@@ -1,0 +1,5 @@
+# 【啟動】備妥密碼、官方儀表板(固定 commit、校驗 SHA-256)、AD 的唯讀查詢帳號、kafka_exporter 專用的 Kafka 帳號(只有 Describe),啟動 Grafana、node_exporter、kafka_exporter
+$ scripts/grafana.sh on
+▶ 讓 Prometheus 載入抓取設定、告警規則與 grafana 帳號(重啟 prometheus 容器)
+▶ 啟動 Grafana、node_exporter、kafka_exporter
+   [grafana] 完成:https://localhost:3000(AD 帳號登入;本機 admin 的密碼在 config/grafana/secrets/admin.pw)

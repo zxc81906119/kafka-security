@@ -1,0 +1,7 @@
+# node_exporter:HTTPS + mTLS(要求並驗證 client 憑證,只有行內 CA 簽發的 monitor 憑證能抓)。
+# 它沒有帳密可洩漏,比 Basic 好;跟 blackbox 一樣的做法(第 22 章)。
+tls_server_config:
+  cert_file: /etc/tls/server.pem
+  key_file: /etc/tls/server.key
+  client_auth_type: RequireAndVerifyClientCert
+  client_ca_file: /etc/tls/ca.pem

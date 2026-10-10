@@ -1,5 +1,7 @@
+▶ 背景用冪等 producer(acks=all)持續寫入,同時依序重啟所有節點;最後比對『送出幾筆』與『topic 實際幾筆』
 Created topic ha.roll.
 背景 producer:2400 筆、每秒 6 筆、acks=all、冪等;同時依序重啟 broker1 → broker2 → broker3 → 非 active controller → active controller
+▶ 重啟順序:先 3 台 broker,再 controller;active controller(leader)放最後,避免 leader 來回切換
 active controller = controller1(最後重啟)
   重啟 broker1 → 健康,URP=0
   重啟 broker2 → 健康,URP=0

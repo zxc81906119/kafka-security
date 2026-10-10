@@ -3,4 +3,4 @@
 dn: olcDatabase={1}mdb,cn=config
 changetype: modify
 add: olcAccess
-olcAccess: {2}to * by dn.exact="cn=svc-kafka-ldap,ou=system,dc=corp,dc=demo" read by self read by dn="cn=admin,dc=corp,dc=demo" write by * none
+olcAccess: {2}to * by dn.exact="cn=svc-kafka-ldap,ou=system,dc=corp,dc=demo" read by dn.exact="cn=svc-grafana-ldap,ou=system,dc=corp,dc=demo" read by self read by dn="cn=admin,dc=corp,dc=demo" write by * none

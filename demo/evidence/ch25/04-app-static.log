@@ -2,21 +2,21 @@
 $ java RebalanceWatch.java <topic> <group> cooperative <秒> c2(靜態)/ 不給 id(動態)
 ▶ c1 先跑;c2 加入後正常結束、再重啟一次(模擬應用程式滾動更新)。比較 c2 用動態成員與靜態成員(group.instance.id)時,c1 經歷幾次 rebalance
 【c2 是dynamic成員】c1 的事件:
-  [ 5s] c1         ASSIGNED [0, 1, 2, 3, 4, 5]
-  [23s] c1         REVOKED  [3, 4, 5]
-  [23s] c1         ASSIGNED []
-  [26s] c1         ASSIGNED []
-  [32s] c1         ASSIGNED [3, 4, 5]
+  [ 4s] c1         ASSIGNED [0, 1, 2, 3, 4, 5]
+  [22s] c1         REVOKED  [3, 4, 5]
+  [22s] c1         ASSIGNED []
+  [25s] c1         ASSIGNED []
+  [34s] c1         ASSIGNED [3, 4, 5]
   [38s] c1         REVOKED  [3, 4, 5]
   [38s] c1         ASSIGNED []
   [41s] c1         ASSIGNED []
-  [47s] c1         ASSIGNED [3, 4, 5]
+  [50s] c1         ASSIGNED [3, 4, 5]
   [60s] c1         REVOKED  [0, 1, 2, 3, 4, 5]
 【c2 是static成員】c1 的事件:
   [ 5s] c1         ASSIGNED [0, 1, 2, 3, 4, 5]
-  [23s] c1         REVOKED  [3, 4, 5]
-  [23s] c1         ASSIGNED []
+  [26s] c1         REVOKED  [3, 4, 5]
   [26s] c1         ASSIGNED []
+  [29s] c1         ASSIGNED []
   [60s] c1         REVOKED  [0, 1, 2]
 c1 的 REVOKED 次數(含最後 c1 自己結束的那一次):動態 3 次、靜態 2 次
 判定:c2 重啟時:動態成員讓 c1 多經歷 rebalance(離開一次、重新加入一次);靜態成員在 session.timeout 內重啟,c1 完全沒有感覺

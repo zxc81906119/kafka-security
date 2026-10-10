@@ -67,6 +67,8 @@ export const MAPS = [
     flows: [['資料全擠在兩台', 'kafka-log-dirs 看每台資料量', '✘ 第三台是空的'], ['限速搬家(4 MB/s)', 'reassign --execute --throttle → --verify', '✔ 背景寫入零失敗;完成後限速自動移除'], ['搬到一半 --cancel', '回到搬家前的副本配置', '✔ 限速一併清除'], ['搬完不跑 --verify', 'broker 與 topic 的 throttled.* 設定殘留', '✘ 之後的複製流量被默默限速 → ✔ --verify 清除']] },
   { n: 25, prove: '應用程式端的可靠性:冪等擋掉重送重複、手動提交是 at-least-once、cooperative 與靜態成員降低 rebalance 影響、交易 abort 要用 read_committed 才看不到', use: ['cli', 'broker'],
     flows: [['broker 凍結 5 秒,producer 逾時重送', '關閉冪等 → broker 收到兩份', '✘ 1500 筆變 1505 → ✔ 開冪等 0 重複'], ['consumer 處理後、提交前當機', 'offset 沒提交 → 重啟從上次位置再讀', '✘ 同一批 100 筆處理兩次(at-least-once)'], ['新成員加入群組', 'eager 全收 / cooperative 只收要換的', '✘ 6 個分區全停 → ✔ 只動 3 個'], ['成員滾動重啟', '動態成員每次觸發 rebalance / 靜態成員不觸發', '✘ 多 2 次 → ✔ 0 次'], ['交易 abort', 'abort 的訊息仍在 log', '✔ read_committed 看不到 → ✘ read_uncommitted 看得到']] },
+  { n: 26, prove: 'Grafana 全元件監控:官方儀表板要檢查「真的有資料」;主機磁碟與 consumer lag 用 node_exporter / kafka_exporter 補上;監控元件自己也要 HTTPS、AD 登入、mTLS、最小權限', use: ['cli', 'broker', 'prom', 'am', 'ad', 'certs', 'browser'],
+    flows: [['匯入官方儀表板', '查詢標籤對不對得上抓取設定', '✔ 150 個查詢約 108 個有資料(107 到 108,隨環境略有出入);✘ 其餘是環境沒有的功能或名稱不符'], ['node_exporter / kafka_exporter', 'mTLS(client 憑證)', '✘ 無憑證與外來憑證握手被拒 → ✔ monitor 憑證 200'], ['kafka_exporter 的 Kafka 帳號', 'ACL 只有 Describe', '✔ 看得到 offset 與 lag → ✘ 讀訊息被拒'], ['consumer 落後 4000 筆', 'kafka_consumergroup_lag → Prometheus 規則', '✔ KafkaConsumerLagHigh 觸發 → 追上後解除'], ['AD 帳號登入 Grafana', 'LDAPS + 群組對映角色', '✔ GARY Admin;YUJIE、MING Viewer;✘ 錯密碼 / 匿名 401']] },
 ];
 
 const esc = s => s.replace(/&/g, '&amp;').replace(/</g, '&lt;');

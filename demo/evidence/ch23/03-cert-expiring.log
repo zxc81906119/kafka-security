@@ -2,14 +2,14 @@
 $ kafka-configs --entity-type brokers --entity-name <id> --alter --add-config listener.name.client.ssl.keystore.location=…
 ▶ 簽一張只有 20 天效期的憑證(模擬快到期),動態換到 CLIENT 埠,看到期告警會不會響
 簽一張只有 20 天效期的 server 憑證(同 DN、同 SAN),動態換到 CLIENT 埠:
-   新憑證 srv-short:4474B9BA75C8AEC73D198B55BD22276108461BAB 到期 Oct 30 07:14:53 2026 GMT 
+   新憑證 srv-short:4474B9BA75C8AEC73D198B55BD22276108461BAF 到期 Oct 30 10:06:23 2026 GMT 
    預檢 srv-short:鏈驗證 → srv-short.pem: OK;SAN 與現有相同
 Completed updating config for broker 11.
 Completed updating config for broker 12.
 Completed updating config for broker 13.
-三台 broker CLIENT 埠送出的序號:4474B9BA75C8AEC73D198B55BD22276108461BAB 4474B9BA75C8AEC73D198B55BD22276108461BAB 4474B9BA75C8AEC73D198B55BD22276108461BAB 
-MDS(8091)送出的序號(不在動態重載範圍):4474B9BA75C8AEC73D198B55BD22276108461BA0
-   56 秒後 KafkaTlsCertExpiringSoon@broker1:9094 觸發
+三台 broker CLIENT 埠送出的序號:4474B9BA75C8AEC73D198B55BD22276108461BAF 4474B9BA75C8AEC73D198B55BD22276108461BAF 4474B9BA75C8AEC73D198B55BD22276108461BAF 
+MDS(8091)送出的序號(不在動態重載範圍):4474B9BA75C8AEC73D198B55BD22276108461BAE
+   47 秒後 KafkaTlsCertExpiringSoon@broker1:9094 觸發
 到期告警目前:KafkaTlsCertExpiringSoon@broker1:9094,KafkaTlsCertExpiringSoon@broker2:9094,KafkaTlsCertExpiringSoon@broker3:9094
-MDS 8091 的剩餘天數:824.8(舊憑證,不告警)
+MDS 8091 的剩餘天數:824.9(舊憑證,不告警)
 判定:CLIENT 埠換成 20 天效期的憑證後,到期告警觸發;MDS 仍是舊憑證(動態重載只涵蓋 Kafka 的 listener),沒有告警

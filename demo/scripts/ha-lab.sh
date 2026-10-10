@@ -161,7 +161,13 @@ lab_ctrls_down() {
   KAFKA_TIMEOUT=25 kafka_topics --create --topic ha.c2 --partitions 1 --replication-factor 3 | grep -E "Created|rror" || echo "沒有回應(逾時)"
   echo -n "describe topic(等 25 秒):"
   KAFKA_TIMEOUT=25 kafka_topics --describe --topic ha.test | grep -c "Partition:" | sed 's/^0$/沒有回應(逾時)/'
-  sent=$(produce_test ha.test 100 all); echo "寫入既有 topic(acks=all):送出 ${sent:-0} 筆"
+  sent=$(produce_test ha.test 100 all)
+  if [ "${sent:-0}" != 100 ]; then
+    # 偶發:曾有一輪(從零重建後第一次跑)送出 0 筆,原因未查明(同樣步驟其餘多次都是 100 筆)。留下第一個錯誤,重試一次。
+    note "第一次送出 ${sent:-0} 筆;錯誤:$(grep -a -m1 -E 'Exception|Timeout|error' "$PERF_OUT" | cut -c1-160)"; sleep 10
+    sent=$(produce_test ha.test 100 all)
+  fi
+  echo "寫入既有 topic(acks=all):送出 ${sent:-0} 筆"
   read_count=$(read_all_partitions ha.test); echo "讀取既有 topic 全部分區:$read_count 筆"
   say "把 controller2、controller3 啟動回來,恢復多數後控制面才恢復"
   start_containers controller2 controller3; wait_healthy controller2 controller3 >/dev/null; sleep 15

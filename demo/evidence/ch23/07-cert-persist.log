@@ -3,5 +3,5 @@ $ docker restart broker1;比對重啟前後送出的序號
 ▶ 動態設定的憑證存在叢集 metadata,重啟後仍然有效;所以靜態設定檔也必須同步更新
 目前是動態設定的新憑證 srv-new;重啟 broker1(靜態設定仍指向舊檔 server.keystore.p12):
 Completed updating config for broker 11.
-重啟前序號:4474B9BA75C8AEC73D198B55BD22276108461BAC;重啟後:4474B9BA75C8AEC73D198B55BD22276108461BAC
+重啟前序號:4474B9BA75C8AEC73D198B55BD22276108461BB0;重啟後:4474B9BA75C8AEC73D198B55BD22276108461BB0
 判定:重啟後仍是動態設定的憑證(動態設定存在叢集 metadata,會在啟動時套用);所以靜態設定檔也必須同步指向新檔,否則兩處不一致、日後有人移除動態�

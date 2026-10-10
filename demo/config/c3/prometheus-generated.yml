@@ -30,10 +30,13 @@ rule_files:
   - 'ops_rules_jmx.yml'
   # 第 23 章:憑證到期告警(blackbox 探測 + 內部 mTLS 憑證指標)
   - 'ops_rules_cert.yml'
+  # 第 26 章:主機(node_exporter)與 consumer lag(kafka_exporter)告警
+  - 'ops_rules_host.yml'
 
 # 第 22 章:JMX exporter 的抓取設定(HA 模式才有這個檔;沒有檔案時這行不匹配任何東西)
 scrape_config_files:
   - 'jmx_scrape*.yml'
+  - 'grafana_scrape*.yml'
 
 # A scrape configuration containing exactly one endpoint to scrape:
 # Here it's Prometheus itself.

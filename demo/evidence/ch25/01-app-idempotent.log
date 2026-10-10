@@ -8,7 +8,7 @@ $ java Producer.java <topic> 1500 200 false|true;docker pause <leader>;java Coun
   producer idempotent=false 確認成功=1500 失敗=0
   counter isolation=read_committed 總筆數=1505 不重複=1500 重複=5
 【開啟冪等 enable.idempotence=true】
-  暫停 broker3(leader)5 秒,模擬網路卡住 / 程序凍結
+  暫停 broker2(leader)5 秒,模擬網路卡住 / 程序凍結
   producer idempotent=true 確認成功=1500 失敗=0
   counter isolation=read_committed 總筆數=1500 不重複=1500 重複=0
 判定:關閉冪等時逾時重送寫出 5 筆重複;開啟冪等後重複為 0(producer 用序號讓 broker 丟掉重送的批次)

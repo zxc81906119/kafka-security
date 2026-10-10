@@ -1,0 +1,20 @@
+# Grafana 的資料來源:Prometheus(HTTPS + Basic 帳密)。
+#   - 帳號 grafana 只做查詢(Prometheus 的帳號依用途分開,見 config/c3/web-config-prom.yml);密碼從檔案讀($__file),不寫在設定裡
+#   - 用行內 CA 驗證 Prometheus 的憑證(不跳過驗證)
+#   - uid 與名稱固定為 Prometheus:Confluent 官方儀表板的查詢用這個名稱找資料來源
+apiVersion: 1
+datasources:
+  - name: Prometheus
+    uid: Prometheus
+    type: prometheus
+    access: proxy
+    url: https://prometheus:9090
+    isDefault: true
+    basicAuth: true
+    basicAuthUser: grafana
+    jsonData:
+      tlsAuthWithCACert: true
+      timeInterval: 15s
+    secureJsonData:
+      basicAuthPassword: $__file{/etc/grafana/secrets/prometheus.pw}
+      tlsCACert: $__file{/etc/tls/ca.pem}

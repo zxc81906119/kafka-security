@@ -48,7 +48,7 @@ export const ACTS = [
     scene: ['基本功過關了,但現實不會照教科書走:半夜要有人能建 topic、舊系統不會說 Kafka 的語言、稽核要盤點每條連線、還有一個你不知道的 REST 入口。'] },
   { id: 'week3', title: '第三週:異動、日常維運、傳輸加密、CyberArk、帳號被偷與 Schema Registry', when: '第三週', labs: [15, 16, 17, 18, 19, 20],
     scene: ['人會調動、會離職;而日常維運不能每次都靠指令記憶。第三週,Ming 處理人員異動,並第一次用平台組自己做的維運選單(OP menu)值班。接著把「線上傳輸」補完整:連 AD 的線路、監控元件、使用者連 C3 的入口。最後,資安要求所有密碼不能再放在檔案裡——行裡的 CyberArk 登場。'] },
-  { id: 'week4', title: '第四週:平台韌性與監控', when: '第四週', labs: [21, 22, 23, 24, 25],
+  { id: 'week4', title: '第四週:平台韌性與監控', when: '第四週', labs: [21, 22, 23, 24, 25, 26],
     scene: ['前三週都在精簡環境裡做。主管問了一句很現實的話:「如果半夜壞一台,會怎樣?壞兩台呢?」Ming 決定不憑印象回答,切到 3 台 controller、3 台 broker 的環境,一台一台停給大家看。'] }
 ];
 
@@ -156,6 +156,11 @@ export const LAB_STORY = {
       '最後是 rebalance:新成員加入時,舊的分配策略讓全部分區先停下來,cooperative 只動要換人的;滾動更新時動態成員每個實例都觸發一次,靜態成員完全不擾動。交易的部分他也順手驗證:abort 的訊息 read_committed 看不到,預設的 read_uncommitted 卻看得到。'],
     mission: ['重現 producer 重送造成的重複,並證明冪等有效。', '重現 consumer 的重複處理,說明為什麼處理必須能容許重複。', '比較 eager 與 cooperative、動態與靜態成員的 rebalance 影響。', '驗證交易 abort 的可見性,說明 isolation.level 的重要。'],
     recap: ['冪等 producer(預設開啟,不要手動關)擋掉逾時重送造成的重複;但只限同一個 producer 實例。', '手動提交是 at-least-once:處理後、提交前當機會重複處理,消費端的處理要冪等或去重。', 'cooperative 只收回要換人的分區,eager 全收;長駐服務偏好 cooperative。', '靜態成員(group.instance.id)讓滾動部署不觸發 rebalance,代價是故障轉移要等 session.timeout。', '交易 abort 的訊息仍在 log,消費端要設 read_committed;abort 前要 flush。'] },
+  26: { scene: ['應用團隊看完 Ming 的實驗,提了一個要求:「能不能在一個畫面看到所有東西?Control Center 只有 broker 跟 controller,我們的 consumer 落後多少、機器的磁碟還剩多少,都要另外去找。」Ming 想起 Lab 22 留下的兩個缺口:磁碟用量,和 consumer lag。',
+      '他把 Grafana 接上 Prometheus,匯入 Confluent 官方的儀表板,但沒有直接相信「匯入成功」:他把每個面板的查詢都跑了一遍,150 個裡約 108 個有資料——沒資料的,有的是環境沒有的功能,有的是指標名稱對不上,他全部記進報告,沒有去改官方儀表板的內容。',
+      '接著補上 node_exporter 與 kafka_exporter。他給 kafka_exporter 一個只有 Describe 權限的帳號,證明它看得到 lag、卻讀不到任何訊息;然後故意讓一個 consumer 落後 4000 筆,看告警響、追上後解除。最後 Grafana 的登入也接上 AD,不另建帳號:Gary 是 Admin,其他人只能看。'],
+    mission: ['把 Grafana 接上 Prometheus,匯入官方儀表板並檢查它們真的有資料。', '補上主機磁碟與 consumer lag 的監控與告警。', '讓 Grafana 與兩個 exporter 和其他元件一樣受保護:HTTPS、AD 登入、mTLS、最小權限帳號。'],
+    recap: ['匯入成功不等於用得起來:官方儀表板的標籤與指標名稱要和抓取設定對得上(job 名稱、env 標籤、exporter 版本)。', '不改官方儀表板內容;對不上的記下來,或另外寫補充的儀表板。', 'node_exporter 補磁碟、kafka_exporter 補 consumer lag;兩個都用 mTLS 保護,Kafka 帳號只給 Describe。', 'Grafana 的使用者與群組以 AD 為準,本機 admin 只留給 break-glass;告警統一走 Prometheus 與 Alertmanager。', 'kafka_exporter 是社群專案,上線前評估維護狀況;磁碟告警的門檻與 lag 門檻都是範例值。'] },
   23: { scene: ['告警上線的第一週,Prometheus 發出了一則 Ming 沒見過的訊息:某個端點送出的憑證只剩 20 天。原來憑證到期也是會「出事」的東西,而他之前只有選單裡一個列出日期的功能。',
       'Ming 先比較了怎麼監控:Kafka 自己的憑證到期指標沒有填值,JMX 也沒有;最後用 blackbox 從外面真的握一次手,看 client 會看到什麼,再用選單的檔案巡檢補上 client 憑證與 CA。',
       '換憑證時他學到三件事:動態重載不用重啟,但 MDS 不在範圍內;SAN 不一樣會被拒絕;別的 CA 簽的憑證 broker 照收、client 全掛,所以要預檢、先換一台、並且回退不能走剛被弄壞的那條路。他在變更紀錄寫下:換完之後,靜態設定也要同步。'],

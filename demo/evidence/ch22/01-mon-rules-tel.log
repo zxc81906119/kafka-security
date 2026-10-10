@@ -1,6 +1,6 @@
 # 【路徑 A:telemetry】7 條平台告警規則已載入 Prometheus 並評估,基準狀態沒有告警(規則 config/c3/ops_rules.yml)
 $ GET /api/v1/rules(Prometheus);GET /api/v1/alerts
-▶ 等 Prometheus 載入並評估 7 條平台告警規則(最多 240 秒),再確認目前沒有任何告警在響
+▶ 等 Prometheus 載入並評估 7 條平台告警規則,而且前一個實驗留下的告警都已解除(最多 300 秒;telemetry 路徑的指標有延遲,剛做完停機實驗時告警會晚幾分
   KafkaUnderReplicatedPartitions      ok    inactive
   KafkaUnderMinIsrPartitions          ok    inactive
   KafkaOfflinePartitions              ok    inactive

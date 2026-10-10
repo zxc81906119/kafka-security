@@ -57,3 +57,9 @@ broker_sizes() {
   "$DEMO_DIR/scripts/k.sh" kafka-log-dirs --bootstrap-server "$KAFKA_BOOTSTRAP" --command-config "$KAFKA_ADMIN_CONFIG" --describe --topic-list "$1" 2>/dev/null \
     | grep '^{' | tail -1 | node "$LIB_DIR/log-dirs.mjs"
 }
+
+# kafka_acls <kafka-acls 參數...>:執行 kafka-acls(一般路徑,管理身分)。
+# 注意:資源名稱 * 一定要加引號('*'),否則會被 shell 展開成目前目錄的檔名。
+kafka_acls() {
+  timeout 90 "$DEMO_DIR/scripts/k.sh" kafka-acls --bootstrap-server "$KAFKA_BOOTSTRAP" --command-config "$KAFKA_ADMIN_CONFIG" "$@" 2>&1 | _kafka_quiet
+}

@@ -1,5 +1,5 @@
 # Prometheus:HTTPS(共用 server 憑證,容器內掛載 /etc/tls)+ HTTP Basic。帳號依用途分開(出事時可單獨撤銷、audit 看得出是誰):
-#   c3 = Control Center;telemetry = broker 與 controller 的 telemetry reporter 推送指標;ops = 維運人員與腳本的查詢。
+#   c3 = Control Center;telemetry = broker 與 controller 的 telemetry reporter 推送指標;ops = 維運人員與腳本的查詢;grafana = Grafana 的資料來源(只讀查詢,第 26 章)。
 #   密碼是 demo 測試值(bcrypt 雜湊,htpasswd -nbBC 10 產生);正式環境由 CyberArk 產生、保管與輪替。
 tls_server_config:
   cert_file: /etc/tls/server.pem
@@ -8,3 +8,4 @@ basic_auth_users:
   c3: "$2y$10$0JXPKBF0fDKvbXh66WbH2utWZAsLk4rolzu2MsMtZ/MDsldjOr9tW"
   telemetry: "$2y$10$2WXpAARpDq3ga1/dBroEAu/ABfH5ueRudlYfOpob611Vivjj.VMKi"
   ops: "$2y$10$lR6oUmxcUgEugx1fwx8gDeKiWFg334PX9MlyIylghOr9uUZsUy9b."
+  grafana: "$2y$10$WCCyiTfRJalrmXXezurjGOuV56VU0RumnkyqDJk3BjKuqSHQlcGyu"

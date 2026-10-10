@@ -46,3 +46,10 @@ objectClass: simpleSecurityObject
 cn: svc-kafka-ldap
 description: Read-only LDAP query account (bind DN) used by MDS and brokers
 userPassword: ldap-bind-pw
+
+dn: cn=svc-grafana-ldap,ou=system,{{ LDAP_BASE_DN }}
+objectClass: organizationalRole
+objectClass: simpleSecurityObject
+cn: svc-grafana-ldap
+description: Read-only LDAP query account (bind DN) used by Grafana login (separate from the broker account so it can be revoked on its own)
+userPassword: ldap-grafana-pw

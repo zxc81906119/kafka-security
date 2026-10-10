@@ -3,9 +3,9 @@ $ docker stop broker2 broker3;acks=all 與 acks=1 各寫 50 筆;比對 consumer 
 ▶ 停 2 台 broker(只剩 broker1):ISR 剩 1,低於 min.insync.replicas 2,看 acks=all 與 acks=1 的差別
 目前 topic 筆數:500
 停 broker2、broker3(只剩 broker1)
- Topic: ha.test Partition: 0 Leader: 11 Replicas: 11,12,13 Isr: 11 Offline: 12,13 Elr: 13 LastKnownElr: 
- Topic: ha.test Partition: 1 Leader: 11 Replicas: 12,13,11 Isr: 11 Offline: 12,13 Elr: 13 LastKnownElr: 
- Topic: ha.test Partition: 2 Leader: 11 Replicas: 13,11,12 Isr: 11 Offline: 12,13 Elr: 13 LastKnownElr: 
+ Topic: ha.test Partition: 0 Leader: 11 Replicas: 12,13,11 Isr: 11 Offline: 12,13 Elr: 13 LastKnownElr: 
+ Topic: ha.test Partition: 1 Leader: 11 Replicas: 13,11,12 Isr: 11 Offline: 12,13 Elr: 13 LastKnownElr: 
+ Topic: ha.test Partition: 2 Leader: 11 Replicas: 11,12,13 Isr: 11 Offline: 12,13 Elr: 13 LastKnownElr: 
 ▶ acks=all 寫 50 筆:應該被拒絕,producer 重試到逾時
 acks=all 寫入 50 筆:成功 0 筆(ISR 1 < min.isr 2,被拒絕,producer 重試到逾時)
         50 TimeoutException: Expiring 50 record

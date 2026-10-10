@@ -38,7 +38,7 @@ RULE_GROUP=$([ "$SRC" = jmx ] && echo kafka-platform-jmx || echo kafka-platform)
 NODES="broker1 broker2 broker3 controller1 controller2 controller3"
 # 平台告警的名稱都以 Kafka 開頭;KafkaAuthFailuresBurst 是另一章(認證失敗)的告警,這裡不算
 PLATFORM_ALERTS='^Kafka'
-NOT_PLATFORM='KafkaAuthFailuresBurst'
+NOT_PLATFORM='KafkaAuthFailuresBurst|KafkaConsumerLagHigh|KafkaExporterDown'   # 其他章節(認證失敗、第 26 章的 consumer lag)的告警,這裡不算
 
 # ---------- 小工具(這支腳本專用) ----------
 
@@ -129,33 +129,33 @@ lab_protect() {
   [ "$n1" = "[HTTP 000]" ] && [ "$n2" = "[HTTP 000]" ] && [ "$n3" = "[HTTP 200]" ] && [ "$ok" = 1 ] || bad=1
 
   say "③ Prometheus 自己抓取這些端點:所有目標都應該是 up(用 https 驗證憑證鏈加帳密或 mTLS)"
-  down=$(prom_query 'count(up{job=~"kafka-jmx|tls-expiry|tls-expiry-mtls"} == 0) or vector(0)')
-  up=$(prom_query 'count(up{job=~"kafka-jmx|tls-expiry|tls-expiry-mtls"} == 1) or vector(0)')
+  down=$(prom_query 'count(up{job=~"kafka-broker|kafka-controller|tls-expiry|tls-expiry-mtls"} == 0) or vector(0)')
+  up=$(prom_query 'count(up{job=~"kafka-broker|kafka-controller|tls-expiry|tls-expiry-mtls"} == 1) or vector(0)')
   echo "③ Prometheus 以 https(驗證憑證鏈)+ 帳密 / mTLS 抓取:目標 up=1 的有 $up 個,up=0 的有 $down 個"
   [ "$down" = 0 ] && [ "$up" -ge 18 ] || bad=1
 
   say "④ Prometheus 與 Alertmanager 的帳號依用途分開:各自的帳號有效,不認識的帳號一律 401"
   echo "④ Prometheus 與 Alertmanager 的帳號依用途分開(機制仍是 HTTPS + Basic):"
   local pa="" aa="" u tk ak
-  for u in c3:prom-pw telemetry:telemetry-pw ops:ops-prom-pw nobody:x; do pa="$pa $u→$(http_code -u "$u" "$PROM_URL/-/healthy")"; done
+  for u in c3:prom-pw telemetry:telemetry-pw ops:ops-prom-pw grafana:graf-prom-pw nobody:x; do pa="$pa $u→$(http_code -u "$u" "$PROM_URL/-/healthy")"; done
   for u in c3:am-pw prometheus:prom-am-pw opmenu:am-opmenu-pw ops:ops-am-pw nobody:x; do aa="$aa $u→$(http_code -u "$u" "$AM_URL/-/healthy")"; done
   echo "  Prometheus:$pa"; echo "  Alertmanager:$aa"
   tk=$(docker inspect broker1 --format '{{range .Config.Env}}{{println .}}{{end}}' | grep -c 'C3PLUSPLUS_API_KEY=telemetry')
   ak=$(grep -A2 'basic_auth' config/c3/prometheus-generated.yml | grep -c 'username: prometheus')
   echo "  broker 的 telemetry reporter 用 telemetry 帳號:$([ "$tk" = 1 ] && echo 是 || echo 否);Prometheus 送告警用 prometheus 帳號:$([ "$ak" = 1 ] && echo 是 || echo 否)"
   case "$pa$aa" in *"nobody:x→[HTTP 401]"*"nobody:x→[HTTP 401]"*) ;; *) bad=1;; esac
-  [ "$(echo "$pa" | grep -o 'HTTP 200' | wc -l)" = 3 ] && [ "$(echo "$aa" | grep -o 'HTTP 200' | wc -l)" = 4 ] && [ "$tk" = 1 ] && [ "$ak" = 1 ] || bad=1
+  [ "$(echo "$pa" | grep -o 'HTTP 200' | wc -l)" = 4 ] && [ "$(echo "$aa" | grep -o 'HTTP 200' | wc -l)" = 4 ] && [ "$tk" = 1 ] && [ "$ak" = 1 ] || bad=1
 
   [ "$bad" = 0 ] && verdict "監控端點全部受保護:6 個 exporter 都是 HTTPS + Basic(不帶帳密與錯密碼 401、明文無回應),blackbox 要求 mTLS(沒有或不被信任的 client 憑證握手被拒),Prometheus 正常抓取;Prometheus 與 Alertmanager 的帳號依用途分開(各自有效、未知帳號 401)"
 }
 
 lab_rules() {
-  say "等 Prometheus 載入並評估 7 條平台告警規則(最多 240 秒),再確認目前沒有任何告警在響"
+  say "等 Prometheus 載入並評估 7 條平台告警規則,而且前一個實驗留下的告警都已解除(最多 300 秒;telemetry 路徑的指標有延遲,剛做完停機實驗時告警會晚幾分鐘才解除)"
   local ok=0 t0 counts
   t0=$(date +%s)
-  while [ $(( $(date +%s) - t0 )) -lt 240 ]; do
+  while [ $(( $(date +%s) - t0 )) -lt 300 ]; do
     counts=$(prom_rules_count "$RULE_GROUP")
-    [ "$counts" = "7 7" ] && { ok=1; break; }
+    [ "$counts" = "7 7" ] && [ "$(platform_firing)" = "-" ] && { ok=1; break; }
     sleep 10
   done
   prom_rules_list "$RULE_GROUP"

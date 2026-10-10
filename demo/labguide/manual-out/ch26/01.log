@@ -1,0 +1,11 @@
+▶ 備妥密碼、官方儀表板、AD 查詢帳號、kafka_exporter 的 Kafka 帳號
+▶ 放寬 svc-grafana-ldap 的讀取權限(ACL)
+▶ 建立 kafka_exporter 專用的 SCRAM 帳號,並只授予 Describe 權限(看得到 topic、group 與 offset,讀不到訊息內容)
+Completed updating config for user kafka-exporter.
+   kafka-exporter 的 ACL:3 個資源(topic *、group *、cluster)
+▶ 讓 Prometheus 載入抓取設定、告警規則與 grafana 帳號(重啟 prometheus 容器)
+▶ 啟動 Grafana、node_exporter、kafka_exporter
+   [grafana] 完成:https://localhost:3000(AD 帳號登入;本機 admin 的密碼在 config/grafana/secrets/admin.pw)
+SASL/EXTERNAL authentication started
+SASL username: gidNumber=0+uidNumber=0,cn=peercred,cn=external,cn=auth
+SASL SSF: 0

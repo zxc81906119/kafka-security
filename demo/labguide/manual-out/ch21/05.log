@@ -1,3 +1,4 @@
+▶ 停 1 台 controller(controller3):剩 2/3 仍有多數,叢集照常運作
 停 controller3(剩 2/3,仍有多數)
 建立 topic:Created topic ha.c1.
 寫入既有 topic:送出 100 筆

@@ -1,35 +1,42 @@
 [
  {
-  "lab": "ch25",
-  "step": "25.1 冪等 producer:broker 凍結造成逾時重送",
+  "lab": "ch26",
+  "step": "26.1 啟動:備妥密碼、帳號、儀表板,再起三個容器",
   "M": "ok",
   "A": "-",
   "E": "ok"
  },
  {
-  "lab": "ch25",
-  "step": "25.2 at-least-once:處理後、提交前當機",
+  "lab": "ch26",
+  "step": "26.2 Grafana 就緒:只收 HTTPS,資料來源與儀表板載入",
   "M": "ok",
   "A": "-",
   "E": "ok"
  },
  {
-  "lab": "ch25",
-  "step": "25.3 rebalance:eager 與 cooperative",
+  "lab": "ch26",
+  "step": "26.3 官方儀表板用得起來嗎:逐個查詢檢查",
   "M": "ok",
   "A": "-",
   "E": "ok"
  },
  {
-  "lab": "ch25",
-  "step": "25.4 靜態成員:滾動部署不觸發 rebalance",
+  "lab": "ch26",
+  "step": "26.4 主機指標:node_exporter 走 mTLS,補上磁碟告警",
   "M": "ok",
   "A": "-",
   "E": "ok"
  },
  {
-  "lab": "ch25",
-  "step": "25.5 交易:abort 的訊息誰看得到",
+  "lab": "ch26",
+  "step": "26.5 consumer lag:最小權限的 kafka_exporter",
+  "M": "ok",
+  "A": "-",
+  "E": "ok"
+ },
+ {
+  "lab": "ch26",
+  "step": "26.6 AD 登入:群組對映角色",
   "M": "ok",
   "A": "-",
   "E": "ok"

@@ -3,7 +3,7 @@ $ kafka-reassign-partitions --list;kafka-configs --describe(leader/follower.repl
 ▶ 搬家完成後『故意不跑 --verify』:限速設定會一直殘留。之後任何複製流量(例如重啟的 broker 追資料)都會被默默限速
 The inter-broker throttle limit was set to 20000000 B/s
 Successfully started partition reassignments for cap.skew-0,cap.skew-1,cap.skew-2,cap.skew-3,cap.skew-4,cap.skew-5
-   3 秒後:搬家完成(--list 沒有進行中的搬家)
+   5 秒後:搬家完成(--list 沒有進行中的搬家)
 搬家已完成,但我們沒有跑 --verify:
 broker 11 的限速設定 2 筆、topic cap.skew 的限速設定 2 筆
     follower.replication.throttled.rate=20000000

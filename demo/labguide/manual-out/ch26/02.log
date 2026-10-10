@@ -1,0 +1,11 @@
+▶ 確認 Grafana 只收 HTTPS、資料來源(Prometheus,帳號 grafana)連得通、官方儀表板與自製儀表板都載入
+HTTPS /api/health:ok;明文 http:[HTTP 400](不是 200 就是沒有提供明文服務;Grafana 對明文請求回 400)
+資料來源 Prometheus 健康檢查:"status":"OK"
+已載入的儀表板(6 個):
+  Confluent Platform overview
+  Confluent RBAC
+  Kafka cluster
+  Kafka Topics
+  KRaft
+  主機與 consumer lag(本專案)
+判定:Grafana 只收 HTTPS(明文請求被拒)、資料來源健康、6 個儀表板已載入(5 個官方、1 個自製)

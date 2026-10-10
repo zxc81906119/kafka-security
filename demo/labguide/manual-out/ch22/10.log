@@ -1,3 +1,4 @@
+▶ ① 6 個 JMX exporter:不帶帳密、錯密碼都要被擋(401),正確帳密才給資料(200),明文 http 連不上
 ① 6 個節點的 JMX exporter(HTTPS + Basic 帳密):
   broker1:不帶帳密 [HTTP 401];錯密碼 [HTTP 401];正確 [HTTP 200];明文 http [HTTP 000]
   broker2:不帶帳密 [HTTP 401];錯密碼 [HTTP 401];正確 [HTTP 200];明文 http [HTTP 000]
@@ -5,12 +6,15 @@
   controller1:不帶帳密 [HTTP 401];錯密碼 [HTTP 401];正確 [HTTP 200];明文 http [HTTP 000]
   controller2:不帶帳密 [HTTP 401];錯密碼 [HTTP 401];正確 [HTTP 200];明文 http [HTTP 000]
   controller3:不帶帳密 [HTTP 401];錯密碼 [HTTP 401];正確 [HTTP 200];明文 http [HTTP 000]
+▶ ② blackbox exporter 要求 mTLS:沒有憑證、或憑證不是行內 CA 簽的,TLS 握手就被拒
 ② blackbox exporter(HTTPS + mTLS,要求並驗證 client 憑證;它能替人連任何端點,所以比一般 exporter 更嚴):
   不帶 client 憑證 [HTTP 000];不是行內 CA 簽的 client 憑證(rogue)[HTTP 000];Prometheus 的 monitor 憑證 [HTTP 200](probe_success 1:1)
   (HTTP 000 = TLS 握手被拒,請求根本沒送進去)
+▶ ③ Prometheus 自己抓取這些端點:所有目標都應該是 up(用 https 驗證憑證鏈加帳密或 mTLS)
 ③ Prometheus 以 https(驗證憑證鏈)+ 帳密 / mTLS 抓取:目標 up=1 的有 18 個,up=0 的有 0 個
+▶ ④ Prometheus 與 Alertmanager 的帳號依用途分開:各自的帳號有效,不認識的帳號一律 401
 ④ Prometheus 與 Alertmanager 的帳號依用途分開(機制仍是 HTTPS + Basic):
-  Prometheus: c3:prom-pw→[HTTP 200] telemetry:telemetry-pw→[HTTP 200] ops:ops-prom-pw→[HTTP 200] nobody:x→[HTTP 401]
+  Prometheus: c3:prom-pw→[HTTP 200] telemetry:telemetry-pw→[HTTP 200] ops:ops-prom-pw→[HTTP 200] grafana:graf-prom-pw→[HTTP 200] nobody:x→[HTTP 401]
   Alertmanager: c3:am-pw→[HTTP 200] prometheus:prom-am-pw→[HTTP 200] opmenu:am-opmenu-pw→[HTTP 200] ops:ops-am-pw→[HTTP 200] nobody:x→[HTTP 401]
   broker 的 telemetry reporter 用 telemetry 帳號:是;Prometheus 送告警用 prometheus 帳號:是
 判定:監控端點全部受保護:6 個 exporter 都是 HTTPS + Basic(不帶帳密與錯密碼 401、明文無回應),blackbox 要求 mTLS(沒有或不被信任的 client 憑證握手被拒),Prometheus 正常抓取;Prometheus 與 Alertmanager 的帳號依用途分開(各自有效、未知帳號 401)

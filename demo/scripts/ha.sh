@@ -27,7 +27,7 @@ current_mode() {
 
 # 清除所有 profile 的容器與資料(失敗也繼續,可能本來就沒有)。
 remove_everything() {
-  docker compose --profile c3 --profile restproxy --profile cyberark --profile sr down -v >/dev/null 2>&1 || true
+  docker compose --profile c3 --profile restproxy --profile cyberark --profile sr --profile grafana down -v >/dev/null 2>&1 || true
 }
 
 # 改 .env:HA 模式加上 COMPOSE_FILE(兩個 compose 檔疊加);基礎模式移除。
@@ -41,6 +41,7 @@ set_compose_files() {
 # Prometheus 抓 JMX exporter 的設定只在 HA 模式存在。
 set_jmx_scrape_config() {
   if [ "$1" = ha ]; then cp config/c3/jmx-scrape.ha.tpl config/c3/jmx_scrape.yml; else rm -f config/c3/jmx_scrape.yml; fi
+  rm -f config/c3/grafana_scrape.yml     # 重建後 Grafana 相關容器不在了,抓取設定要等 scripts/grafana.sh on 才產生(否則會有 up==0 的目標與告警)
 }
 
 case "${1:-status}" in

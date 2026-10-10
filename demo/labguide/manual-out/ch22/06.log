@@ -1,4 +1,5 @@
-KafkaJmxUnderReplicatedPartitions   ok    inactive
+▶ 等 Prometheus 載入並評估 7 條平台告警規則,而且前一個實驗留下的告警都已解除(最多 300 秒;telemetry 路徑的指標有延遲,剛做完停機實驗時告警會晚幾分鐘才解除)
+  KafkaJmxUnderReplicatedPartitions   ok    inactive
   KafkaJmxUnderMinIsrPartitions       ok    inactive
   KafkaJmxOfflinePartitions           ok    inactive
   KafkaJmxActiveControllerCountNotOne ok    inactive
