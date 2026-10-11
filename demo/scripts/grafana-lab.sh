@@ -54,11 +54,20 @@ lab_stack() {
     && verdict "Grafana 只收 HTTPS(明文請求被拒)、資料來源健康、$n 個儀表板已載入(5 個官方、1 個自製)"
 }
 
+# 給 wait_until 用:Grafana 經資料來源代理查 Prometheus,4 台 broker 的 kafka_server_replicamanager_leadercount 都有資料就回傳 0
+grafana_prom_ready() {
+  local url="https://localhost:3000/api/datasources/proxy/uid/Prometheus/api/v1/query?query=count(kafka_server_replicamanager_leadercount)" n
+  n=$(curl -s --ssl-no-revoke --cacert certs/ca.pem -u "$ADMIN_AUTH" "$url" | node "$LIB_DIR/prom-value.mjs" 2>/dev/null)
+  [ "${n%%.*}" -ge 4 ] 2>/dev/null
+}
+
 lab_dashboards() {
   say "把每個儀表板的每個 PromQL 查詢都透過 Grafana 跑一次,數有幾個回傳資料——匯入成功不等於用得起來"
   local out total with_data
   local f files=()
   for f in config/grafana/dashboards/*.json; do [ "${f##*/}" = cp-host-lag.json ] || files+=("$f"); done   # 自製的不算在『官方儀表板』裡
+  # 先等 Grafana 經資料來源查得到 Kafka 指標再量:剛啟動 / Prometheus 剛重啟時查詢會出錯(實測:同一組儀表板 24 個 → 穩定後 126 個有資料)
+  wait_until "Grafana 經資料來源查得到 Kafka 指標" 300 grafana_prom_ready >/dev/null || true
   out=$(node "$LIB_DIR/dash-coverage.mjs" https://localhost:3000 "$ADMIN_AUTH" certs/ca.pem "${files[@]}")
   echo "$out"
   total=$(echo "$out" | sed -E 's/.*查詢 ([0-9]+) 個,有資料 ([0-9]+) 個.*/\1/' | awk '{s+=$1} END {print s}')

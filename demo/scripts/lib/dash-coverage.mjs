@@ -45,7 +45,7 @@ for (const f of files) {
     const q = substitute(raw, vars);
     const r = await get('/api/datasources/proxy/uid/Prometheus/api/v1/query?query=' + encodeURIComponent(q));
     let ok = false;
-    try { const j = JSON.parse(r.body); if (j.status === 'success') { ok = j.data.result.length > 0; } else { error++; errSample ||= `${j.errorType || ''} ${j.error || ''}`.slice(0, 160); } }
+    try { const j = JSON.parse(r.body); if (j.status === 'success') { ok = j.data.result.length > 0; } else { error++; errSample ||= JSON.stringify(j).slice(0, 200); } }
     catch { error++; errSample ||= `HTTP ${r.code ?? "?"} ${String(r.body).slice(0, 120)}`; }
     if (ok) withData++; else { empty++; emptyList.push(raw.slice(0, 110)); }
   }
