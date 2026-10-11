@@ -117,7 +117,8 @@ if [ -f certs/.done ]; then
   # 第 32 章:Tiered Storage 的物件儲存 MinIO(HTTPS)
   add_server_san "DNS:minio" 's/DNS:broker4,/DNS:broker4,DNS:minio,/' "minio"
   # 單一基線:REST Proxy、Schema Registry、Connect 各 2 台,各自的名稱要在 server 憑證的 SAN
-  add_server_san "DNS:restproxy1" 's/DNS:restproxy,/DNS:restproxy,DNS:restproxy1,DNS:restproxy2,DNS:schema-registry1,DNS:schema-registry2,DNS:connect1,DNS:connect2,/' \n    "restproxy1/2、schema-registry1/2、connect1/2"
+  add_server_san "DNS:restproxy1" 's/DNS:restproxy,/DNS:restproxy,DNS:restproxy1,DNS:restproxy2,DNS:schema-registry1,DNS:schema-registry2,DNS:connect1,DNS:connect2,/' \
+    "restproxy1/2、schema-registry1/2、connect1/2"
   # 第 33 章:動態 quorum 汰換 controller 實驗的第 4 台 controller(server 憑證與內部憑證都要)
   add_server_san "DNS:controller4" 's/DNS:controller3,/DNS:controller3,DNS:controller4,/' "controller4"
   add_internal_san "DNS:controller4" 's/DNS:controller3,/DNS:controller3,DNS:controller4,/' "controller4"

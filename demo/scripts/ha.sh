@@ -8,8 +8,7 @@
 #   scripts/ha.sh on  [up.sh 參數]    清掉現有資料 → 全新重建(不帶參數 = 全部元件,與客戶 HA 拓樸相同)
 #   scripts/ha.sh off [up.sh 參數]    同 on(舊名稱,相容用)
 #   scripts/ha.sh status              顯示目前拓樸(controller 與 broker 數量)
-# 會改動什麼:`docker compose down -v`(清除所有 profile 的容器與資料,含 Conjur);移除 .env 裡舊的 COMPOSE_FILE / SBC_ENABLE;
-#   重置 Conjur 的金鑰檔;之後執行 scripts/up.sh。
+# 會改動什麼:先執行 scripts/down.sh(清除所有 profile 的容器與資料、Conjur 金鑰檔、.env 的實驗覆蓋設定),之後執行 scripts/up.sh。
 # 怎麼判斷成功:最後印「[ha] 已重建」。
 # 常見失敗:卡在重建 → 看 scripts/up.sh 的輸出;記憶體不足 → Docker Desktop / WSL 至少 11 GB,可選元件分批啟動。
 # ============================================================================
@@ -18,27 +17,13 @@ source "$(dirname "${BASH_SOURCE[0]}")/lib/common.sh"
 [ "${1:-}" = "--help" ] && { usage_from_header "$0"; exit 0; }
 cd "$DEMO_DIR"
 
-# 清除所有 profile 的容器與資料(失敗也繼續,可能本來就沒有)。
-remove_everything() {
-  docker compose --profile c3 --profile restproxy --profile sr --profile cyberark --profile grafana --profile observability \
-    --profile connect --profile mail --profile tier --profile sbc --profile quorum down -v >/dev/null 2>&1 || true
-  # Conjur 的資料卷已清掉,舊的 admin.key / 各 host 的 API key 就失效了;不清的話第 18 章會『Unable to authenticate』(conjur.env 的 data key 保留)
-  rm -f config/conjur/admin.key config/conjur/policy.out; rm -rf config/conjur/keys
-}
-
-# 清掉 .env 裡實驗用的覆蓋設定(COMPOSE_FILE 疊 tier 檔、SBC_ENABLE),回到乾淨基線。
-reset_env_overrides() {
-  sed -i '/^COMPOSE_PATH_SEPARATOR=/d;/^COMPOSE_FILE=/d;/^SBC_ENABLE=/d' .env
-}
-
 case "${1:-status}" in
   status)
     echo "controller:$(docker ps --format '{{.Names}}' | grep -c '^controller[0-9]*$') 台;broker:$(docker ps --format '{{.Names}}' | grep -c '^broker[0-9]*$') 台" ;;
   on|off)
     shift
     echo "[ha] 清除所有資料並全新重建(3 controller + 4 broker、副本 3)"
-    remove_everything
-    reset_env_overrides
+    bash scripts/down.sh
     bash scripts/up.sh "$@"
     echo "[ha] 已重建" ;;
   *)

@@ -5,13 +5,14 @@
 ## 0. 啟動 / 自檢 / 重置
 ```bash
 cd demo
-bash scripts/up.sh --with-restproxy --with-c3   # 首次建置(含憑證、LDAP、RBAC 初始化)
+bash scripts/up.sh                              # 首次建置(不帶參數 = 全部元件;含憑證、LDAP、RBAC 初始化)
+bash scripts/ha.sh on                           # 全新重建(清除所有資料後重跑 up.sh)
 ./preflight.sh                                  # 開場前自檢(容器、端點、登入、記憶體)
 ./preflight.sh --full                           # 全章實跑確認「全部符合預期」
 ./demo.sh                                       # 現場控制台(選單;每步先印講稿,按 Enter 才執行)
 ./demo.sh reset                                 # 回到第 0 章起點
 ```
-Docker Desktop 建議記憶體 ≥ 10GB(實測全部啟動約 3.5GB;controller×1 + broker×2)。
+**拓樸(與客戶正式環境相同,所有章節都以此為準)**:controller×3(動態 quorum)、broker×4(node id 11 到 14,MDS 8091 到 8094)、topic 副本 3、min.insync.replicas 2;REST Proxy×2(前面一台 L4 負載平衡器 `restproxy`,依來源 IP 黏著,代替 F5)、Schema Registry×2、Connect×2、Control Center×1。Docker Desktop / WSL 建議記憶體 ≥ 11GB。<!-- TODO-REVERIFY: 舊版「實測全部啟動約 3.5GB」是 controller×1 + broker×2 時量到的,新拓樸用量待量測 -->
 
 ### 身分與密碼(demo 專用)
 | 身分 | 類型 | 帳號 / 密碼 | 說明 |
@@ -26,7 +27,7 @@ Docker Desktop 建議記憶體 ≥ 10GB(實測全部啟動約 3.5GB;controller×
 | bootstrap | 平台(對 MDS 用憑證 CN=bootstrap;對 Kafka 先用同一張憑證向 MDS 換 token,以 OAUTHBEARER 連線;不另建 SCRAM 帳號,設定檔 config/clients/token-bootstrap.properties) | — | super user,MDS 初始管理員與 kafka-configs/topic 管理用,MDS 無法簽發 token 時改用內部帳號 kafka-broker(SCRAM,super user)直連 broker |
 | c3、restproxy | 平台(憑證 CN=c3 / restproxy) | — | 向 MDS 認證用,不是 AD 帳號;連 Kafka 也用憑證換 token |
 
-入口:C3 `https://localhost:9022`(瀏覽器要信任 demo CA;自動化略過驗證)、LDAP 管理介面 `http://localhost:8081`(登入 DN `cn=admin,dc=corp,dc=demo` / `adminpw`)、REST Proxy `https://localhost:8086`、MDS `https://localhost:8091`。
+入口:C3 `https://localhost:9022`(瀏覽器要信任 demo CA;自動化略過驗證)、LDAP 管理介面 `http://localhost:8081`(登入 DN `cn=admin,dc=corp,dc=demo` / `adminpw`)、REST Proxy `https://localhost:8086`(L4 負載平衡器,後面是 restproxy1、restproxy2)、MDS `https://localhost:8091`(broker2 到 broker4 為 8092 到 8094)、Schema Registry `https://localhost:8085` / `8185`、Connect `https://localhost:8083` / `8183`。
 
 ### 畫面配置(建議)
 左半:瀏覽器(C3 / Postman)・右上:終端機(`./demo.sh`)・右下:audit log(`scripts/lib-ev.sh` 的 `audit_events`)。gary / yujie / ming 各開一個瀏覽器 profile(或無痕視窗)預先登入。
@@ -145,7 +146,7 @@ gary 在 C3 指派 `orders-read` → DeveloperRead;LDAP 介面把 ming 從 devel
 **做法**(都已併入主 compose;共用同一張 server 憑證,SAN 補 `prometheus`、`alertmanager`,**同一把 key、同一個 CA 重簽**):
 | 對象 | 設定 | 說明 |
 |---|---|---|
-| broker → AD | `ldap.java.naming.provider.url=ldaps://…:636`、`ldap.java.naming.security.protocol=SSL`、`ldap.ssl.truststore.*` | 只有連 AD 的 JVM(兩台 broker)需要信任庫;controller 不連 AD |
+| broker → AD | `ldap.java.naming.provider.url=ldaps://…:636`、`ldap.java.naming.security.protocol=SSL`、`ldap.ssl.truststore.*` | 只有連 AD 的 JVM(每一台 broker)需要信任庫;controller 不連 AD |
 | Prometheus、Alertmanager | `web-config-prom.yml`、`web-config-am.yml`:`tls_server_config` + `basic_auth_users`(bcrypt) | 啟動參數 `--web.config.file`;demo 帳密 c3 / prom-pw、c3 / am-pw(測試值) |
 | Prometheus → Alertmanager | `prometheus.yml` 的 `alerting.alertmanagers` 加 `scheme: https`、`basic_auth`、`tls_config.ca_file` | **官方 TLS + Basic 頁沒寫、實測必要**:沒設時告警送不到(`bad response status 400`) |
 | C3 → Prometheus / Alertmanager | `confluent.controlcenter.prometheus.url` 與 `alertmanager.url` 改 https;`.ssl.truststore.*`;`.basic.auth.user.info` | |
@@ -171,7 +172,7 @@ gary 在 C3 指派 `orders-read` → DeveloperRead;LDAP 介面把 ming 從 devel
 | 設定檔密碼不落地 | Confluent Secret Protection:`confluent secret` 加密 AD 查詢密碼 → `certs/security.properties`;主金鑰存 Conjur;broker2 以 `docker-compose.cyberark.yml` 覆蓋,啟動前 `config/conjur/fetch-secret.py` 取主金鑰進環境變數(= systemd 的包裝腳本;ExecStartPre 的環境變數不會傳給 ExecStart);生效設定只有佔位符、環境無明文、gary 經 broker2 登入 200 | `scripts/secret-protection.sh setup / apply / show / revert` |
 | 主金鑰 / 資料金鑰輪替 | `confluent secret file rotate --master-key`(需「目前的」+「新的」passphrase,新主金鑰只印一次)只重包資料金鑰、值的密文不變;`--data-key`(只需目前 passphrase)重新加密所有值、主金鑰不變。**檔與主金鑰必須成對**(新檔配舊金鑰、舊檔配新金鑰都解不開;不成對時 broker 起不來:`Failed to unwrap the data key`)。passphrase 存 Conjur 的 `broker/master-key-passphrase`(只有管理員能讀)。**此版 confluent CLI 的 `--passphrase` 不支援 `@檔案`(會被當字面值,實測)** | `scripts/secret-protection.sh rotate-master / rotate-data / mismatch-demo / check` |
 | 同上,改用 CyberArk 官方工具 summon | `summon -p summon-conjur -f secrets.yml <啟動程式>`:summon-conjur 以 `/etc/conjur.conf` + `/etc/conjur.identity`(netrc)向 Conjur 取 `config/conjur/secrets-broker.yml` 列的秘密,注入成子程序環境變數後執行啟動程式;取不到(401)就不執行。實測 broker2(`docker-compose.cyberark-summon.yml`):PID 1 = summon → java;master key 只在 java 程序環境、docker inspect 與 /tmp 都沒有;gary 登入 200。正式環境 systemd 只要 `ExecStart=/usr/local/bin/summon -p summon-conjur -f /etc/kafka/secrets.yml /usr/bin/kafka-server-start /etc/kafka/server.properties`,不必 ExecStartPre 或包裝腳本。踩坑:Docker Desktop 單檔 bind mount 時 summon-conjur 讀不到 netrc(改掛目錄 + `netrc_path`) | `scripts/secret-protection.sh summon-setup / apply-summon`(summon v0.13.1、summon-conjur v0.9.3 自 GitHub 下載並校驗 SHA256,放 `config/conjur/bin/`,不進版本庫) |
-| 滾動輪替期間的影響 | 背景 producer(acks=all、冪等、每秒 5 筆共 1200 筆)同時輪替資料金鑰,broker1 → broker2 依序重啟:送出 1200 筆 = topic 1200 筆,零送出失敗(只有換 leader 的重試警告)。條件:2 台 broker、副本 2、min.isr 1 | `scripts/rolling-rotate-test.sh`;兩台共用同一把主金鑰與同一份檔(`secret-protection.sh join-broker1`) |
+| 滾動輪替期間的影響 | 背景 producer(acks=all、冪等、每秒 5 筆共 1200 筆)同時輪替資料金鑰,broker1 → broker2(套用 Secret Protection 的兩台)依序重啟:送出 1200 筆 = topic 1200 筆,零送出失敗(只有換 leader 的重試警告)。條件:依序重啟 2 台 broker、實驗 topic 副本 2 <!-- TODO-REVERIFY: 1200 = 1200 是舊拓樸(min.isr 1)量到的 --> | `scripts/rolling-rotate-test.sh`;兩台共用同一把主金鑰與同一份檔(`secret-protection.sh join-broker1`) |
 | 稽核 | Conjur 日誌:`demo:host:kafka/rogue-app tried to fetch …: Forbidden`、`… fetched …` | ch18 步驟 13 |
 **實測結果(ch18)**:整章腳本 0 失敗(含主金鑰/資料金鑰輪替、檔與金鑰不成對、兩台滾動重啟期間 producer 零遺失);手冊自檢 27 步 0 不符合。**注意**:取不到主金鑰 broker 就不啟動(刻意),Conjur 的可用性要與 broker 同級;Kafka 的 SCRAM 輪替沒有現成 CyberArk 平台,靠腳本,由 CPM 自訂平台或排程觸發;CLI 是 `conjur init oss`(v9),docker exec 要 `MSYS_NO_PATHCONV=1`。**未驗證**:商業版 CCP 的 AppID 認證、Conjur 高可用、PAM 側全部。
 
@@ -205,7 +206,7 @@ gary 在 C3 指派 `orders-read` → DeveloperRead;LDAP 介面把 ming 從 devel
 | 刪除後只重啟 controller | 正常 |
 | metadata 日誌撐大 6000 筆(沒有快照)再重啟 | 正常(排除「日誌太大」) |
 
-**做法(已套用在 demo)**:停用帳號 = 把 SCRAM 憑證覆寫成隨機密碼,不刪除(`scripts/scram-disable.sh`,對不存在的帳號不動作);重置、第 6、9、18、19 章與 OP menu 的「下架帳號」都改了。整條章節鏈(第 1 到 20 章、15、16)在從零重建的環境跑完後,直接重啟兩台 broker 都正常,自癒機制(`broker-heal.sh`)被用到 0 次。已經刪過的帳號,事後重新建立即可讓 broker 再啟動;`broker-heal.sh`(清空該 broker 資料目錄重建)保留為最後手段。**對應的官方 bug(2026-10-09 查到)**:[KAFKA-20774](https://issues.apache.org/jira/browse/KAFKA-20774)「ScramDelta.apply() drops SCRAM users when processing REMOVE records for absent users or multiple removals in one batch」(2026-07-06 回報、2026-09-23 修復,fix version **4.5.0,尚未發行**;PR apache/kafka#22763)。內容與實測完全吻合:broker 重放 metadata 時,REMOVE 紀錄的對象若不在目前的 image 裡(= 對不存在的帳號刪除,或重啟時從頭重放、先遇到 REMOVE),整個 SCRAM 機制的使用者表會被丟掉,連 kafka-broker 這類應該存在的帳號也消失;報告者說正式環境整組 SCRAM 使用者都不見了。demo 的 CP 8.3.2 內含 Kafka 4.3.x,在受影響範圍。**沒有 fix 之前的做法**:不要對 SCRAM 帳號用 `--delete-config`(停用改覆寫隨機密碼);已經刪過的話,重建被刪的帳號再重啟即可(讓重放時 REMOVE 之後有對應的 UPSERT)。這個 bug 與 listener 無關,內部通道改 mTLS 只解掉 broker 起不來,SCRAM 用戶端登入仍會壞(實測)。**正式環境**:在確認 Confluent 的說法之前,不要用 `--delete-config` 刪 SCRAM 憑證;停用改用覆寫隨機密碼加解除 role binding;滾動重啟 broker 前先在測試環境確認。重現步驟:全新叢集 → `kafka-configs --alter --add-config SCRAM-SHA-512=[password=p] --entity-type users --entity-name x` → `--delete-config SCRAM-SHA-512` 同一帳號 → 重啟 broker。
+**做法(已套用在 demo)**:停用帳號 = 把 SCRAM 憑證覆寫成隨機密碼,不刪除(`scripts/scram-disable.sh`,對不存在的帳號不動作);重置、第 6、9、18、19 章與 OP menu 的「下架帳號」都改了。整條章節鏈(第 1 到 20 章、15、16)在從零重建的環境跑完後,直接重啟兩台 broker 都正常<!-- TODO-REVERIFY: 這是舊拓樸(2 台 broker)時的實測,4 台 broker 待重跑 -->,自癒機制(`broker-heal.sh`)被用到 0 次。已經刪過的帳號,事後重新建立即可讓 broker 再啟動;`broker-heal.sh`(清空該 broker 資料目錄重建)保留為最後手段。**對應的官方 bug(2026-10-09 查到)**:[KAFKA-20774](https://issues.apache.org/jira/browse/KAFKA-20774)「ScramDelta.apply() drops SCRAM users when processing REMOVE records for absent users or multiple removals in one batch」(2026-07-06 回報、2026-09-23 修復,fix version **4.5.0,尚未發行**;PR apache/kafka#22763)。內容與實測完全吻合:broker 重放 metadata 時,REMOVE 紀錄的對象若不在目前的 image 裡(= 對不存在的帳號刪除,或重啟時從頭重放、先遇到 REMOVE),整個 SCRAM 機制的使用者表會被丟掉,連 kafka-broker 這類應該存在的帳號也消失;報告者說正式環境整組 SCRAM 使用者都不見了。demo 的 CP 8.3.2 內含 Kafka 4.3.x,在受影響範圍。**沒有 fix 之前的做法**:不要對 SCRAM 帳號用 `--delete-config`(停用改覆寫隨機密碼);已經刪過的話,重建被刪的帳號再重啟即可(讓重放時 REMOVE 之後有對應的 UPSERT)。這個 bug 與 listener 無關,內部通道改 mTLS 只解掉 broker 起不來,SCRAM 用戶端登入仍會壞(實測)。**正式環境**:在確認 Confluent 的說法之前,不要用 `--delete-config` 刪 SCRAM 憑證;停用改用覆寫隨機密碼加解除 role binding;滾動重啟 broker 前先在測試環境確認。重現步驟:全新叢集 → `kafka-configs --alter --add-config SCRAM-SHA-512=[password=p] --entity-type users --entity-name x` → `--delete-config SCRAM-SHA-512` 同一帳號 → 重啟 broker。
 
 **內部通道改 mTLS 之後(2026-10-09 實測)**:broker↔broker 與 broker↔controller 改用共用憑證 CN=kafka-internal 做 mTLS(第 9 章)後,同一個實驗(新建 SCRAM 帳號再刪除 → 重啟兩台 broker)**broker 都能正常啟動**;但重啟後 **CLIENT 埠上所有 SCRAM 帳號(svc-orders、kafka-broker)登入失敗**,把被刪的帳號重建也沒用,要重建之後再重啟 broker 才恢復。結論:壞的是 broker 重啟時重放 metadata 裡的 SCRAM 憑證,不限 listener;mTLS 只解掉「broker 起不來」這個可用性問題,**不能取代「不要刪 SCRAM 憑證」這條規則**,而且服務帳號登入失敗比 broker 起不來更隱蔽(像是密碼錯)。
 
@@ -237,50 +238,50 @@ gary 在 C3 指派 `orders-read` → DeveloperRead;LDAP 介面把 ming 從 devel
 
 **未驗證 / 要和客戶確認**:CSFLE 授權的商務與取得方式;地端 KMS(Vault 或自訂 driver)對接;機器(不在 AD)如何向 SR 認證(SR 的 REST 只認 AD 帳密或 MDS token);SR 的高可用與多執行個體(`schema.registry.group.id`);加密對效能與 schema 演進的影響。
 
-## 第 21 章(進階)HA 叢集:3 controller、3 broker 的停機行為與滾動重啟(`./demo.sh 21`,需先 `scripts/ha.sh on`)
+## 第 21 章(進階)HA 叢集:3 controller、4 broker 的停機行為與滾動重啟(`./demo.sh 21`)
 
-**環境**:`docker-compose.ha.yml` 加 controller2、controller3、broker3;副本 3、min.insync.replicas 2;靜態 quorum(`kraft.version` 0,正式環境官方建議動態)。`scripts/ha.sh on|off` 切換(會清除所有資料;在 `.env` 加 `COMPOSE_FILE` 與 `COMPOSE_PATH_SEPARATOR=,`),HA 模式不要同時開 cyberark、sr profile(記憶體)。不在 `demo.sh all` 與 preflight 的基礎鏈內。
+**環境**:就是基線(`scripts/up.sh`):3 台 controller(動態 quorum,`kraft.version` 1)、4 台 broker、副本 3、min.insync.replicas 2。實驗 topic `ha.test` 的副本固定放在 broker1、broker2、broker3(`--replica-assignment 11:12:13,12:13:11,13:11:12`),broker4 不放,這樣停 2 台時才看得到「同一分區失去 2 個副本」。每個實驗結束都會把停掉的節點啟動回來;要回到全新狀態用 `scripts/ha.sh on`。不在 `demo.sh all` 與 preflight 的章節鏈內。
 
-| 實驗 | 實測結果(7 步 0 失敗;手冊自檢 7 步 0 不符合) | 腳本 |
+| 實驗 | 實測結果(7 步 0 失敗;手冊自檢 7 步 0 不符合)<!-- TODO-REVERIFY: 本表是 3 台 broker、靜態 quorum 時量到的,待新拓樸重跑 --> | 腳本 |
 |---|---|---|
-| quorum | 3 個 voter、1 個 leader;3 台 broker 是 observer | `scripts/ha-lab.sh quorum` |
-| 停 1 台 broker | acks=all 寫入不中斷;URP 大於 0(要告警);恢復後補齊 | `broker-down` |
-| 停 2 台 broker(剩 1) | ISR 1 < min.isr 2:acks=all 被擋(逾時 0 筆成功);**acks=1 producer 回報成功但 consumer 讀不到**(高水位不前進,恢復後才出現);consumer group 加入不了(__consumer_offsets 的 min.isr 也不足) | `brokers-down` |
+| quorum | 3 個 voter、1 個 leader;4 台 broker 是 observer | `scripts/ha-lab.sh quorum` |
+| 停 1 台 broker(broker3) | acks=all 寫入不中斷;URP 大於 0(要告警);恢復後補齊 | `broker-down` |
+| 停 broker2、broker3(`ha.test` 的副本只剩 broker1) | ISR 1 < min.isr 2:acks=all 被擋(逾時 0 筆成功);**acks=1 producer 回報成功但 consumer 讀不到**(高水位不前進,恢復後才出現);consumer group 加入不了(__consumer_offsets 的 min.isr 也不足) | `brokers-down` |
 | 停 1 台 controller | 建 topic、寫入正常 | `ctrl-down` |
 | 停 2 台 controller(失去多數) | 建 topic 沒回應;describe 有時由 broker 的 metadata 快取回答(3 個分區)、有時逾時(兩種都出現過);既有 topic 讀寫仍可(實測 2 分鐘內,連續 15 次寫入全成功;更長時間未測) | `ctrls-down` |
-| 滾動重啟 | 背景寫入 2400 筆(acks=all、冪等),依序重啟 3 broker(每台等 URP=0)再 3 controller(active 最後):2400 = 2400,零失敗 | `rolling` |
+| 滾動重啟 | 背景寫入 2400 筆(acks=all、冪等),依序重啟 4 broker(每台等 URP=0)再 3 controller(active 最後):2400 = 2400,零失敗 | `rolling` |
 
 **踩坑**:perf 的 sticky partitioner 會把一批資料放在同一分區,檢查「讀得到」要加總全部分區,不能只看分區 0;`kafka-producer-perf-test --producer.config` 已棄用,改 `--command-config`。
 
-## 第 22 章(進階)平台監控與告警:URP、離線分區、active controller(`./demo.sh 22`,需 HA 模式與 Prometheus;約 45 分鐘)
+## 第 22 章(進階)平台監控與告警:URP、離線分區、active controller(`./demo.sh 22`,需 Prometheus;約 45 分鐘)
 
-**準備**:`scripts/ha.sh on`(會自動下載 JMX exporter agent 並以 Maven Central 的 .sha1 校驗,放 `config/jmx/`,不進版本庫)→ `docker compose --profile c3 up -d prometheus alertmanager`。controller 也送 telemetry(KRaft 下 ActiveControllerCount、OfflinePartitionsCount 只有 controller 有),見 `docker-compose.ha.yml`。
+**準備**:叢集已啟動(`scripts/up.sh` 會自動下載 JMX exporter agent 並以 Maven Central 的 .sha1 校驗,放 `config/jmx/`,不進版本庫)→ `docker compose --profile c3 up -d prometheus alertmanager`。controller 也送 telemetry(KRaft 下 ActiveControllerCount、OfflinePartitionsCount 只有 controller 有),見 `docker-compose.yml`。
 
 | 項目 | 路徑 A:telemetry → Prometheus | 路徑 B:JMX exporter → Prometheus |
 |---|---|---|
 | 規則檔 | `config/c3/ops_rules.yml`(7 條) | `config/c3/ops_rules_jmx.yml`(7 條,含「監控的監控」KafkaJmxScrapeDown) |
-| 抓取 | broker 與 controller 每 60 秒推送 | Prometheus 每 15 秒抓 7778 埠(`config/c3/jmx_scrape.yml`,HA 模式才有) |
+| 抓取 | broker 與 controller 每 60 秒推送 | Prometheus 每 15 秒抓 7778 埠(`config/c3/jmx_scrape.yml`,由 `up.sh` 從 `jmx-scrape.tpl` 產生) |
 | URP 偵測(停 1 台 broker) | 約 150 秒觸發、約 100 秒解除 | 約 35 秒觸發、約 35 秒解除 |
 | 離線分區(單副本 topic 所在 broker 掉線) | 約 160 秒 | 約 35 秒 |
 | controller 掉線 | ControllerMissing 約 250 秒;失去多數時 active controller 數 0 → 約 125 秒 | 約 37 秒;失去多數約 24 秒 |
 | 依賴 | 為 C3 設計;告警與 C3 的 telemetry 綁在一起 | 獨立於 C3;銀行既有 Prometheus、Grafana 能直接用 |
 | 建議 | C3 的資料來源,保留 | **銀行自有監控的告警走這條**(偵測快 4 到 5 倍、不依賴 C3) |
 
-**監控端點的保護(22.10,實測)**:6 個節點的 JMX exporter 一律 HTTPS + Basic 帳密(JMX exporter 1.0.1 不支援 mTLS;密碼 PBKDF2-HMAC-SHA512 雜湊、隨機產生存 `config/c3/jmx_exporter.pw`,Prometheus 以 `password_file` 讀取,不進版本庫);blackbox exporter 一律 HTTPS + mTLS(`config/blackbox/web-config.yml`:`client_auth_type: RequireAndVerifyClientCert`;Prometheus 帶 `client-monitor` 憑證)。負面測試:不帶帳密與錯密碼 401、明文 http 無回應、不帶或不被信任的 client 憑證握手被拒;Prometheus 18 個目標 up=1。依據:Prometheus 官方安全文件(exporter 支援 TLS 與 client 憑證驗證;blackbox 與 SNMP exporter 依 URL 參數替人連任意位址,要特別限制存取)、官方 jmx-monitoring-stacks 的 ssl_basic_auth 做法。**未實測**:網路層防火牆、client_allowed_sans、密碼輪替。
+**監控端點的保護(22.10,實測)**:每個 controller 與 broker 的 JMX exporter 一律 HTTPS + Basic 帳密(JMX exporter 1.0.1 不支援 mTLS;密碼 PBKDF2-HMAC-SHA512 雜湊、隨機產生存 `config/c3/jmx_exporter.pw`,Prometheus 以 `password_file` 讀取,不進版本庫);blackbox exporter 一律 HTTPS + mTLS(`config/blackbox/web-config.yml`:`client_auth_type: RequireAndVerifyClientCert`;Prometheus 帶 `client-monitor` 憑證)。負面測試:不帶帳密與錯密碼 401、明文 http 無回應、不帶或不被信任的 client 憑證握手被拒;Prometheus 18 個目標 up=1<!-- TODO-REVERIFY: 18 個目標是 3 controller + 3 broker 時量到的 -->。依據:Prometheus 官方安全文件(exporter 支援 TLS 與 client 憑證驗證;blackbox 與 SNMP exporter 依 URL 參數替人連任意位址,要特別限制存取)、官方 jmx-monitoring-stacks 的 ssl_basic_auth 做法。**未實測**:網路層防火牆、client_allowed_sans、密碼輪替。
 
 **官方設定檔**:各元件的 exporter 設定直接用 Confluent 官方 jmx-monitoring-stacks(`kafka_broker.yml`、`kafka_controller.yml`,釘定 commit `f376263` 並校驗 SHA-256,由 `scripts/jmx-setup.sh` 下載,不進版本庫)。取捨:官方檔每台 broker 約 12,000 個時間序列,startDelaySeconds 120(啟動後 2 分鐘才開始匯出,重啟後指標會有 2 分鐘空窗)。官方 broker-alerts.yml 的五條告警與本 Lab 規則一致。
 
 **沒觸發的告警**:KafkaUncleanLeaderElection(正常操作不會發生;要製造需刻意開 unclean election 並讓所有同步副本掉線,風險高,沒做)。**沒有的指標**:磁碟用量百分比(telemetry 與 JMX 的這組 MBean 都沒有,要 node_exporter);憑證到期見第 23 章。
 
-**踩坑**:`kafka-topics --replica-assignment` 不能和 `--partitions` 一起用(錯誤被過濾掉會讓告警「沒有觸發」);JMX 的指標名稱是 `kafka_server_replicamanager_underminisrpartitioncount`(不是 underminispartitioncount);Prometheus `scrape_config_files` 的 glob 沒有匹配檔案時不報錯,所以 JMX 抓取設定可以只在 HA 模式存在;compose 的 `extends` 會串接 ports,要用 `!override`。
+**踩坑**:`kafka-topics --replica-assignment` 不能和 `--partitions` 一起用(錯誤被過濾掉會讓告警「沒有觸發」);JMX 的指標名稱是 `kafka_server_replicamanager_underminisrpartitioncount`(不是 underminispartitioncount);Prometheus `scrape_config_files` 的 glob 沒有匹配檔案時不報錯,所以抓取設定檔不存在時不會讓 Prometheus 啟動失敗(例如 Grafana 的抓取設定要等 `scripts/grafana.sh on` 才產生);compose 的 `extends` 會串接 ports,要用 `!override`。
 
-## 第 23 章(進階)憑證到期監控與不停機換憑證(`./demo.sh 23`,需 HA 模式、Prometheus、blackbox-exporter;約 15 分鐘)
+## 第 23 章(進階)憑證到期監控與不停機換憑證(`./demo.sh 23`,需 Prometheus、blackbox-exporter;約 15 分鐘)
 
-**準備**:`scripts/ha.sh on` → `docker compose --profile c3 up -d prometheus alertmanager blackbox-exporter`。
+**準備**:叢集已啟動(`scripts/up.sh`)→ `docker compose --profile c3 up -d prometheus alertmanager blackbox-exporter`。
 
 | 項目 | 實測結果 |
 |---|---|
-| 到期監控 | blackbox exporter 對 12 個端點(對外 TLS 6、內部 mTLS 6)探測「實際送出」的憑證;`probe_ssl_earliest_cert_expiry`;< 30 天告警。telemetry 的 `mtls_earliest_cert_expiration_ms` 全部回報 Long.MAX(沒填值)不採用;官方 JMX 設定沒有憑證到期指標。client 憑證與 CA 靠 OP menu 第 17 項檔案巡檢(含剩餘時間分級) |
+| 到期監控 | blackbox exporter 對 12 個端點(對外 TLS 6、內部 mTLS 6)<!-- TODO-REVERIFY: 12 個是 3 台 broker 時的數字;4 台 broker 應為對外 8、內部 7 -->探測「實際送出」的憑證;`probe_ssl_earliest_cert_expiry`;< 30 天告警。telemetry 的 `mtls_earliest_cert_expiration_ms` 全部回報 Long.MAX(沒填值)不採用;官方 JMX 設定沒有憑證到期指標。client 憑證與 CA 靠 OP menu 第 17 項檔案巡檢(含剩餘時間分級) |
 | 不停機換憑證 | 動態 keystore 重載(`listener.name.client.ssl.keystore.*`),keystore 設定只能逐台設(不能設叢集預設);流程「預檢 → 金絲雀(broker1)→ client 角度驗證 → 其餘」;背景寫入 300 筆零失敗、broker 沒有重啟;MDS(Jetty)不在動態重載範圍 |
 | SAN 不同 | broker 拒絕動態更新(DN / SAN 必須與現有相同) |
 | 別的 CA 簽的憑證 | broker 接受(不檢查鏈是否被 client 信任),client 全部驗證失敗;影響限於金絲雀;回退必須走不經 CLIENT 埠的帶外路徑(INTERNAL mTLS 埠) |
@@ -288,23 +289,23 @@ gary 在 C3 指派 `orders-read` → DeveloperRead;LDAP 介面把 ming 從 devel
 
 **沒測**:MDS 與其他 Jetty 入口的換憑證(要重啟)、client 憑證與 CA 輪替、INTERNAL / CONTROLLER 埠憑證輪替(全叢集共用的 super user 憑證)。
 
-## 第 24 章(進階)容量與再平衡:分區重新指派加限速(`./demo.sh 24`,需 HA 模式;約 6 分鐘)
+## 第 24 章(進階)容量與再平衡:分區重新指派加限速(`./demo.sh 24`;約 6 分鐘)
 
-**準備**:`scripts/ha.sh on`(不需要 Prometheus)。`scripts/reassign-lab.sh` 五個子命令:`skew`、`plan`、`execute`、`cancel`、`leftover`。
+**準備**:叢集已啟動(`scripts/up.sh`;不需要 Prometheus)。`scripts/reassign-lab.sh` 五個子命令:`skew`、`plan`、`execute`、`cancel`、`leftover`。
 
 | 項目 | 實測結果 |
 |---|---|
-| 造不均 | `--replica-assignment` 把 6 分區副本全放 broker1、2,寫入約 200 MB;`kafka-log-dirs` 顯示 broker3 為 0 MB |
+| 造不均 | `--replica-assignment` 把 6 分區副本全放 broker1、2,寫入約 200 MB;`kafka-log-dirs` 顯示 broker3、broker4 為 0 MB |
 | 計畫 | `--generate` 第一段輸出存成回退檔;建議的新指派起點隨機、不刻意少搬,只當草稿;執行的是審過的均衡計畫 |
-| 限速搬家 | `--execute --throttle 4000000`:broker 層 `leader/follower.replication.throttled.rate`、topic 層 `*.replication.throttled.replicas`;背景寫入 600 筆(acks=all、冪等)零失敗;約 40 秒完成;`--verify` 完成時自動移除限速;搬完三台各約 132 MB |
+| 限速搬家 | `--execute --throttle 4000000`:broker 層 `leader/follower.replication.throttled.rate`、topic 層 `*.replication.throttled.replicas`;背景寫入 600 筆(acks=all、冪等)零失敗;約 40 秒完成;`--verify` 完成時自動移除限速;搬完三台各約 132 MB(審過的計畫輪流放在 broker1 到 broker3)<!-- TODO-REVERIFY: 132 MB 是 3 台 broker 時量到的 --> |
 | 取消 | `--cancel`:搬到一半的分區回到搬家前的副本集合(順序可能不同),並自動清除限速 |
 | 忘了收尾 | 搬完不跑 `--verify`:broker 層與 topic 層的限速設定殘留(各 2 筆);再跑 `--verify` 才清掉 |
 
 **踩坑**:`kafka-reassign-partitions` 讀容器內的檔案,`scripts/k.sh bash -c 'cat > /tmp/plan.json; kafka-reassign-partitions …' < 本機檔` 以標準輸入送進去;`kafka-topics --describe` 欄位以 Tab 分隔,比對前先把空白正規化。**沒測**:Self-Balancing(授權待確認)、Tiered Storage、大資料量(數百 GB)的搬家時間與對服務延遲的影響、新增第 4 台 broker 後的搬家。
 
-## 第 25 章(進階)應用程式端的可靠性(`./demo.sh 25`,需 HA 模式;約 8 分鐘)
+## 第 25 章(進階)應用程式端的可靠性(`./demo.sh 25`;約 8 分鐘)
 
-**準備**:`scripts/ha.sh on`。第一次會下載 JDK 映像 `eclipse-temurin:21-jdk`(約 740 MB)並把 Kafka jar 從 cp-server 映像複製到 Docker volume `cpsec-kafka-jars`(cp-server 的 Java 是精簡版,沒有編譯器,不能 `java Foo.java`)。程式在 `apps/`,由 `scripts/lib/apps.sh` 的 `run_app` 執行,以 super user 的 token 連線(專注行為)。
+**準備**:叢集已啟動(`scripts/up.sh`;交易預設需要至少 3 台 broker)。第一次會下載 JDK 映像 `eclipse-temurin:21-jdk`(約 740 MB)並把 Kafka jar 從 cp-server 映像複製到 Docker volume `cpsec-kafka-jars`(cp-server 的 Java 是精簡版,沒有編譯器,不能 `java Foo.java`)。程式在 `apps/`,由 `scripts/lib/apps.sh` 的 `run_app` 執行,以 super user 的 token 連線(專注行為)。
 
 | 實驗 | 實測結果 |
 |---|---|
@@ -316,9 +317,9 @@ gary 在 C3 指派 `orders-read` → DeveloperRead;LDAP 介面把 ming 從 devel
 
 **踩坑**:abortTransaction 前沒 `flush()`,緩衝區的訊息被直接丟掉(abort 的訊息根本沒寫進 log);`grep -o '重複='` 會先匹配到「不重複=」;`group.protocol=classic` 才能比較兩種 assignor。**沒測**:新 consumer protocol(KIP-848)、consume-transform-produce 的 exactly-once、Streams、僵屍 producer 隔離。
 
-## 第 26 章(進階)Grafana 全元件監控:官方儀表板、主機指標、consumer lag(`./demo.sh 26`,需 HA 模式與 Prometheus;約 12 分鐘)
+## 第 26 章(進階)Grafana 全元件監控:官方儀表板、主機指標、consumer lag(`./demo.sh 26`,需 Prometheus;約 12 分鐘)
 
-**準備**:`scripts/ha.sh on` → `docker compose --profile c3 up -d prometheus alertmanager blackbox-exporter` → `scripts/grafana.sh on`(備妥密碼檔、官方儀表板、AD 查詢帳號、kafka-exporter 帳號與 ACL,啟動 grafana / node-exporter / kafka-exporter;Grafana 在 https://localhost:3000)。
+**準備**:叢集已啟動(`scripts/up.sh`)→ `docker compose --profile c3 up -d prometheus alertmanager blackbox-exporter` → `scripts/grafana.sh on`(備妥密碼檔、官方儀表板、AD 查詢帳號、kafka-exporter 帳號與 ACL,啟動 grafana / node-exporter / kafka-exporter;Grafana 在 https://localhost:3000)。
 
 | 項目 | 實測結果 |
 |---|---|
@@ -333,9 +334,9 @@ gary 在 C3 指派 `orders-read` → DeveloperRead;LDAP 介面把 ming 從 devel
 
 **踩坑**:`kafka-acls --topic *` 沒加引號會被 shell 展開成目前目錄的檔名,建出錯誤的 ACL(已清除,`kafka_acls` 函式註明要用 `'*'`);server 憑證要補 SAN(grafana、node-exporter、kafka-exporter)後 exporter 才不會 `bad certificate`(`make-certs.sh` 對既有環境同 key 重簽);Grafana 的檔案 provisioning 只在啟動時讀目錄,新增儀表板要重啟 Grafana(`grafana.sh on` 先放檔再啟動);`ldap.toml` 只展開環境變數,所以 bind 密碼由容器啟動指令從密碼檔讀入。**沒測**:磁碟告警實際觸發、Grafana 高可用與外部資料庫、raft 指標缺漏原因、Loki / Tempo(Lab 27 規劃)。
 
-## 第 27 章(進階)日誌與追蹤:經過 Kafka 進 Loki 與 Tempo(`./demo.sh 27`,需 HA 模式與 Grafana;約 12 分鐘)
+## 第 27 章(進階)日誌與追蹤:經過 Kafka 進 Loki 與 Tempo(`./demo.sh 27`,需 Grafana;約 12 分鐘)
 
-**準備**:`scripts/ha.sh on` → prometheus 等 → `scripts/grafana.sh on` → `docker stop control-center`(記憶體吃緊時)→ `scripts/observability.sh on`(Kafka 帳號 alloy-producer / alloy-consumer、topic otel-logs / otel-traces、ACL、OpenTelemetry Java agent 2.32.0 校驗 checksums.txt、啟動 loki / tempo / alloy,重啟 grafana 載入資料來源)。
+**準備**:叢集已啟動(`scripts/up.sh`)→ prometheus 等 → `scripts/grafana.sh on` → `docker stop control-center`(記憶體吃緊時)→ `scripts/observability.sh on`(Kafka 帳號 alloy-producer / alloy-consumer、topic otel-logs / otel-traces、ACL、OpenTelemetry Java agent 2.32.0 校驗 checksums.txt、啟動 loki / tempo / alloy,重啟 grafana 載入資料來源)。
 
 | 項目 | 實測結果 |
 |---|---|
@@ -350,7 +351,7 @@ gary 在 C3 指派 `orders-read` → DeveloperRead;LDAP 介面把 ming 從 devel
 
 ## 第 28 章(進階)Schema 演進與資料契約(`./demo.sh 28`,需 Schema Registry;約 4 分鐘)
 
-**準備**:`scripts/sr-setup.sh`(HA 或基礎環境皆可;記憶體吃緊先 `scripts/observability.sh off`、`docker stop control-center`)。`scripts/schema-lab.sh` 子命令:evolve、modes、transitive、gates、naming、contract。
+**準備**:Schema Registry 兩台已由 `scripts/up.sh` 經 `scripts/sr-setup.sh` 先授權再啟動(單獨補做時重跑 `scripts/sr-setup.sh`;記憶體吃緊先 `scripts/observability.sh off`、`docker stop control-center`)。`scripts/schema-lab.sh` 子命令:evolve、modes、transitive、gates、naming、contract。
 
 | 項目 | 實測結果 |
 |---|---|
@@ -363,9 +364,9 @@ gary 在 C3 指派 `orders-read` → DeveloperRead;LDAP 介面把 ming 從 devel
 
 **踩坑**:相容性檢查用 `/versions/latest` 時 TRANSITIVE 也只比最新版;實驗 topic 要替 svc-orders 補 Write 的 ACL(否則先遇到 TopicAuthorizationException,看不到 schema 的結果);`kafka-avro-console-producer` 的 SR 帳密從標準輸入進容器(`scripts/schema-produce.sh`)。**沒測**:消費端規則與 DLQ、migration rules、Protobuf / JSON Schema、CI 外掛、Schema Linking;CEL 規則的正式授權範圍。
 
-## 第 29 章(進階)Kafka Connect 的安全與可靠性(`./demo.sh 29`,需 HA 模式;約 8 分鐘)
+## 第 29 章(進階)Kafka Connect 的安全與可靠性(`./demo.sh 29`;約 8 分鐘)
 
-**準備**:`scripts/connect-setup.sh on`(記憶體吃緊先 `scripts/observability.sh off`、`docker stop control-center schema-registry`)。備妥:client 憑證 CN=connect、server 憑證 SAN 加 connect、AD 服務帳號 `SVC-ORDERS-SINK`(`ou=svc,ou=users`)、topic `orders.sink` 與 `orders.sink.dlq`、角色綁定、外掛 connect-file 4.3.1(Maven Central 校驗 SHA-1)、密碼檔 `config/connect/secrets/orders-sink.properties`(測試值,正式環境由 CyberArk 提供)。`scripts/connect-lab.sh` 子命令:rbac、identity、dlq、secrets。
+**準備**:Connect 兩個 worker(connect1、connect2,同一個 group.id)已由 `scripts/up.sh` 經 `scripts/connect-setup.sh on` 先授權再啟動(記憶體吃緊先 `scripts/observability.sh off`、`docker stop control-center`)。備妥:client 憑證 CN=connect、server 憑證 SAN 加 connect、AD 服務帳號 `SVC-ORDERS-SINK`(`ou=svc,ou=users`)、topic `orders.sink` 與 `orders.sink.dlq`、角色綁定、外掛 connect-file 4.3.1(Maven Central 校驗 SHA-1)、密碼檔 `config/connect/secrets/orders-sink.properties`(測試值,正式環境由 CyberArk 提供)。`scripts/connect-lab.sh` 子命令:rbac、identity、dlq、secrets。
 
 | 項目 | 實測結果 |
 |---|---|
@@ -377,9 +378,9 @@ gary 在 C3 指派 `orders-read` → DeveloperRead;LDAP 介面把 ming 從 devel
 
 **踩坑**:server 憑證 SAN 缺 connect → `curl` HTTP 000;連接器 task 讀 topic 的歷史壞資料而 FAILED(實驗前要重建 topic);手動試過的舊連接器也寫同一個 DLQ(數字會多);FileStreamSink 的輸出檔留在容器內(實驗前先清)。**沒測**:多 worker 與故障轉移、source 連接器、Avro / SR 轉換器、密碼輪替生效方式、SecurePass provider、外掛供應鏈驗證。
 
-## 第 30 章(進階)告警寄成信:Alertmanager 到自架郵件伺服器(`./demo.sh 30`,需 HA 模式與 Prometheus;約 6 分鐘)
+## 第 30 章(進階)告警寄成信:Alertmanager 到自架郵件伺服器(`./demo.sh 30`,需 Prometheus;約 6 分鐘)
 
-**準備**:`scripts/ha.sh on --with-c3` → `docker compose --profile c3 up -d prometheus alertmanager blackbox-exporter` → `scripts/mail-setup.sh on`。`scripts/mail-lab.sh` 子命令:send、route、group、real、security。
+**準備**:叢集已啟動(`scripts/up.sh`,預設含 Control Center)→ `docker compose --profile c3 up -d prometheus alertmanager blackbox-exporter` → `scripts/mail-setup.sh on`。`scripts/mail-lab.sh` 子命令:send、route、group、real、security。
 
 | 項目 | 實測結果 |
 |---|---|
@@ -391,23 +392,23 @@ gary 在 C3 指派 `orders-read` → DeveloperRead;LDAP 介面把 ming 從 devel
 
 **踩坑**:`demo.sh` 的章節號判斷要加 30;測試告警過期後會再收到 RESOLVED,所以收件匣裡可能混著前一個實驗的解除信(各實驗只比對自己的告警名稱);Control Center 的畫面若也改告警設定會寫同一個檔案。**沒測**:接真正的行內郵件伺服器(Exchange / Postfix 的驗證、relay 限制、SPF / DKIM)、簡訊與通訊軟體與工單 webhook、靜音與抑制、Alertmanager 高可用、通知失敗的備援。
 
-## 第 31 章(進階)Self-Balancing:自動搬分區(`./demo.sh 31`,需 HA 模式;約 40 分鐘,大部分是等指標視窗)
+## 第 31 章(進階)Self-Balancing:自動搬分區(`./demo.sh 31`;約 40 分鐘,大部分是等指標視窗)
 
-**準備**:`scripts/ha.sh on --with-c3`(從全新環境)→ `scripts/sbc-setup.sh on`(`.env` 設 `SBC_ENABLE=true`,controller 與 broker 依序重建)。`scripts/sbc-lab.sh` 子命令:status、add、uneven、remove。還原:`scripts/sbc-setup.sh off`(`ha.sh` 重建時也會清掉 `SBC_ENABLE`)。
+**準備**:`scripts/ha.sh on`(從全新環境)→ `scripts/sbc-setup.sh on`(`.env` 設 `SBC_ENABLE=true`,controller 與 broker 依序重建)。`scripts/sbc-lab.sh` 子命令:status、add、uneven、remove。還原:`scripts/sbc-setup.sh off`(`ha.sh` 重建時也會清掉 `SBC_ENABLE`)。
 
 | 項目 | 實測結果 |
 |---|---|
 | 啟用 | `confluent.balancer.enable=true` 設在每台 controller 與 broker(`docker-compose.yml` 的 `KAFKA_CONFLUENT_BALANCER_ENABLE: ${SBC_ENABLE:-false}`);controller 另需 `inter.broker.listener.name=INTERNAL`、`listener.security.protocol.map` 含 INTERNAL、INTERNAL 的 client 憑證(CN=kafka-internal,在 super.users);否則狀態 DISABLED 或 `IllegalArgumentException: Bootstrap server endpoint was not provided` |
 | 狀態 | `kafka-rebalance-cluster --status / --describe`:Balancer is running on brokers: [controller 的 id](KRaft 下跑在 active controller) |
-| 加 broker | `docker compose --profile sbc up -d broker4`(node id 14,SAN 補 broker4);約 15 到 20 分鐘後(日誌 `Insufficient metric windows… will attempt retry`,每 90 秒)自動搬副本;搬家期間 20000 筆 acks=all 寫入全成功 |
+| 加 broker | `docker compose --profile sbc up -d broker5`(第 5 台,node id 15,SAN 補 broker5);約 15 到 20 分鐘後<!-- TODO-REVERIFY: 時間是 3 台加到第 4 台時量到的 -->(日誌 `Insufficient metric windows… will attempt retry`,每 90 秒)自動搬副本;搬家期間 20000 筆 acks=all 寫入全成功 |
 | 負載不均 | 資料量低於官方觸發門檻(副本數與 >20% 磁碟用量):日誌 `did not detect any violated goals`,不搬;broker 有變動後偵測器暫停 `confluent.balancer.goal.violation.delay.on.new.brokers.ms`(預設 1800000,demo 設 180000) |
-| 移除 | `kafka-remove-brokers --broker-id 14 --delete`(約 2 分鐘):Broker Replica Exclusion → Partition Reassignment → Broker Shutdown;筆數不變;完成後 `kafka-cluster unregister --id 14`(官方) |
+| 移除 | `kafka-remove-brokers --broker-id 15 --delete`(約 2 分鐘):Broker Replica Exclusion → Partition Reassignment → Broker Shutdown;筆數不變;完成後 `kafka-cluster unregister --id 15`(官方) |
 
 **踩坑**:啟用時另一台 broker 在跑沒有一併重建 → balancer 指標視窗內部錯誤(日誌反覆 `Replica metrics have more windows than partition metrics`)、移除 broker 失敗(`Partition Reassignment: ERROR`);重建 controller 要等 controller 都 healthy 再看狀態;反覆刪除並重建同名 topic 會讓指標歷史混亂,實驗前用全新環境。
 
-## 第 32 章(進階)Tiered Storage 到 MinIO(`./demo.sh 32`,需 HA 模式;約 20 分鐘)
+## 第 32 章(進階)Tiered Storage 到 MinIO(`./demo.sh 32`;約 20 分鐘)
 
-**準備**:`scripts/ha.sh on` → `scripts/tier-setup.sh on`(MinIO + 專用帳號 + broker 依序重建;`docker-compose.tier.yml` 疊進 `COMPOSE_FILE`)。`scripts/tier-lab.sh` 子命令:produce、archive、evict、read、restart、security。還原:`scripts/tier-setup.sh off`。
+**準備**:叢集已啟動(`scripts/up.sh`)→ `scripts/tier-setup.sh on`(MinIO + 專用帳號 + broker 依序重建;`docker-compose.tier.yml` 疊進 `COMPOSE_FILE`)。`scripts/tier-lab.sh` 子命令:produce、archive、evict、read、restart、security。還原:`scripts/tier-setup.sh off`。
 
 | 項目 | 實測結果 |
 |---|---|
@@ -420,14 +421,14 @@ gary 在 C3 指派 `orders-read` → DeveloperRead;LDAP 介面把 ming 從 devel
 
 **踩坑**:`cred.file.path` 要 `accessKey=`、`secretKey=`(properties),給 AWS CLI 格式 broker 起不來;預設 SSE AES256 對沒有 KMS 的 MinIO 回 501,上傳無限重試(topic 正常、沒有物件);HTTPS 需 `-Djavax.net.ssl.trustStore`;MinIO 映像的健康檢查工具是 curl(沒有 `mc`);`kafka-log-dirs` 含已上傳資料,看本機占用要用 `du`。
 
-## 第 33 章(進階)動態 quorum:靜態升級成動態、汰換 controller(`./demo.sh 33`,需全新 HA 環境;約 12 分鐘)
+## 第 33 章(進階)動態 quorum:汰換 controller(`./demo.sh 33`,需全新環境;約 12 分鐘)
 
-**準備**:`scripts/ha.sh on`(全新環境)。`scripts/quorum-lab.sh` 子命令:status、upgrade、replace、reset。做完會永久改變 voter 名單,用 `scripts/ha.sh on` 重建。
+**準備**:`scripts/ha.sh on`(全新環境;叢集一開始就是動態 quorum)。`scripts/quorum-lab.sh` 子命令:status、replace、reset。做完會永久改變 voter 名單,用 `scripts/ha.sh on` 重建。
 
 | 項目 | 實測結果 |
 |---|---|
-| 現況 | `kafka-features describe`:kraft.version 0(靜態);`describe --status` 的 CurrentVoters 沒有 directoryId |
-| 升級 | `kafka-features upgrade --feature kraft.version=1` → `docker-compose.dynq.yml` 把 `KAFKA_CONTROLLER_QUORUM_VOTERS` 設空、加 `KAFKA_CONTROLLER_QUORUM_BOOTSTRAP_SERVERS` → controller1-3、broker1-3 依序重建;背景寫入 1500 筆全成功 |
+| 現況 | `kafka-features describe`:kraft.version 1(動態);`describe --status` 的 CurrentVoters 每個都有 directoryId(controller 以相同的 `--initial-controllers` 格式化) |
+| 既有靜態叢集的升級(參考) | `kafka-features upgrade --feature kraft.version=1` → 各節點移除 `controller.quorum.voters`、改設 `controller.quorum.bootstrap.servers` → controller 依序重啟、再重啟 broker;先前實測背景寫入 1500 筆全成功 <!-- TODO-REVERIFY: 1500 筆是舊拓樸(靜態 quorum、3 台 broker)量到的,新 Lab 33 已不含升級步驟 --> |
 | 汰換 | 停 controller3 → controller4(profile quorum,`QUORUM_FORMAT_FLAG=--no-initial-controllers`)啟動為 observer → 新節點上 `add-controller` → `remove-controller --controller-id 3 --controller-directory-id <id>` → 名單 {1,2,4} |
 | 驗證 | 再停 controller1:leader 約 3 到 5 秒選出,寫入與建 topic 成功 |
 

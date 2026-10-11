@@ -31,11 +31,11 @@ add({ title: '整體架構', sub: '正式環境的元件與主要連線;內部�
   ...node(0.6, 3.3, 2.1, 1.6, { icon: 'FaServer', title: '應用系統', sub: 'SCRAM 帳號或 client 憑證', col: SVC, ssz: 10.5 }),
   ...node(0.6, 5.05, 2.1, 1.6, { icon: 'FaTerminal', title: '跳板機 + OP menu', sub: '本人 AD 身分', col: HUM, tsz: 13, ssz: 10.5 }),
   ...node(3.3, 1.55, 2.2, 1.6, { icon: 'FaDesktop', title: 'Control Center', sub: 'HTTPS;人用 AD,自身用憑證', col: PLT, ssz: 10.5 }),
-  ...node(3.3, 3.3, 2.2, 1.6, { icon: 'FaExchangeAlt', title: 'F5 → REST Proxy', sub: 'L4 透傳;帳密或 client 憑證', col: PLT, ssz: 10.5 }),
+  ...node(3.3, 3.3, 2.2, 1.6, { icon: 'FaExchangeAlt', title: 'F5 → REST Proxy ×2', sub: 'L4 透傳;帳密或 client 憑證', col: PLT, ssz: 10.5 }),
   ...node(3.3, 5.05, 2.2, 1.6, { icon: 'FaChartLine', title: '監控', sub: 'TLS + 帳密', col: PLT, ssz: 10.5 }),
   tint(6.2, 1.55, 4.0, 5.2, MDS, { round: 0.06 }),
   text(6.3, 1.6, 3.8, 0.4, [P('Kafka 叢集', { sz: 15, b: true, c: MDS, algn: 'ctr' })]),
-  ...node(6.4, 2.05, 3.6, 1.6, { icon: 'FaDatabase', title: 'broker ×N(內建 MDS)', sub: '對外埠:AD 帳密、SCRAM、token', col: MDS, tsz: 13, ssz: 10.5 }),
+  ...node(6.4, 2.05, 3.6, 1.6, { icon: 'FaDatabase', title: 'broker ×4(內建 MDS)', sub: '對外埠:AD 帳密、SCRAM、token', col: MDS, tsz: 13, ssz: 10.5 }),
   ...node(6.4, 3.8, 3.6, 1.6, { icon: 'FaCogs', title: 'controller ×3', sub: '內部憑證(mTLS);只接 broker', col: MDS, tsz: 13, ssz: 10.5 }),
   text(6.4, 5.5, 3.6, 1.15, [P('內部連線:mTLS,broker 與 controller 共用一張內部憑證(身分是 super user);MDS 負責驗證、授權、簽 token', { sz: 10.5, algn: 'ctr', c: MDS })], { anchor: 'ctr' }),
   ...node(10.6, 1.55, 2.13, 1.6, { icon: 'FaAddressBook', title: 'AD', sub: '使用者與群組;加密連線', col: HUM, ssz: 10.5 }),
@@ -301,7 +301,7 @@ add({ title: '設定檔密碼加密:輪替與重啟', sub: 'Confluent Secret Pro
     ['輪替資料金鑰', '只需要目前的 passphrase;所有值重新加密;主金鑰不變,CyberArk 不用動'],
     ['檔與主金鑰要成對', '新檔配舊金鑰、舊檔配新金鑰都解不開;不成對時 broker 起不來。輪替前先備好舊檔與舊主金鑰以便退回'],
     ['一定要重啟', '啟動時才讀。維護窗口內一台一台做:換檔 → 取新主金鑰 → 重啟 → 確認健康 → 下一台'],
-    ['重啟期間服務', '測試環境 2 台 broker、副本 2:輪替並滾動重啟期間持續寫入 1200 筆,全部寫入、零遺失;正式環境建議副本 3、最小同步副本 2,controller 也逐台重啟'],
+    ['重啟期間服務', '輪替後逐台重啟 broker(實驗 topic 副本 2)期間持續寫入 1200 筆,全部寫入、零遺失;正式 topic 用副本 3、最小同步副本 2,全部 broker 與 controller 的滾動重啟見高可用頁'], /* TODO-REVERIFY: 1200 筆零遺失是舊拓樸(min.isr 1)量到的 */
     ['注意', 'passphrase 在這個版本的指令只能直接放在指令列(不讀檔),輪替要在受控的管理主機上做'],
   ], { rowH: 0.66, hdrH: 0.44, sz: 11.5, col: PLT }), rowCols: [PLT, PLT, SVC, PLT, RISK, HUM, RISK] },
 ] });
@@ -309,15 +309,15 @@ add({ title: '設定檔密碼加密:輪替與重啟', sub: 'Confluent Secret Pro
 // ───────────────── 6. 收尾
 sec('六、平台韌性、可觀測性與應用開發', '高可用、監控告警、憑證、容量、日誌與追蹤、應用端可靠性、資料契約、Connect');
 
-add({ title: '高可用:壞幾台還撐得住', sub: '3 台 controller、3 台以上 broker、副本 3、min.insync.replicas 2;順序與數字都用停機實測確認', items: [
+add({ title: '高可用:壞幾台還撐得住', sub: '3 台 controller、4 台 broker、副本 3、min.insync.replicas 2;順序與數字都用停機實測確認', items: [
   { ...table(0.6, 1.5, [3.0, 6.43, 2.7], [
     ['情境', '結果', '狀態'],
     ['停 1 台 broker', '寫入(acks=all)不中斷;副本不足的分區數(URP)大於 0 是要告警的訊號;恢復後補齊', '測試環境已驗證'],
-    ['停 2 台 broker', 'acks=all 被擋;acks=1 的 producer 回報成功,consumer 卻讀不到(高水位不前進),恢復後才出現', '測試環境已驗證'],
+    ['停 2 台 broker(同一分區只剩 1 個副本)', 'acks=all 被擋;acks=1 的 producer 回報成功,consumer 卻讀不到(高水位不前進),恢復後才出現', '測試環境已驗證'],
     ['停 1 台 controller', '叢集照常:建 topic、寫入都正常', '測試環境已驗證'],
     ['停 2 台 controller', '失去多數:建 topic 沒回應(describe 有時逾時);既有 topic 的讀寫暫時還可用,不是可依賴的容錯', '測試環境已驗證'],
-    ['滾動重啟', 'broker 一台一台(等 URP 回 0),controller 非 active 先、active 最後;背景寫入零失敗零遺失', '測試環境已驗證'],
-    ['動態 quorum', '靜態可不停機升級成動態(寫入零失敗);壞掉的 controller 以「先加新的、再移除舊的」汰換,不動其他節點;建議正式環境用動態', '測試環境已驗證(自動加入、同時壞兩台未驗證)'],
+    ['滾動重啟', 'broker 一台一台(等 URP 回 0),controller 非 active 先、active 最後;背景寫入零失敗零遺失', '測試環境已驗證'], /* TODO-REVERIFY: 零失敗零遺失是 3 台 broker 時量到的 */
+    ['動態 quorum', '正式環境用動態 quorum(controller 名單存在叢集裡);壞掉的 controller 以「先加新的、再移除舊的」汰換,不動其他節點;既有的靜態叢集可不停機升級(寫入零失敗)', '測試環境已驗證(自動加入、同時壞兩台未驗證)'], /* TODO-REVERIFY: 「靜態升級寫入零失敗」是舊拓樸量到的,新 Lab 33 已不含升級步驟 */
   ], { rowH: 0.66, hdrH: 0.44, sz: 12, col: MDS }), rowCols: [SVC, RISK, SVC, RISK, SVC, SVC] },
 ] });
 
@@ -423,7 +423,7 @@ add({ title: 'Kafka Connect:授權、身分、壞資料與密碼', sub: '連接�
     ['連接器的身分', '每個連接器用自己的 AD 服務帳號(最小權限),不共用 worker 的身分;worker 本身不給資料 topic 的讀取權', '測試環境已驗證'],
     ['壞資料', '預設遇到第一筆壞資料就停;errors.tolerance=all 加 DLQ 好壞分流並附錯誤標頭;DLQ 要有告警', '測試環境已驗證'],
     ['密碼不落地', '連接器設定存在 Kafka 的 topic;直接寫密碼就是明文;改用 config provider 引用密碼檔(由 CyberArk 提供)', '測試環境已驗證'],
-    ['多 worker、source 連接器、密碼輪替生效方式', '單一 worker 與檔案型連接器做過;其餘沒有做', '未驗證'],
+    ['worker 故障轉移、source 連接器、密碼輪替生效方式', '檔案型連接器做過(測試環境有 2 個 worker);worker 故障時的重新分配與其餘沒有做', '未驗證'],
   ], { rowH: 0.74, hdrH: 0.44, sz: 12, col: MDS }), rowCols: [SVC, SVC, SVC, SVC, RISK] },
 ] });
 
@@ -448,7 +448,7 @@ add({ title: '未驗證與限制(如實說明)', sub: '已實測的以外,這些
     ['CyberArk:PAM(PSM、CPM、PVWA)', '無法在測試環境重現,整合方式為通用模式;需在客戶環境 PoC'],
     ['真實 AD', '巢狀群組、群組異動的實際延遲、AD 憑證鏈(中繼 CA)要以客戶 AD 驗證'],
     ['F5', '以同類負載平衡器實測 L4 透傳可行、L7 終止不可;F5 本身的行為要以客戶設定驗證'],
-    ['多 controller 與 RHEL 部署', '設計依官方文件;以本方案的測試環境為準,未在客戶 VM 驗證'],
+    ['RHEL 部署', '設計依官方文件;測試環境的拓樸與正式環境相同(3 台 controller、4 台 broker),但以容器執行,未在客戶 VM 驗證'],
     ['C3 經 F5', '未驗證;建議 C3 不經 F5'],
     ['SCRAM 密碼輪替', '已實測新舊並行流程(建新帳號、驗證、隔離、看 audit、才停用舊帳號,停用是覆寫成隨機密碼、不刪除);由 CPM 自訂平台或排程觸發同一支腳本,需在客戶環境確認'],
     ['停用帳號對已連線的影響', '實測:只停用 SCRAM 憑證擋不住已連著的連線,必須先解除角色;長連線的應用要能在失敗時重新取帳密'],

@@ -30,6 +30,8 @@ scrape_configs:
     tls_config: { ca_file: /etc/tls/ca.pem, cert_file: /etc/tls/client-monitor.pem, key_file: /etc/tls/client-monitor.key }
     static_configs:
       - targets: ['broker1:9094', 'broker2:9094', 'broker3:9094', 'broker4:9094', 'broker1:8091', 'broker2:8092', 'broker3:8093', 'broker4:8094']
+      # 生態系元件也用同一張 server 憑證:每個對外 TLS 端點都要探測,否則到期時只有 broker 會告警
+      - targets: ['restproxy1:8086', 'restproxy2:8086', 'schema-registry1:8081', 'schema-registry2:8081', 'connect1:8083', 'connect2:8083', 'control-center:9022']
     relabel_configs:
       - source_labels: [__address__]
         target_label: __param_target

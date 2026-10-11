@@ -157,7 +157,7 @@ add(P('目標:上課當天每個人的電腦都能在 5 分鐘內把環境建起
 add(H2('要安裝的軟體'));
 add(...table([
   ['軟體', '版本 / 設定', '用途'],
-  ['Docker Desktop', '最新版;Settings → Resources 記憶體 ≥ 10 GB', '跑全部 9 個容器(實測全部啟動約 3.5 GB)'],
+  ['Docker Desktop', '最新版;Settings → Resources 記憶體 ≥ 11 GB', '跑與客戶正式環境相同的 HA 拓樸(3 controller、4 broker、REST Proxy / Schema Registry / Connect 各 2 台、Control Center 1 台)'], /* TODO-REVERIFY: 舊版寫「實測全部啟動約 3.5 GB」是 9 個容器時量到的,新拓樸的實際用量待量測 */
   ['Git for Windows(Git Bash)', '最新版', '所有指令都在 Git Bash 執行(Linux / macOS 用內建終端機即可)'],
   ['Node.js', '24(LTS 亦可)', 'UI 自動化截圖、Postman 批次測試(newman)、產生本手冊'],
   ['Postman 桌面版', '最新版(選裝)', '只有 Lab 5 用;不裝可改用 newman'],
@@ -166,12 +166,12 @@ add(...table([
 add(H2('課前步驟(打勾清單)'));
 [
   ['取得專案目錄(含 demo/),確認磁碟剩餘空間 ≥ 15 GB;不要放在有中文或空白的路徑。', null, null],
-  ['第一次建置:會下載映像(約 7 GB),最後印出「[up] 完成。」', 'cd demo\nbash scripts/up.sh --with-restproxy --with-c3', '約 5 到 30 分鐘(視網速);中途失敗可以重跑同一指令'],
+  ['第一次建置:會下載映像(約 7 GB),最後印出「[up] 完成。」', 'cd demo\nbash scripts/up.sh', '不帶參數 = 全部元件;約 5 到 30 分鐘(視網速);中途失敗可以重跑同一指令'],
   ['自檢:容器、端點、登入、瀏覽器自動化都通過', './preflight.sh', '通過 18 / 失敗 0'],
   ['瀏覽器自動化(各 Lab 的 C3、phpLDAPadmin 截圖用;需要連網,約 150 MB)', 'bash scripts/setup-e2e.sh', 'OK: 瀏覽器自動化可用'],
   ['瀏覽器開 Control Center 登入頁(demo 的 CA 是自簽的:按「進階」繼續,或把 demo/certs/ca.pem 匯入「受信任的根憑證授權單位」)', '瀏覽器:https://localhost:9022/login', '看到 Welcome to Confluent Platform 登入畫面(載入需數秒)'],
   ['(選做)Postman:匯入 demo/postman/ 的 collection 與環境,並信任 demo CA(做法見 Lab 5.1)', null, null],
-  ['清掉環境,Lab 0 上課時從零建(映像保留在本機,不會重新下載;第二次建置約 3 分鐘)', 'docker compose --profile c3 --profile restproxy down -v', '容器與資料全部移除'],
+  ['清掉環境,Lab 0 上課時從零建(映像保留在本機,不會重新下載;第二次建置約 3 分鐘)', 'docker compose --profile c3 --profile restproxy --profile sr --profile connect down -v', '容器與資料全部移除'],
 ].forEach(([t, cmd, exp], i) => {
   add(P([run('☐  ', { color: STORY_C, bold: true }), run(`${i + 1}. ${t}`)], { indent: { left: 360 } }));
   if (cmd) add(...code(cmd, { bar: MUTE }));
@@ -188,14 +188,16 @@ add(...table([
   ['curlimages/curl、alpine/openssl', '50 MB', 'hc 函式的 curl、產生憑證'],
   ['postman/newman:alpine', '0.3 GB', 'Lab 5 的批次測試(第一次跑 Lab 5 時才下載)'],
   ['cyberark/conjur、cyberark/conjur-cli:9、postgres:15、nginx:stable、confluentinc/confluent-cli', '約 1.2 GB', 'Lab 18(CyberArk 整合;第一次跑 Lab 18 時才下載)'],
-  ['confluentinc/cp-schema-registry:8.3.2', '1.5 GB', 'Lab 20(Schema Registry;第一次跑 Lab 20 時才下載)'],
+  ['confluentinc/cp-schema-registry:8.3.2', '1.5 GB', 'Schema Registry ×2(Lab 0 起就啟動;Lab 20 設定授權)'],
+  ['confluentinc/cp-server-connect:8.3.2', '2.7 GB', 'Connect ×2(Lab 0 起就啟動;Lab 29 示範)'],
+  ['nginx:stable', '約 0.2 GB', 'REST Proxy 前面的 L4 負載平衡器(F5 的替身)'],
 ], [4200, 1500, 3326], { size: 17 }));
 add(H2('課前常見問題'));
 add(...table([
   ['現象', '處理'],
   ['docker 綁不上主機埠(ports are not available … forbidden by its access permissions)', 'Windows 開機後會保留一段埠範圍。在 demo/.env 加 HOST_PORT_MDS=18091 之類的覆蓋(變數名稱見 docker-compose.yml 的 ${HOST_PORT_*}),再重跑 up.sh;手冊裡的 localhost 埠要跟著換。'],
   ['映像下載失敗或很慢', '公司網路可能擋 Docker Hub:請 IT 開通,或在能連網的電腦 docker save 後帶進來 docker load。'],
-  ['記憶體不足、容器一直重啟', 'Docker Desktop → Settings → Resources 把記憶體調到 10 GB 以上;關掉其他容器。'],
+  ['記憶體不足、容器一直重啟', 'Docker Desktop → Settings → Resources 把記憶體調到 11 GB 以上;關掉其他容器。'],
   ['controller 或 broker 起不來', '一律用 bash scripts/up.sh 啟動(controller 要先 healthy),不要直接 docker compose up。'],
   ['preflight 的「瀏覽器自動化」失敗', '需要連網下載 chromium;執行 bash scripts/setup-e2e.sh 看錯誤訊息。'],
 ], [3600, 5426], { size: 17 }));
@@ -203,15 +205,17 @@ add(...table([
 // Demo 架構
 add(H1('Demo 架構'));
 add(P('先看兩張圖:第一張是「有哪些東西、在哪個埠」,第二張是「誰用什麼身分進來」。之後每個 Lab 開頭都有一張「Lab 地圖」,把這堂用到的元件打亮、標出走的路與結果。'));
-add(...image('../labguide/img/arch-deploy.png', 'Demo 部署元件:9 個容器 + 你電腦上的工具'));
+add(...image('../labguide/img/arch-deploy.png', 'Demo 部署元件(與客戶正式環境相同的 HA 拓樸)+ 你電腦上的工具')); /* TODO-REVERIFY: arch-deploy.png 仍是舊拓樸(1 controller、2 broker、9 個容器)的圖,需重畫 */
 add(...table([
   ['元件', '主機埠(容器埠)', '協定 / 身分'],
   ['模擬 AD(openldap)', '389;636 只在容器內(broker 走 LDAPS)', 'bind DN 唯讀查詢帳號;使用者名稱 = CN'],
   ['phpLDAPadmin', '8081', 'cn=admin,dc=corp,dc=demo / adminpw'],
-  ['controller1', '9093 只在容器內', 'mTLS(與 broker 共用憑證 CN=kafka-internal)'],
-  ['broker1 / broker2(Kafka)', '9094 / 19194(容器內都是 9094)', 'CLIENT:人 PLAIN+AD、服務 SCRAM、元件 OAUTHBEARER;INTERNAL 9092(mTLS,共用內部憑證)只在容器內'],
-  ['broker1 / broker2(MDS)', '8091 / 8092', 'HTTPS;Basic(AD)或 client 憑證;Admin REST(/kafka/v3)共用此埠'],
-  ['REST Proxy', '8086', 'HTTPS;人 Basic、legacy app client 憑證'],
+  ['controller1 到 controller3(動態 quorum)', '9093 只在容器內', 'mTLS(與 broker 共用憑證 CN=kafka-internal)'],
+  ['broker1 到 broker4(Kafka,node id 11 到 14)', '9094 / 19194 / 19294 / 19394(容器內都是 9094)', 'CLIENT:人 PLAIN+AD、服務 SCRAM、元件 OAUTHBEARER;INTERNAL 9092(mTLS,共用內部憑證)只在容器內;topic 副本 3、min.insync.replicas 2'],
+  ['broker1 到 broker4(MDS)', '8091 / 8092 / 8093 / 8094', 'HTTPS;Basic(AD)或 client 憑證;Admin REST(/kafka/v3)共用此埠'],
+  ['REST Proxy(restproxy1、restproxy2)', '8086(L4 負載平衡器 restproxy,依來源 IP 黏著;F5 的替身)', 'HTTPS;人 Basic、legacy app client 憑證'],
+  ['Schema Registry(schema-registry1、schema-registry2)', '8085 / 8185', 'HTTPS;認證交 MDS(Lab 20)'],
+  ['Connect(connect1、connect2,同一個 group)', '8083 / 8183', 'HTTPS;AD 帳密,授權交 MDS(Lab 29)'],
   ['Control Center', '9022(9021 只給容器內健康檢查)', 'HTTPS;人用 AD 帳密;C3 自己用 CN=c3 憑證'],
   ['Prometheus / Alertmanager', '只在容器內(9090 / 9093)', 'HTTPS + Basic;帳號依用途分開(Prometheus:c3、telemetry、ops;Alertmanager:c3、prometheus、opmenu、ops;測試值)'],
 ], [2600, 2900, 3526], { size: 17 }));
@@ -267,7 +271,7 @@ add(H2('限制與如實說明'));
   '群組異動不是即時:demo 設 5 秒(ldap.refresh.interval.ms),官方預設 60 秒;實機請預留約 1 分鐘。',
   'audit log:官方預設只擷取 Management 與 Authorize 類事件;本 demo 另以自訂 router 開啟 produce/consume/describe。即便如此,部分拒絕(例如缺叢集層級 IdempotentWrite 的 produce)仍查不到,稽核需求要另外盤點。',
   '映像的 Java 為 25;客戶現場建議 Java 21(CP 8.3 官方建議版本)。',
-  '本環境為 1 個 controller + 2 個 broker(節省記憶體);正式環境請用 3 個 controller。',
+  '本環境的拓樸與客戶正式環境相同:3 個 controller(動態 quorum)、4 個 broker、topic 副本 3 與 min.insync.replicas 2;REST Proxy、Schema Registry、Connect 各 2 台,Control Center 1 台。差別在於全部跑在同一台主機的容器裡,主機層級的故障(斷電、磁碟、網路分區)要在真實 VM 上演練。',
   'RBAC、LDAP、audit log、REST Proxy 安全外掛屬 Confluent Enterprise 商用功能(官方授權文件),demo 使用 30 天試用。',
   '驗證方式:本手冊的每一條「手動指令」' + VERIFY_NOTE + '有介面操作的步驟以等效 API/CLI 驗證,截圖來自 Playwright 自動化。',
   '官方文件核對:角色權限(Operator、DeveloperManage、UserAdmin)、C3 在 RBAC 下僅支援 OAUTHBEARER、KRaft controller 之間不支援 SCRAM、MDS 自 7.8 起支援憑證認證、LDAP 群組快取預設 60 秒、Java 21 為 8.3 建議版本,均已對照 docs.confluent.io。controller 不需要 LDAP 設定(官方:只有 MDS writer broker 連 LDAP;本專案實測無 LDAP 的 controller 仍能依群組授權)。',
@@ -345,8 +349,7 @@ add(H1('附錄 A  重置、清理與疑難排解'));
 add(H2('重置到起點'));
 add(...code(`./scripts/reset.sh      # LDAP 群組、示範用 role binding、服務帳號回到起點(不重建叢集)
 ./demo.sh reset         # 同上
-docker compose --profile c3 --profile restproxy down -v   # 關閉並移除全部容器與資料(冷啟動重建前用)
-bash scripts/up.sh --with-restproxy --with-c3             # 重新建置`));
+bash scripts/ha.sh on   # 關閉並移除全部容器與資料,再依 scripts/up.sh 全新重建(冷啟動重建用)`));
 add(H2('疑難排解'));
 add(...table([
   ['現象', '原因 / 處理'],
@@ -365,7 +368,7 @@ add(...table([
   ['Windows 的 curl 連 HTTPS 失敗(CRYPT_E_NO_REVOCATION_CHECK)', '加 --ssl-no-revoke。內部 CA 沒有憑證撤銷清單,curl(schannel)無法檢查撤銷就會拒絕,不是憑證有問題。'],
   ['Prometheus 日誌出現 TLS handshake error … EOF', '容器的健康檢查只打開 TCP 埠就關閉,不是真正的 HTTPS 請求,可忽略。'],
   ['broker 日誌出現 Telemetry Metrics Failure(401 Unauthorized)', 'broker 推指標到 Prometheus 的 Basic 帳密(api.key / api.secret)與 web-config-prom.yml 的 bcrypt 雜湊不一致;兩個監控元件的雜湊不要貼反(Prometheus 與 Alertmanager 各一份)。'],
-  ['冷啟動:controller 或 broker 起不來', '一律用 bash scripts/up.sh --with-restproxy --with-c3 啟動,不要直接 docker compose up:controller 要先起來並 healthy,broker 才起得來(controller 的 authorizer 在等 broker 時會逾時退出)。Docker Desktop 重新啟動後所有容器都是停止狀態,同樣用 up.sh。'],
+  ['冷啟動:controller 或 broker 起不來', '一律用 bash scripts/up.sh 啟動,不要直接 docker compose up:controller 要先起來並 healthy,broker 才起得來(controller 的 authorizer 在等 broker 時會逾時退出)。Docker Desktop 重新啟動後所有容器都是停止狀態,同樣用 up.sh。'],
   ['broker 重啟後起不來:SaslAuthenticationException … SCRAM-SHA-512', '實測遇過(叢集連續跑了一整天、metadata 約 13000 筆之後):broker 重啟時 authorizer 用 SCRAM 連自己,但 SCRAM 憑證還沒從 metadata 載入,錯誤是致命的,容器退出,再啟動也一樣。原因是推測、未確認。OP menu 的滾動重啟(Lab 16)遇到這種情況會等到逾時就停止,不會動下一台。demo 的處理:冷啟動重建(down -v 後 up.sh)。'],
   ['broker 啟動即退出:Authentication failed … Invalid user credentials(SCRAM-SHA-512)', '實測遇過:改設定時 docker 連動重建 controller,逾時強制終止留下 10 位元組的空 KRaft snapshot(__cluster_metadata-0/*.snapshot),controller 重啟後遺失 SCRAM 憑證(含 kafka-broker),broker 無法啟動;還原設定無效,只能 docker compose down -v 後重建。預防:compose 已為 controller、broker 設 stop_grace_period: 60s;改設定只重建 broker;實機用 systemctl 逐台滾動重啟,避免強制終止 controller。'],
   ['匿名呼叫 broker 的 /kafka/v3 沒被擋、甚至 broker 崩潰', 'broker 內建 Admin REST(與 MDS 共用 8091)未設定 kafka.rest. 安全擴充時完全無認證。依 Lab 14 套用官方設定。'],
@@ -389,12 +392,13 @@ add(H1('附錄 C  專案檔案索引'));
 add(...table([
   ['路徑', '用途'],
   ['demo/docker-compose.yml', '全部容器定義(broker 使用 x-ldap-env;broker/controller 共用 x-common-ssl)'],
-  ['demo/scripts/up.sh、reset.sh、bootstrap-rbac.sh', '一鍵建置、重置、第一批授權'],
+  ['demo/scripts/up.sh、ha.sh、reset.sh、bootstrap-rbac.sh', '一鍵建置(HA 拓樸,不帶參數 = 全部元件)、全新重建(清除資料後重跑 up.sh)、重置、第一批授權'],
+  ['demo/scripts/ha-lab.sh', 'Lab 21:停 broker / controller 與滾動重啟的實驗'],
   ['demo/scripts/k.sh、rp.sh、mds.sh、ldap-group.sh、create-service-account.sh、as-user.sh', '包好的單項指令(對應手動的 kc、hc、ldapmodify…)'],
   ['demo/scenarios/ch01…ch20-*.sh', '各 Lab 的整章腳本(含自動驗證);ch15 人員異動、ch16 OP menu、ch17 傳輸加密補強、ch18 CyberArk 整合、ch19 帳號被偷之後、ch20 Schema Registry'],
-  ['demo/config/conjur/、scripts/conjur.sh、scripts/app-with-conjur.sh、scripts/secret-protection.sh、scripts/rolling-rotate-test.sh、docker-compose.ha.yml、scripts/ha.sh、scripts/ha-lab.sh、docker-compose.cyberark.yml、docker-compose.cyberark-summon.yml', 'Lab 18:Conjur 的 policy、TLS 入口、取秘密腳本、應用啟動示範、Secret Protection 與 broker2 覆蓋設定(自寫腳本版與 summon 版)'],
+  ['demo/config/conjur/、scripts/conjur.sh、scripts/app-with-conjur.sh、scripts/secret-protection.sh、scripts/rolling-rotate-test.sh、docker-compose.cyberark.yml、docker-compose.cyberark-summon.yml', 'Lab 18:Conjur 的 policy、TLS 入口、取秘密腳本、應用啟動示範、Secret Protection 與 broker2 覆蓋設定(自寫腳本版與 summon 版)'],
   ['demo/scripts/reauth-test.sh、quota-test.sh、ad-lockout.sh、config/c3/security_rules.yml、ldap-config/ppolicy-*.ldif', 'Lab 19:重新認證、配額、AD 鎖定實驗與認證失敗告警規則'],
-  ['demo/scripts/sr-setup.sh、scenarios/ch20-schema-registry.sh', 'Lab 20:Schema Registry(profile sr)的啟動與授權'],
+  ['demo/scripts/sr-setup.sh、scenarios/ch20-schema-registry.sh', 'Lab 20:Schema Registry ×2(profile sr;up.sh 預設會先授權再啟動)的授權設定'],
   ['demo/opmenu/', 'OP menu 程式(README.md 說明項目、設定與限制;test-*.sh 回歸測試)'],
   ['demo/spike/lb-nginx、rp-mds-failover', '負載平衡器與多台 MDS 的實驗(FINDINGS.md)'],
   ['demo/e2e/*.mjs', 'Playwright:C3 / LDAP 介面自動化與截圖;terminal 與 newman 渲染'],
@@ -444,7 +448,7 @@ add(...table([
   ['confluent secret 的 --passphrase 不會讀檔:--passphrase @/路徑 會把 @/路徑 這串字當成密碼(用另一個檔案內容去解會失敗)', 'passphrase 只能直接放在指令列,輪替要在受控的管理主機上做;不要以為 @檔案 在讀檔'],
   ['主金鑰輪替只重包資料金鑰,值的密文不變;新檔必須和新主金鑰成對(新檔配舊金鑰、舊檔配新金鑰都解不開)', '成對才能啟動:不成對時 broker 起不來(Failed to unwrap the data key)。輪替前先備好舊檔與舊主金鑰,以便退回'],
   ['輪替主金鑰需要「目前的 passphrase」與「新的 passphrase」,新主金鑰只印一次', 'passphrase 也要保存(demo 放 Conjur 只有管理員能讀的變數,broker 讀不到),新主金鑰要立刻寫進 Conjur'],
-  ['兩台 broker 滾動重啟(依序一台一台)期間,背景 producer(acks=all、冪等)送出 1200 筆 = topic 1200 筆,零送出失敗', '重啟不等於停機。只證明這個條件:2 台 broker、副本 2、min.isr 1;正式環境副本 3、min.isr 2,controller 也要一台一台重啟'],
+  ['套用 Secret Protection 的 broker1、broker2 滾動重啟(依序一台一台)期間,背景 producer(acks=all、冪等)送出 1200 筆 = topic 1200 筆,零送出失敗', '重啟不等於停機。只證明這個條件:依序重啟 2 台 broker、實驗 topic 副本 2;正式 topic 副本 3、min.isr 2,全部 broker 與 controller 的滾動重啟見 Lab 21'], /* TODO-REVERIFY: 1200 = 1200 是舊拓樸(min.isr 1)量到的 */
   ['CyberArk 官方 summon + summon-conjur 對開源版 Conjur 可用:主金鑰只在 java 程序的環境(容器環境、/tmp 都沒有),錯 API key 回 401、啟動程式不執行', '正式環境 systemd 只要 ExecStart=summon -p summon-conjur -f secrets.yml kafka-server-start … 一行;不要用 ExecStartPre 取秘密(它設的環境變數不會傳給 ExecStart)'],
 ], [4600, 4426], { size: 17 }));
 add(H2('沒有示範的限制(要在客戶環境處理)'));

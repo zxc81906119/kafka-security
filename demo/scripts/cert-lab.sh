@@ -151,19 +151,21 @@ lab_baseline() {
 }
 
 lab_monitor() {
-  say "等 blackbox 探測到 12 個 TLS 端點(最多 180 秒),列出每個端點憑證的剩餘天數,確認目前沒有憑證告警"
+  say "等 blackbox 探測到 22 個 TLS 端點(最多 180 秒),列出每個端點憑證的剩餘天數,確認目前沒有憑證告警"
   local t0 ok=0 n e
   t0=$(date +%s)
   while [ $(( $(date +%s) - t0 )) -lt 180 ]; do
     n=$(prom_query 'count(probe_success{job=~"tls-expiry.*"} == 1) or vector(0)')
-    [ "$n" = 12 ] && { ok=1; break; }
+    [ "$n" = 22 ] && { ok=1; break; }
     sleep 10
   done
-  for e in broker1:9094 broker2:9094 broker3:9094 broker4:9094 broker1:8091 broker2:8092 broker3:8093 broker4:8094; do echo "  $e → 剩 $(days_left $e) 天"; done
+  for e in broker1:9094 broker2:9094 broker3:9094 broker4:9094 broker1:8091 broker2:8092 broker3:8093 broker4:8094 \
+           restproxy1:8086 restproxy2:8086 schema-registry1:8081 schema-registry2:8081 connect1:8083 connect2:8083 control-center:9022; do
+    echo "  $e → 剩 $(days_left $e) 天"; done
   for e in broker1:9092 broker2:9092 broker3:9092 broker4:9092 controller1:9093 controller2:9093 controller3:9093; do echo "  $e(內部 mTLS)→ 剩 $(days_left $e) 天"; done
   echo "目前 firing 的憑證告警:$(cert_firing)"
   [ "$ok" = 1 ] && [ "$(cert_firing)" = "-" ] \
-    && verdict "12 個 TLS 端點(6 個對外、6 個內部 mTLS)的探測都成功並有剩餘天數,基準狀態沒有憑證告警"
+    && verdict "22 個 TLS 端點(15 個對外、7 個內部 mTLS)的探測都成功並有剩餘天數,基準狀態沒有憑證告警"
 }
 
 lab_expiring() {
@@ -183,7 +185,7 @@ lab_expiring() {
 }
 
 lab_rotate() {
-  say "背景持續寫入 300 筆,同時不重啟換成 825 天的新憑證:先換一台當金絲雀驗證,再換其餘兩台"
+  say "背景持續寫入 300 筆,同時不重啟換成 825 天的新憑證:先換一台當金絲雀驗證,再換其餘 3 台"
   local before after sent have pp f2=0 new old
   echo "簽新憑證(825 天、同 DN 與 SAN):"; mkcert srv-new 825
   before=$(docker inspect -f '{{.State.StartedAt}}' broker1 broker2 broker3 broker4 | tr '\n' ' ')
@@ -198,7 +200,7 @@ lab_rotate() {
   apply srv-new 11 | grep -E "Completed|rror"; sleep 6
   echo "   金絲雀 broker1 實際送出的鏈驗證:$(verify_served broker1:9094)"
   case "$(verify_served broker1:9094)" in
-    *"(ok)"*) apply srv-new 12 13 | grep -E "Completed|rror" ;;
+    *"(ok)"*) apply srv-new 12 13 14 | grep -E "Completed|rror" ;;
     *)        echo "   金絲雀驗證失敗,停止並回退"; revert; exit 1 ;;
   esac
   sleep 8

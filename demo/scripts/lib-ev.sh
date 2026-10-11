@@ -60,7 +60,7 @@ step() {
 }
 
 # ---------- 友善包裝(顯示成客戶看得懂的指令) ----------
-BOOT="broker1:9094"
+BOOT="broker1:9094,broker2:9094,broker3:9094,broker4:9094"   # bootstrap 列多台:任一台停機仍連得進叢集
 K() { "$DEMO_ROOT/scripts/k.sh" "$@"; }
 as_produce() { # as_produce <user> <topic> <message>   (人:SASL/PLAIN + AD 帳密)
   echo "$3" | K kafka-console-producer --bootstrap-server $BOOT --command-config "/clients/plain-$1.properties" --topic "$2"

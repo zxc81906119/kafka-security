@@ -17,7 +17,9 @@ source "$(dirname "$0")/../scripts/lib-ev.sh"
 ch_begin ch33 "動態 quorum:汰換壞掉的 controller"
 QL="$DEMO_ROOT/scripts/quorum-lab.sh"
 
-step quorum-status "【現況】動態 quorum:kraft.version=1,3 個 voter 各有 directory id(controller 名單存在叢集 metadata)" \n  "kafka-features describe;kafka-metadata-quorum describe --status" \n  'bash "$QL" status 2>&1' '判定:目前是 動態 quorum'
+step quorum-status "【現況】動態 quorum:kraft.version=1,3 個 voter 各有 directory id(controller 名單存在叢集 metadata)" \
+  "kafka-features describe;kafka-metadata-quorum describe --status" \
+  'bash "$QL" status 2>&1' '判定:目前是 動態 quorum'
 
 step quorum-replace "【汰換】停 controller3 → 全新 controller4 加入 → 移出 controller3;再停 controller1 驗證新名單可服務" \
   "kafka-metadata-quorum add-controller / remove-controller" \

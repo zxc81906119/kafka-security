@@ -745,8 +745,8 @@ services:
     volumes:
       - ./certs:/etc/kafka/secrets:ro
       - ./config/c3:/mnt/config
+    # 只對外開 HTTPS 9022;HTTP 9021 留在容器內給健康檢查(正式環境不要開 HTTP)
     ports:
-      - "${HOST_PORT_C3:-9021}:9021"
       - "${HOST_PORT_C3_2:-9022}:9022"
     environment:
       PORT: 9021

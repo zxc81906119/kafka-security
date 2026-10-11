@@ -10,7 +10,7 @@ export const SETUP = R`cd <你的路徑>/untitled6/demo
 export MSYS_NO_PATHCONV=1                 # Git Bash 專用:避免路徑被轉換(Linux/macOS 可省略)
 export D="$(pwd -W 2>/dev/null || pwd)"   # Windows 取得 C:/... 路徑;Linux/macOS 為 pwd
 export NET=cpsec_default                  # docker compose 建立的網路名稱
-BOOT=broker1:9094                         # 供「人與服務」連線的 CLIENT listener
+BOOT=broker1:9094,broker2:9094,broker3:9094,broker4:9094   # 供「人與服務」連線的 CLIENT listener;列多台,任一台停機仍連得進叢集
 
 # kc:在 demo 網路內執行 Kafka CLI(使用 cp-server 映像內的工具)
 kc() { docker run --rm -i --network $NET -v "$D/certs:/etc/kafka/secrets:ro" -v "$D/config/clients:/clients:ro" \
@@ -60,12 +60,12 @@ export const LABS = [
   // ───────────────────────── Lab 0 ─────────────────────────
   {
     id: 'ch00', n: 0, title: '建立實驗環境', time: '15–30 分(首次含映像下載)',
-    goal: '在本機用 Docker 建出:OpenLDAP(模擬 AD)、1 個 KRaft controller、2 個 broker(含 MDS/RBAC)、REST Proxy、Control Center,並完成初始授權。',
-    pre: ['Windows 11 + Docker Desktop(建議配置 ≥ 10GB 記憶體)、Git Bash;Node.js 24(只有跑 UI 自動化/newman 才需要;第一次執行 UI 章節時會自動下載 Playwright 的 chromium,也可先執行 bash scripts/setup-e2e.sh,需要能連網)。', '連接埠未被占用:8081(LDAP 介面)、8086(REST Proxy)、8091(MDS)、9022(C3,HTTPS)。', '首次需下載約數 GB 映像(cp-server、cp-kafka-rest、C3、Prometheus、Alertmanager、OpenLDAP、phpLDAPadmin)。'],
-    autoAll: ['bash scripts/up.sh --with-restproxy --with-c3   # 一鍵:憑證 → LDAP → controller → brokers → 初始授權 → 服務帳號與 topics → C3/REST Proxy', './preflight.sh                                  # 開場前自檢(容器、端點、登入、記憶體)'],
+    goal: '在本機用 Docker 建出與客戶正式環境相同的 HA 拓樸:OpenLDAP(模擬 AD)、3 台 KRaft controller(動態 quorum)、4 台 broker(含 MDS/RBAC;topic 副本 3、min.insync.replicas 2)、REST Proxy 2 台(前面一台 L4 負載平衡器,代替 F5)、Schema Registry 2 台、Connect 2 台、Control Center 1 台,並完成初始授權。',
+    pre: ['Windows 11 + Docker Desktop(建議配置 ≥ 11 GB 記憶體;實測全部元件啟動約用 8.3 GB)、Git Bash;Node.js 24(只有跑 UI 自動化/newman 才需要;第一次執行 UI 章節時會自動下載 Playwright 的 chromium,也可先執行 bash scripts/setup-e2e.sh,需要能連網)。', '連接埠未被占用:389、8081(LDAP 與管理介面)、8086(REST Proxy 負載平衡器)、8091~8094(各 broker 的 MDS)、9094、19194、19294、19394(各 broker 的 CLIENT)、8085、8185(Schema Registry)、8083、8183(Connect)、9022(C3,HTTPS)。', '首次需下載映像約 4.3 GB(解壓後約 11 GB;cp-server、cp-kafka-rest、cp-schema-registry、cp-server-connect、C3、Prometheus、Alertmanager、blackbox-exporter、nginx、OpenLDAP、phpLDAPadmin)。'],
+    autoAll: ['bash scripts/up.sh      # 一鍵(不帶參數 = 全部元件):憑證 → LDAP → controller → brokers → 初始授權 → 服務帳號與 topics → C3、REST Proxy → SR、Connect(先授權再啟動)', './preflight.sh          # 開場前自檢(全部容器、各端點與登入、記憶體)'],
     steps: [
       { t: '0.1 準備終端機與輔助函式', why: '之後所有「手動指令」都用 kc(Kafka CLI)與 hc(curl)兩個函式,它們只是 docker run 的簡寫,不依賴專案腳本。每開一個新終端機都要重貼一次。', manual: [SETUP], expect: '沒有輸出。可用 type kc 確認函式已定義。' },
-      { t: '0.2 產生憑證(CA、單一共用 server 憑證、client 憑證、MDS token 金鑰)', why: '客戶情境:所有元件共用「同一張 server 憑證」(同一把 private key、同一個 DN),憑證只做傳輸加密。另外產生 3 張 client 憑證(CN=c3、restproxy、bootstrap),供平台元件向 MDS 以 mTLS 認證,以及第 8 章對照。',
+      { t: '0.2 產生憑證(CA、單一共用 server 憑證、內部通道憑證、client 憑證、MDS token 金鑰)', why: '客戶情境:所有元件共用「同一張 server 憑證」(同一把 private key、同一個 DN),憑證只做傳輸加密;SAN 涵蓋每一台主機名稱(controller、broker、REST Proxy、Schema Registry、Connect 各台)與負載平衡器的服務名稱,後續章節用到的監控與 CyberArk 名稱也先放進去,之後不必重簽。broker↔broker、broker↔controller 走另一張內部憑證(CN=kafka-internal,mTLS)。另外產生平台元件的 client 憑證(CN=c3、restproxy、bootstrap、schema-registry、connect、monitor),供它們向 MDS 以 mTLS 認證換 token;legacy-orders 給第 12 章的舊系統。',
         manual: [R`mkdir -p certs
 docker run --rm -v "$D/certs:/certs" --entrypoint sh alpine/openssl -c '
 set -e; cd /certs
@@ -80,35 +80,52 @@ prompt=no
 CN=kafka.demo.local
 O=Demo
 [v3]
-subjectAltName=DNS:kafka.demo.local,DNS:localhost,DNS:controller1,DNS:broker1,DNS:broker2,DNS:restproxy,DNS:control-center,DNS:openldap,IP:127.0.0.1
+subjectAltName=DNS:kafka.demo.local,DNS:localhost,DNS:controller1,DNS:controller2,DNS:controller3,DNS:controller4,DNS:broker1,DNS:broker2,DNS:broker3,DNS:broker4,DNS:minio,DNS:restproxy,DNS:restproxy1,DNS:restproxy2,DNS:schema-registry1,DNS:schema-registry2,DNS:connect1,DNS:connect2,DNS:control-center,DNS:openldap,DNS:prometheus,DNS:alertmanager,DNS:conjur,DNS:schema-registry,DNS:blackbox-exporter,DNS:grafana,DNS:node-exporter,DNS:kafka-exporter,DNS:loki,DNS:tempo,DNS:connect,DNS:mailpit,IP:127.0.0.1
 extendedKeyUsage=serverAuth,clientAuth
 EOF
 openssl genrsa -out server.key 2048
 openssl req -new -key server.key -out server.csr -config san.cnf
 openssl x509 -req -in server.csr -CA ca.pem -CAkey ca.key -CAcreateserial -out server.pem -days 825 -sha256 -extfile san.cnf -extensions v3
 openssl pkcs12 -export -in server.pem -inkey server.key -certfile ca.pem -name server -out server.keystore.p12 -passout pass:changeit
-for n in c3 restproxy bootstrap; do
+for n in c3 restproxy bootstrap legacy-orders schema-registry monitor connect; do
   openssl genrsa -out client-$n.key 2048
   openssl req -new -key client-$n.key -subj "/CN=$n/O=Demo" -out client-$n.csr
   openssl x509 -req -in client-$n.csr -CA ca.pem -CAkey ca.key -CAcreateserial -out client-$n.pem -days 825 -sha256
   openssl pkcs12 -export -in client-$n.pem -inkey client-$n.key -certfile ca.pem -name $n -out client-$n.keystore.p12 -passout pass:changeit
 done
+# 內部通道共用憑證(CN=kafka-internal):broker↔broker、broker↔controller 的 mTLS,同時當 server 與 client 憑證
+cat > internal.cnf <<EOF2
+[req]
+distinguished_name=dn
+req_extensions=v3
+prompt=no
+[dn]
+CN=kafka-internal
+O=Demo
+[v3]
+subjectAltName=DNS:broker1,DNS:broker2,DNS:broker3,DNS:broker4,DNS:controller1,DNS:controller2,DNS:controller3,DNS:controller4,DNS:localhost
+extendedKeyUsage=serverAuth,clientAuth
+EOF2
+openssl genrsa -out internal.key 2048
+openssl req -new -key internal.key -out internal.csr -config internal.cnf
+openssl x509 -req -in internal.csr -CA ca.pem -CAkey ca.key -CAcreateserial -out internal.pem -days 825 -sha256 -extfile internal.cnf -extensions v3
+openssl pkcs12 -export -in internal.pem -inkey internal.key -certfile ca.pem -name internal -out internal.keystore.p12 -passout pass:changeit
 openssl genrsa -out keypair.pem 2048
 openssl rsa -in keypair.pem -outform PEM -pubout -out public.pem
 chmod 644 *.pem *.p12 *.key'
 docker run --rm -v "$D/certs:/certs" --entrypoint bash confluentinc/cp-server:8.3.2 -c "rm -f /certs/truststore.p12; keytool -importcert -noprompt -alias demo-ca -file /certs/ca.pem -keystore /certs/truststore.p12 -storetype PKCS12 -storepass changeit; chmod 644 /certs/truststore.p12"
 # 容器要求的密碼檔(cp-server 以檔名約定讀取)
 printf changeit > certs/keystore_creds; printf changeit > certs/sslkey_creds; printf changeit > certs/truststore_creds`],
-        auto: ['bash scripts/make-certs.sh'], ev0: 'certs-ls', expect: 'certs/ 內有 ca.pem、server.keystore.p12、client-c3/restproxy/bootstrap.*、keypair.pem、public.pem、truststore.p12。', tip: '客戶現場:有 AD CS 就用 AD CS 簽發,並把根憑證同時放進 RHEL 系統信任(update-ca-trust)與 Java truststore。' },
-      { t: '0.3 啟動 LDAP(模擬 AD)與 KRaft controller', why: 'OpenLDAP 啟動時匯入 users(GARY、YUJIE、MING;使用者名稱 = CN,分散在多層 OU)與 8 個 groups(orders-read、orders-write、ops、topic-admin、cluster-admin、rbac-admin、security、breakglass)。Controller 啟動時由 ensure 腳本以 kafka-storage format --add-scram 預建 broker 間的 SCRAM 憑證。',
-        manual: [R`docker compose up -d openldap ldapadmin controller1
+        auto: ['bash scripts/make-certs.sh'], ev0: 'certs-ls', expect: 'certs/ 內有 ca.pem、server.keystore.p12、internal.keystore.p12、client-c3/restproxy/bootstrap/schema-registry/connect/monitor/legacy-orders.*、keypair.pem、public.pem、truststore.p12。', tip: '客戶現場:有 AD CS 就用 AD CS 簽發,並把根憑證同時放進 RHEL 系統信任(update-ca-trust)與 Java truststore。' },
+      { t: '0.3 啟動 LDAP(模擬 AD)與 3 台 KRaft controller', why: 'OpenLDAP 啟動時匯入 users(GARY、YUJIE、MING;使用者名稱 = CN,分散在多層 OU)與 8 個 groups(orders-read、orders-write、ops、topic-admin、cluster-admin、rbac-admin、security、breakglass)。3 台 controller 組成動態 quorum:第一次啟動時由 ensure 腳本執行 kafka-storage format --initial-controllers(3 台的 id、主機、directory id),controller 名單存在叢集 metadata,日後汰換 controller 不必改每台設定檔(第 33 章);已格式化過就略過。3 台可容忍 1 台故障。',
+        manual: [R`docker compose up -d --wait openldap ldapadmin controller1 controller2 controller3
 # 等 LDAP 種子資料匯入完成(看到 cn=GARY 即可)
 until docker exec openldap ldapsearch -x -H ldap://localhost -b dc=corp,dc=demo -D cn=admin,dc=corp,dc=demo -w adminpw "(cn=GARY)" dn 2>/dev/null | grep -qi "cn=GARY"; do sleep 2; done; echo LDAP-ready`], auto: ['(包含在 scripts/up.sh)'], expect: '最後印出 LDAP-ready。' },
       { t: '0.4 授權「bind DN 唯讀查詢帳號」', why: 'MDS / broker 查 AD 需要一個唯讀查詢帳號(bind DN:cn=svc-kafka-ldap)。它只負責搜尋使用者與群組成員,不參與驗證使用者密碼。正式環境請客戶提供專用唯讀帳號並建議 LDAPS。',
         manual: [R`docker cp ldap-config/acl-bind-dn.ldif openldap:/tmp/acl.ldif
 docker exec openldap ldapmodify -Y EXTERNAL -H ldapi:/// -f /tmp/acl.ldif`], auto: ['(包含在 scripts/up.sh)'], expect: '顯示 modifying entry "olcDatabase={1}mdb,cn=config"。' },
-      { t: '0.5 啟動 brokers(MDS 內建於 broker)並等待 MDS 就緒', why: 'broker 同時是 MDS 伺服器(8091)。MDS 回 200 代表 RBAC 與 LDAP 設定載入成功。',
-        manual: [R`docker compose up -d broker1 broker2
+      { t: '0.5 啟動 4 台 broker(MDS 內建於 broker)並等待 MDS 就緒', why: '每台 broker 同時是 MDS 伺服器(broker1~4 對外分別是 8091~8094);元件設定 MDS 位址時 4 台都列出,任一台停機仍可換 token。MDS 回 200 代表 RBAC 與 LDAP 設定載入成功。',
+        manual: [R`docker compose up -d --wait broker1 broker2 broker3 broker4
 until [ "$(curl -sk -o /dev/null -w '%{http_code}' https://localhost:8091/security/1.0/features)" = 200 ]; do sleep 4; done; echo MDS-ready; sleep 8`], auto: ['(包含在 scripts/up.sh)'], expect: '印出 MDS-ready。' },
       { t: '0.6 用 bootstrap 憑證建立第一批 role binding', why: '新叢集沒有任何 role binding,只有 super.users 能建第一批。bootstrap 身分是 client 憑證 CN=bootstrap(非 AD 帳號),建完後管理權交給 AD 群組(依職責分成 7 組,沒有人日常是 SystemAdmin;SystemAdmin 只給 breakglass 群組,平常是空的),之後 bootstrap 只作 break-glass。role binding 的 scope 需要 Kafka cluster ID(本手冊以 CID 代入,demo 為 XyZBQ3-GTvKH2qNfP7X33A);實機自己取得,兩種方式皆已實測:kafka-cluster cluster-id --bootstrap-server <broker>:9094 --command-config <client.properties>(--config 已被標為棄用),或 curl https://<broker>:8091/v1/metadata/id(匿名可讀)。',
         manual: [R`B=(--cert /certs/client-bootstrap.pem --key /certs/client-bootstrap.key "${'$'}{JSON[@]}")
@@ -130,13 +147,19 @@ for r in DeveloperRead DeveloperWrite; do rb User%3Arestproxy $r Topic _confluen
   kc kafka-configs --bootstrap-server $BOOT --command-config /clients/token-bootstrap.properties --alter --add-config "SCRAM-SHA-512=[password=${'$'}{p#*:}]" --entity-type users --entity-name ${'$'}{p%%:*}
 done
 for t in orders.events orders.payments payments.events; do
-  kc kafka-topics --bootstrap-server $BOOT --command-config /clients/token-bootstrap.properties --create --if-not-exists --topic $t --partitions 1 --replication-factor 2
+  kc kafka-topics --bootstrap-server $BOOT --command-config /clients/token-bootstrap.properties --create --if-not-exists --topic $t --partitions 1 --replication-factor 3
 done`], auto: ['(包含在 scripts/up.sh)'], expect: '每個帳號印出 Completed updating config for user …;三個 topic 顯示 Created topic。' },
-      { t: '0.8 啟動 Control Center 與 REST Proxy,並自檢', why: 'C3(next-gen)需要 Prometheus + Alertmanager,三個容器放在 c3 profile。啟動後用 preflight 自檢所有端點與登入。',
-        manual: [R`docker compose --profile c3 --profile restproxy up -d
-curl -sk -o /dev/null -w "REST Proxy no-credentials: %{http_code}\n" https://localhost:8086/topics
-curl -s --ssl-no-revoke --cacert certs/ca.pem -o /dev/null -w "C3 login page (HTTPS): %{http_code}\n" https://localhost:9022/login
-docker ps --format "table {{.Names}}\t{{.Status}}"`], auto: ['./preflight.sh'], ev0: 'preflight', expect: 'REST Proxy no-credentials: 401(代表已要求驗證);C3 login page (HTTPS): 200;所有容器 Up。preflight 結果 通過 18 / 失敗 0。' },
+      { t: '0.8 啟動 Control Center、REST Proxy 2 台與負載平衡器', why: 'C3(next-gen)需要 Prometheus + Alertmanager(與 blackbox-exporter,憑證到期探測)放在 c3 profile。REST Proxy 2 台放在 restproxy profile,前面一台 L4 負載平衡器(容器名稱 restproxy,依來源 IP 黏著;正式環境是 F5),使用者與舊系統一律連負載平衡器的 8086。',
+        manual: [R`docker compose --profile c3 --profile restproxy up -d --wait
+curl -sk -o /dev/null -w "REST Proxy(經負載平衡器)no-credentials: %{http_code}\n" https://localhost:8086/topics
+curl -s --ssl-no-revoke --cacert certs/ca.pem -o /dev/null -w "C3 login page (HTTPS): %{http_code}\n" https://localhost:9022/login`], auto: ['(包含在 scripts/up.sh)'], expect: 'REST Proxy(經負載平衡器)no-credentials: 401(代表已要求驗證);C3 login page (HTTPS): 200。' },
+      { t: '0.9 Schema Registry 2 台:先授權、再啟動', why: '順序很重要:SR 若在 role binding 建好之前啟動,第一次存取 _schemas 被拒,controller 的授權快取會留著這次拒絕,之後補綁定也一直 TopicAuthorizationException(實測;只能依序重啟 controller 清掉)。所以先用 bootstrap 憑證綁好 SR 自己(CN=schema-registry)需要的角色,再啟動兩台。兩台用同一個 schema.registry.group.id,由 Kafka 協調選出一台 leader;寫入送到任一台都會轉給 leader。授權細節見 Lab 20。',
+        manual: [R`bash scripts/sr-setup.sh      # 綁定 SR 需要的角色 → 啟動 schema-registry1、schema-registry2 → 等授權生效`], auto: ['(包含在 scripts/up.sh)'], expect: '最後印出 [sr] 就緒(gary 可列 KEK)。' },
+      { t: '0.10 Connect 2 台:先授權、再啟動', why: '與 SR 同理:先綁好 worker 自己(CN=connect)與連接器服務帳號的角色,再啟動。兩台 worker 同一個 group.id(connect-cluster),連接器的工作由兩台分擔,一台停機時由另一台接手。細節見 Lab 29。',
+        manual: [R`bash scripts/connect-setup.sh on`], auto: ['(包含在 scripts/up.sh)'], expect: '最後印出 [connect] 就緒。' },
+      { t: '0.11 開場前自檢', why: '一次確認全部容器、各端點的認證(不帶帳密要 401、AD 帳號要 200)、AD 走 LDAPS、瀏覽器自動化可用。',
+        manual: [R`./preflight.sh
+docker ps --format "table {{.Names}}\t{{.Status}}"`], auto: ['./preflight.sh'], ev0: 'preflight', expect: '結果 通過 32 / 失敗 0;20 個容器都是 Up(healthy)。' },
     ],
   },
 

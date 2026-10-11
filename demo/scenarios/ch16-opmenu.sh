@@ -10,7 +10,7 @@
 #   ./scenarios/ch16-opmenu.sh      直接跑(DEMO_PAUSE=0 不暫停)
 # 會改動什麼:開頭刪除 opmenu 的並行鎖目錄與 demo/.maint.out。
 #   維護模式:對 broker1 建立 Alertmanager 靜音再結束它;匯出權限清單 CSV 到 opmenu/log/;並行鎖那步暫時建立鎖目錄與背景 sleep(結束前清掉)。
-#   滾動重啟(項目 27)會真的依序重啟兩台 broker,約 3 分鐘;不想跑時設 CH16_SKIP_ROLLING=1。
+#   滾動重啟(項目 27)會真的依序重啟 4 台 broker,約 6 分鐘(待實測);不想跑時設 CH16_SKIP_ROLLING=1。
 #   結束前刪除 .maint.out。
 # 怎麼判斷成功:每一步印『✔ 符合預期』,最後一行『第 16 章完成(失敗 0 項)』
 # 實測結果摘要:取證用:以環境變數帶入帳密與核准單號(OPMENU_USER、OPMENU_PASS、OPMENU_TICKET 等),僅在 demo 設定檔 OPMENU_ALLOW_ENV_OVERRIDE=1 時有效,正式環境一律忽略
