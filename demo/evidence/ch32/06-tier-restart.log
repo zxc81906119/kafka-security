@@ -1,0 +1,5 @@
+# 【重啟 broker】重啟 broker1 後仍讀到全部資料
+$ docker restart broker1;再讀一次
+▶ 重啟 broker1,再從頭讀一次:資料在物件儲存,broker 重啟不會遺失、也不用從別的副本重新複製舊資料
+讀到 100000 筆;broker1 本機磁碟上這個 topic 的資料量:10 MB
+判定:broker1 重啟後仍讀到全部 100000 筆

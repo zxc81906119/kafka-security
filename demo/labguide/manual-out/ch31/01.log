@@ -1,0 +1,15 @@
+▶ 在 .env 設 SBC_ENABLE=true,依序重建 controller 與 broker
+▶ 重建 controller1(讀新的 SBC_ENABLE)
+   controller1 已 healthy
+▶ 重建 controller2(讀新的 SBC_ENABLE)
+   controller2 已 healthy
+▶ 重建 controller3(讀新的 SBC_ENABLE)
+   controller3 已 healthy
+▶ 重建 broker1(讀新的 SBC_ENABLE)
+   broker1 已 healthy
+▶ 重建 broker2(讀新的 SBC_ENABLE)
+   broker2 已 healthy
+▶ 重建 broker3(讀新的 SBC_ENABLE)
+   broker3 已 healthy
+   5 秒後:balancer 啟動(狀態不是 DISABLED)
+   [sbc] 完成:Balancer status: ENABLED

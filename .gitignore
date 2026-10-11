@@ -66,3 +66,6 @@ demo/config/mail/smtp.pw
 demo/config/mail/ui.pw
 demo/config/c3/smtp.pw
 demo/config/c3/alertmanager-generated.yml.orig
+
+# --- 第 32 章 Tiered Storage 的帳密與 TLS 檔(tier-setup.sh 產生) ---
+demo/config/tier/

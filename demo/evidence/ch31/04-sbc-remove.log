@@ -1,0 +1,15 @@
+# 【移除 broker】kafka-remove-brokers --delete:副本搬走、筆數不變、broker 自動關機
+$ kafka-remove-brokers --broker-id 14 --delete / --describe
+移除前:sbc.data 筆數 80000;broker 14 上的副本數:106
+▶ 下一個指令:kafka-remove-brokers --delete。它先把 broker 排除在新副本之外,再把它的副本搬走,最後關機
+Initiating remove brokers call...
+Started remove broker task for brokers [14].
+You can check its status by calling this command again with the `--describe` option.
+   185 秒後:移除作業完成(最多 10 分鐘)
+  Broker 14 removal status - SUCCESS. Sub-task statuses:
+    Broker Replica Exclusion: COMPLETED
+    Partition Reassignment: COMPLETED
+    Broker Shutdown: COMPLETED
+    Shutdown Scheduled: true
+移除後:sbc.data 筆數 80000;broker 14 上的副本數:0;容器狀態:Exited (0) 13 seconds ago
+判定:broker 14 的副本全部搬走、資料筆數不變(80000)、broker 已自動關機;不需要手寫搬移計畫

@@ -1,9 +1,9 @@
 ▶ 看 KRaft controller quorum:應該有 3 個 voter(controller)、1 個 leader;broker 是 observer
-LeaderId:               1
+LeaderId:               3
 CurrentVoters:          [{"id": 1, "endpoints": ["CONTROLLER://controller1:9093"]}, {"id": 2, "endpoints": ["CONTROLLER://controller2:9093"]}, {"id": 3, "endpoints": ["CONTROLLER://controller3:9093"]}
-CurrentObservers:       [{"id": 11, "directoryId": "O2fpvazLiXRGcEibRv5aiQ"}, {"id": 12, "directoryId": "bmkTdD51gintdfM2LBe7PQ"}, {"id": 13, "directoryId": "154lXU759XdatASlkOF16w"}]
+CurrentObservers:       [{"id": 13, "directoryId": "p5dcFt7XcoQqYnGLUNr3pA"}, {"id": 12, "directoryId": "rDJ3kT4sonH7NUJwK1BIkg"}, {"id": 11, "directoryId": "oITRhsKgIQ2L0Jcc9yBWQg"}]
 kraft.version / metadata.version:
 Feature: confluent.metadata.version SupportedMinVersion: CP-7.3-IV3 SupportedMaxVersion: CP-8.3-IV0B FinalizedVersionLevel: CP-8.3-IV0B Epoc
-Feature: kraft.version SupportedMinVersion: 0 SupportedMaxVersion: 1 FinalizedVersionLevel: 0 Epoch: 26564
-Feature: metadata.version SupportedMinVersion: 3.3-IV3 SupportedMaxVersion: 4.3-IV0 FinalizedVersionLevel: UNKNOWN 0 Epoch: 26564
+Feature: kraft.version SupportedMinVersion: 0 SupportedMaxVersion: 1 FinalizedVersionLevel: 0 Epoch: 582
+Feature: metadata.version SupportedMinVersion: 3.3-IV3 SupportedMaxVersion: 4.3-IV0 FinalizedVersionLevel: UNKNOWN 0 Epoch: 582
 判定:3 個 controller 都是 voter(quorum 容得下 1 台故障),3 台 broker 是 observer

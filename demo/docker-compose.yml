@@ -8,7 +8,7 @@ x-common-ssl: &common-ssl
   KAFKA_SSL_KEY_CREDENTIALS: sslkey_creds
   KAFKA_SSL_KEYSTORE_TYPE: PKCS12
   KAFKA_OPTS: "-Ddemo.cpsec=1"
-  KAFKA_CONFLUENT_BALANCER_ENABLE: "false"
+  KAFKA_CONFLUENT_BALANCER_ENABLE: "${SBC_ENABLE:-false}"   # 第 31 章:scripts/sbc-setup.sh on 會在 .env 設 SBC_ENABLE=true(controller 與 broker 都要)
   KAFKA_SSL_TRUSTSTORE_LOCATION: /etc/kafka/secrets/truststore.p12
   KAFKA_SSL_TRUSTSTORE_TYPE: PKCS12
   KAFKA_SSL_TRUSTSTORE_PASSWORD: changeit

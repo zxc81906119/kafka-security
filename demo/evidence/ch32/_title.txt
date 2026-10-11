@@ -1,0 +1,1 @@
+Tiered Storage:舊資料放到物件儲存(MinIO)

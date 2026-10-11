@@ -1,0 +1,8 @@
+▶ balancer 的狀態:跑在哪一台、負載不均的觸發條件、目前是否在搬
+  Balancer status: ENABLED
+  Balancer is running on brokers: [1]
+  Uneven load balance status:
+    HealUnevenLoadTrigger: EMPTY_BROKER
+    Current: BALANCED
+    Last Update Time: 2026-10-11_06:22:30 UTC
+判定:balancer 已啟用(KRaft 下跑在 active controller 上)

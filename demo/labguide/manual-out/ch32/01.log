@@ -1,0 +1,15 @@
+▶ 備妥帳密、TLS 檔與 broker 用的憑證檔(accessKey= / secretKey=)(密碼隨機產生,不進版本庫)
+▶ 啟動 MinIO(HTTPS,使用共用 server 憑證)
+▶ 建立 bucket kafka-tier 與專用帳號 kafka-tier(權限只限這個 bucket)
+Bucket created successfully `local/kafka-tier`.
+Added user `kafka-tier` successfully.
+Attached Policies: [kafka-tier-rw]
+To User: kafka-tier
+▶ broker 依序重建,讀入 Tiered Storage 設定
+▶ 重建 broker1
+   broker1 已 healthy
+▶ 重建 broker2
+   broker2 已 healthy
+▶ 重建 broker3
+   broker3 已 healthy
+   [tier] 完成:bucket=kafka-tier,endpoint=https://minio:9000,控制台 https://localhost:9001(未對外開放埠;需要時 docker exec)

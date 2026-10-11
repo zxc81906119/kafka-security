@@ -1,0 +1,5 @@
+▶ 建立 topic tier.demo:啟用 tier、segment 5 MB(小,才會很快寫滿並上傳)、本機只保留 60 秒(hotset)、整體保留 7 天
+Created topic tier.demo.
+▶ 寫入 100000 筆(每筆約 1 KB,約 100 MB)
+送出 100000 筆;topic 筆數:100000;各副本本機總大小:333 MB(3 個副本各一份)
+判定:寫入完成(100000 筆);接著用 archive 看資料是否上傳

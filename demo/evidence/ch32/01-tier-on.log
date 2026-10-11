@@ -1,0 +1,5 @@
+# 【啟用】MinIO(HTTPS)+ 專用帳號與 bucket + broker 載入 Tiered Storage 設定(依序重建)
+$ scripts/tier-setup.sh on
+▶ 重建 broker3
+   broker3 已 healthy
+   [tier] 完成:bucket=kafka-tier,endpoint=https://minio:9000,控制台 https://localhost:9001(未對外開放埠;需要時 docker exec)

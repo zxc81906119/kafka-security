@@ -1,0 +1,7 @@
+# 【本機清理】hotset 到期後,broker 本機只留最近的 segment
+$ kafka-log-dirs --describe(前後比較)
+▶ hotset 是 60 秒:上傳完成且超過 60 秒的 segment,本機會在下一輪保留檢查(log.retention.check.interval.ms,預設 5 分鐘)被清掉;等本機大小變小
+清理前(寫入完成時),各副本本機總大小:300 MB
+   307 秒後:本機大小降到一半以下(最多 12 分鐘)
+清理後,各副本本機總大小:120 MB(物件儲存 90MiB)
+判定:本機從 300 MB 降到 120 MB,topic 筆數仍是 100000(舊資料在物件儲存,不在 broker 磁碟)

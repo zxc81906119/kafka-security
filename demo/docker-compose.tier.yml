@@ -1,0 +1,26 @@
+# 第 32 章:Tiered Storage(把舊的 log segment 放到物件儲存)。由 scripts/tier-setup.sh on 加進 .env 的 COMPOSE_FILE。
+# 官方設定(CP 8.3 Tiered Storage 頁):confluent.tier.feature / confluent.tier.enable / backend / bucket / region / endpoint.override
+#   / force.path.style.access / cred.file.path;MinIO 是官方列出的 S3 相容範例之一。
+# 這個檔只改 broker(controller 不存資料);broker 都要同一個 bucket。
+x-tier: &tier
+  KAFKA_CONFLUENT_TIER_FEATURE: "true"
+  KAFKA_CONFLUENT_TIER_ENABLE: "false"                 # 新 topic 預設不 tier;要 tier 的 topic 自己設 confluent.tier.enable=true(最小影響)
+  KAFKA_CONFLUENT_TIER_BACKEND: S3
+  KAFKA_CONFLUENT_TIER_S3_BUCKET: kafka-tier
+  KAFKA_CONFLUENT_TIER_S3_REGION: us-east-1            # MinIO 預設區域
+  KAFKA_CONFLUENT_TIER_S3_AWS_ENDPOINT_OVERRIDE: https://minio:9000
+  KAFKA_CONFLUENT_TIER_S3_FORCE_PATH_STYLE_ACCESS: "true"
+  KAFKA_CONFLUENT_TIER_S3_IPV6_ENABLED: "false"        # 官方:CP 7.9.1 起用 endpoint override 時需要
+  KAFKA_CONFLUENT_TIER_S3_CRED_FILE_PATH: /etc/tier/credentials   # 官方:優先於環境變數,且不印在日誌
+  KAFKA_CONFLUENT_TIER_METADATA_REPLICATION_FACTOR: 3
+  KAFKA_CONFLUENT_TIER_METADATA_MIN_ISR: 2
+  # 物件儲存走 HTTPS:AWS SDK 用 JVM 的信任庫,所以把行內 CA 的 truststore 給 JVM(只影響 JVM 預設的 TLS 驗證;Kafka 自己的 listener 另有設定)
+  KAFKA_OPTS: "-Ddemo.cpsec=1 -javaagent:/opt/jmx/jmx_prometheus_javaagent.jar=7778:/opt/jmx/kafka_broker_tls.yml -Djavax.net.ssl.trustStore=/etc/kafka/secrets/truststore.p12 -Djavax.net.ssl.trustStoreType=PKCS12 -Djavax.net.ssl.trustStorePassword=changeit"
+x-tier-vol: &tier-vol
+  - ./config/tier/aws-credentials:/etc/tier/credentials:ro
+
+services:
+  broker1: { environment: *tier, volumes: *tier-vol }
+  broker2: { environment: *tier, volumes: *tier-vol }
+  broker3: { environment: *tier, volumes: *tier-vol }
+  broker4: { environment: *tier, volumes: *tier-vol }

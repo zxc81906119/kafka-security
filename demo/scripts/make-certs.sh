@@ -41,7 +41,7 @@ if [ -f certs/.done ]; then
   fi
   # 已有 CA:補產內部通道共用憑證(CN=kafka-internal,mTLS;broker↔broker 與 broker↔controller 共用)
   if [ ! -f certs/internal.keystore.p12 ]; then
-    docker run --rm -v "$OUT:/certs" --entrypoint sh alpine/openssl -c "cd /certs; printf '[req]\ndistinguished_name=dn\nreq_extensions=v3\nprompt=no\n[dn]\nCN=kafka-internal\nO=Demo\n[v3]\nsubjectAltName=DNS:broker1,DNS:broker2,DNS:broker3,DNS:controller1,DNS:controller2,DNS:controller3,DNS:localhost\nextendedKeyUsage=serverAuth,clientAuth\n' > internal.cnf; openssl genrsa -out internal.key 2048 2>/dev/null; openssl req -new -key internal.key -out internal.csr -config internal.cnf; openssl x509 -req -in internal.csr -CA ca.pem -CAkey ca.key -CAcreateserial -out internal.pem -days 825 -sha256 -extfile internal.cnf -extensions v3 2>/dev/null; openssl pkcs12 -export -in internal.pem -inkey internal.key -certfile ca.pem -name internal -out internal.keystore.p12 -passout pass:$PASS; chmod 644 internal.* "
+    docker run --rm -v "$OUT:/certs" --entrypoint sh alpine/openssl -c "cd /certs; printf '[req]\ndistinguished_name=dn\nreq_extensions=v3\nprompt=no\n[dn]\nCN=kafka-internal\nO=Demo\n[v3]\nsubjectAltName=DNS:broker1,DNS:broker2,DNS:broker3,DNS:broker4,DNS:controller1,DNS:controller2,DNS:controller3,DNS:localhost\nextendedKeyUsage=serverAuth,clientAuth\n' > internal.cnf; openssl genrsa -out internal.key 2048 2>/dev/null; openssl req -new -key internal.key -out internal.csr -config internal.cnf; openssl x509 -req -in internal.csr -CA ca.pem -CAkey ca.key -CAcreateserial -out internal.pem -days 825 -sha256 -extfile internal.cnf -extensions v3 2>/dev/null; openssl pkcs12 -export -in internal.pem -inkey internal.key -certfile ca.pem -name internal -out internal.keystore.p12 -passout pass:$PASS; chmod 644 internal.* "
     echo "補產內部通道共用憑證: internal(CN=kafka-internal)"
   fi
   # 已有 CA:blackbox exporter 啟用 TLS(第 22 章),server 憑證 SAN 要有它的名稱,同一把 key、同一個 CA 重簽
@@ -85,6 +85,23 @@ if [ -f certs/.done ]; then
     docker run --rm -v "$OUT:/certs" --entrypoint sh alpine/openssl -c "cd /certs; openssl x509 -req -in internal.csr -CA ca.pem -CAkey ca.key -CAcreateserial -out internal.pem -days 825 -sha256 -extfile internal.cnf -extensions v3 2>/dev/null; openssl pkcs12 -export -in internal.pem -inkey internal.key -certfile ca.pem -name internal -out internal.keystore.p12 -passout pass:$PASS; chmod 644 internal.*"
     echo "內部憑證 SAN 已補 broker3 / controller2 / controller3(同 key、同 CA)"
   fi
+  # 已有 CA:第 31 章(Self-Balancing 加 / 移除 broker 實驗)的第 4 台 broker,SAN 要有 broker4,同一把 key、同一個 CA 重簽
+  if ! grep -q "DNS:broker4" certs/san.cnf 2>/dev/null; then
+    sed -i "s/DNS:broker3,/DNS:broker3,DNS:broker4,/" certs/san.cnf
+    docker run --rm -v "$OUT:/certs" --entrypoint sh alpine/openssl -c "cd /certs; openssl x509 -req -in server.csr -CA ca.pem -CAkey ca.key -CAcreateserial -out server.pem -days 825 -sha256 -extfile san.cnf -extensions v3 2>/dev/null; openssl pkcs12 -export -in server.pem -inkey server.key -certfile ca.pem -name server -out server.keystore.p12 -passout pass:$PASS; chmod 644 server.pem server.keystore.p12"
+    echo "server 憑證 SAN 已補 broker4(同 key、同 CA)"
+  fi
+  if [ -f certs/internal.cnf ] && ! grep -q "DNS:broker4" certs/internal.cnf 2>/dev/null; then
+    sed -i "s/DNS:broker3,/DNS:broker3,DNS:broker4,/" certs/internal.cnf
+    docker run --rm -v "$OUT:/certs" --entrypoint sh alpine/openssl -c "cd /certs; openssl x509 -req -in internal.csr -CA ca.pem -CAkey ca.key -CAcreateserial -out internal.pem -days 825 -sha256 -extfile internal.cnf -extensions v3 2>/dev/null; openssl pkcs12 -export -in internal.pem -inkey internal.key -certfile ca.pem -name internal -out internal.keystore.p12 -passout pass:$PASS; chmod 644 internal.*"
+    echo "內部憑證 SAN 已補 broker4(同 key、同 CA)"
+  fi
+  # 已有 CA:第 32 章(Tiered Storage 的物件儲存 MinIO,走 HTTPS)的 server 憑證 SAN 要有 minio,同一把 key、同一個 CA 重簽
+  if ! grep -q "DNS:minio" certs/san.cnf 2>/dev/null; then
+    sed -i "s/DNS:broker4,/DNS:broker4,DNS:minio,/" certs/san.cnf
+    docker run --rm -v "$OUT:/certs" --entrypoint sh alpine/openssl -c "cd /certs; openssl x509 -req -in server.csr -CA ca.pem -CAkey ca.key -CAcreateserial -out server.pem -days 825 -sha256 -extfile san.cnf -extensions v3 2>/dev/null; openssl pkcs12 -export -in server.pem -inkey server.key -certfile ca.pem -name server -out server.keystore.p12 -passout pass:$PASS; chmod 644 server.*"
+    echo "server 憑證 SAN 已補 minio(同 key、同 CA)"
+  fi
   # 已有 CA:僅補產缺少的 client 憑證
   for n in c3 restproxy bootstrap legacy-orders schema-registry monitor connect; do
     if [ ! -f certs/client-$n.keystore.p12 ]; then
@@ -112,7 +129,7 @@ prompt=no
 CN=kafka.demo.local
 O=Demo
 [v3]
-subjectAltName=DNS:kafka.demo.local,DNS:localhost,DNS:controller1,DNS:controller2,DNS:controller3,DNS:broker1,DNS:broker2,DNS:broker3,DNS:restproxy,DNS:control-center,DNS:openldap,DNS:prometheus,DNS:alertmanager,DNS:conjur,DNS:schema-registry,DNS:blackbox-exporter,DNS:grafana,DNS:node-exporter,DNS:kafka-exporter,DNS:loki,DNS:tempo,DNS:connect,DNS:mailpit,IP:127.0.0.1
+subjectAltName=DNS:kafka.demo.local,DNS:localhost,DNS:controller1,DNS:controller2,DNS:controller3,DNS:broker1,DNS:broker2,DNS:broker3,DNS:broker4,DNS:minio,DNS:restproxy,DNS:control-center,DNS:openldap,DNS:prometheus,DNS:alertmanager,DNS:conjur,DNS:schema-registry,DNS:blackbox-exporter,DNS:grafana,DNS:node-exporter,DNS:kafka-exporter,DNS:loki,DNS:tempo,DNS:connect,DNS:mailpit,IP:127.0.0.1
 extendedKeyUsage=serverAuth,clientAuth
 EOF
 openssl genrsa -out server.key 2048 2>/dev/null

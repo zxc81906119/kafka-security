@@ -17,6 +17,8 @@
 | 28 | Schema 演進與資料契約 | 完成 |
 | 29 | Connect:RBAC、連接器各用自己的身分、DLQ、config provider(用 Apache Kafka 自帶 connect-file,Maven Central 下載) | 完成 |
 | 30 | 告警寄成信:Alertmanager 到自架郵件伺服器(使用者 2026-10-11 指定通道;demo 用 Mailpit 代替) | 完成 |
+| 31 | Self-Balancing:自動搬分區(使用者 2026-10-11 指定):啟用(controller 也要設)、加空 broker、負載不均不觸發的條件、kafka-remove-brokers | 完成(授權範圍與 >20% 磁碟用量的重平衡未驗證) |
+| 32 | Tiered Storage 到 MinIO(使用者 2026-10-11 指定):上傳、本機清理、從頭讀、重啟、存取保護 | 完成(物件儲存中斷、讀取效能、授權範圍未驗證) |
 
 > 編號說明:原規劃 Lab 27–29 因批 B(升級與 DR)暫不做,改成連續編號 25–27;故事順序依「監控 → 憑證 → 容量 → 應用開發」。
 

@@ -364,7 +364,20 @@ add({ title: '容量:分區搬家', sub: '新增 broker 不會自動搬舊資料
   ...step(5, 10.6, 1.6, 2.13, 2.5, '必要時取消', '--cancel 回到搬家前並清除限速', SVC),
   arrow(2.9, 2.85, 3.1, 2.85, 'text1'), arrow(5.4, 2.85, 5.6, 2.85, 'text1'), arrow(7.9, 2.85, 8.1, 2.85, 'text1'), arrow(10.4, 2.85, 10.6, 2.85, 'text1'),
   note('搬家期間不要同時做滾動重啟或換憑證;限速值依服務延遲逐步調,不要憑感覺', 4.6, PLT),
-  note('Self-Balancing 與 Tiered Storage 尚未驗證(授權與版本資格要向 Confluent 確認)', 5.2, RISK),
+  note('要審計畫、要控制節奏時用這套;擴縮容與下線 broker 的自動版是下一頁的 Self-Balancing', 5.2, PLT),
+] });
+
+add({ title: '容量與成本:Self-Balancing 與 Tiered Storage', sub: '自動搬分區、舊資料放物件儲存;兩者的授權與版本資格官方頁沒有明載,導入前向 Confluent 確認', items: [
+  { ...table(0.6, 1.5, [2.8, 6.63, 2.7], [
+    ['項目', '實測結果與限制', '狀態'],
+    ['Self-Balancing 啟用', 'KRaft 下跑在 active controller:controller 與 broker 都要設 enable 與 inter.broker.listener.name,要滾動重啟;只動態開 broker 沒有用', '測試環境已驗證'],
+    ['加空 broker', '自動搬副本、不用手寫計畫;但要先蒐集指標視窗,實測等 15 到 20 分鐘才開始搬;搬家時寫入零失敗', '測試環境已驗證'],
+    ['移除 broker', 'kafka-remove-brokers 一個指令:副本搬走、資料筆數不變、broker 自動關機(約 3 分鐘);新建 topic 後約 18 分鐘內算不出計畫', '測試環境已驗證'],
+    ['負載不均', '官方只在副本數與超過 20% 的磁碟用量觸發;小資料量不會搬,磁碟用量仍要自己監控', '測試環境已驗證(超過 20% 未驗證)'],
+    ['Tiered Storage', '舊 segment 上傳到 S3 相容物件儲存(測試用 MinIO,HTTPS):本機從約 300 MB 降到約 20 MB,從頭讀仍讀到全部,broker 重啟後仍在', '測試環境已驗證'],
+    ['Tiered 的踩坑與保護', '憑證檔格式特殊、預設伺服器端加密需要物件儲存支援 KMS、讀取要信任行內 CA;專用帳號只限單一 bucket,匿名被拒', '測試環境已驗證'],
+    ['物件儲存中斷、讀取效能、授權範圍', '物件儲存掛掉時的行為、回補 30 天資料的延遲、客戶行內物件儲存是否在官方認證清單', '未驗證'],
+  ], { rowH: 0.6, hdrH: 0.42, sz: 11.5, col: MDS }), rowCols: [SVC, SVC, SVC, RISK, SVC, SVC, RISK] },
 ] });
 
 add({ title: 'Grafana 全元件監控,以及日誌與追蹤', sub: 'Control Center 只看得到 broker 與 controller;Grafana 把 Kafka、主機、consumer、日誌、追蹤放在一起', items: [

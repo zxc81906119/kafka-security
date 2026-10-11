@@ -85,7 +85,7 @@ lab_idempotent() {
 lab_atleast() {
   apps_prepare
   say "先造一個有 1000 筆的 topic(冪等 producer),再用手動提交的 consumer:第一次處理 100 筆後在提交前當機"
-  local group="g-alo-$(date +%s)" r1 r2 r3
+  local group; group="g-alo-$(date +%s)"; local r1 r2 r3
   app_topic app.alo 1 >/dev/null
   run_app app-prod Producer app.alo 1000 1000 true 2000 >/dev/null
   echo "第 1 次(處理 100 筆,提交前當機):"; r1=$(run_app app-alo AtLeastOnce app.alo "$group" 100 crash-before-commit); echo "$r1" | sed 's/^/  /'

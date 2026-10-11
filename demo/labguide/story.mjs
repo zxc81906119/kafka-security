@@ -54,6 +54,8 @@ export const ACTS = [
     scene: ['平台穩了、看得見了,接下來的麻煩變成人與人之間:訂單團隊和對帳團隊各自改程式、各自上線。Ming 要把『欄位怎麼改才不會互相弄壞』變成機器擋得住的規矩,而不是靠開會。'] }
   ,{ id: 'week6', title: '第六週:告警送到人', when: '第六週', labs: [30],
     scene: ['儀表板、日誌、追蹤、資料契約都有了。主管最後問的是最樸素的問題:「半夜壞了,誰會知道?」'] }
+  ,{ id: 'week7', title: '第七週:容量與成本', when: '第七週', labs: [31, 32],
+    scene: ['告警有人接了。下一個問題來自採購:「資料留 30 天,磁碟要買多少?加機器又要排幾個晚上搬資料?」Ming 把官方文件裡兩個看起來能省事的功能拿來實測,看它們到底省了什麼、又多要求了什麼。'] }
 ];
 
 // 每個 Lab 的故事:scene 情境、mission 任務、recap 小結(學到的事 + 對應的規矩)
@@ -165,6 +167,16 @@ export const LAB_STORY = {
       '接著補上 node_exporter 與 kafka_exporter。他給 kafka_exporter 一個只有 Describe 權限的帳號,證明它看得到 lag、卻讀不到任何訊息;然後故意讓一個 consumer 落後 4000 筆,看告警響、追上後解除。最後 Grafana 的登入也接上 AD,不另建帳號:Gary 是 Admin,其他人只能看。'],
     mission: ['把 Grafana 接上 Prometheus,匯入官方儀表板並檢查它們真的有資料。', '補上主機磁碟與 consumer lag 的監控與告警。', '讓 Grafana 與兩個 exporter 和其他元件一樣受保護:HTTPS、AD 登入、mTLS、最小權限帳號。'],
     recap: ['匯入成功不等於用得起來:官方儀表板的標籤與指標名稱要和抓取設定對得上(job 名稱、env 標籤、exporter 版本)。', '不改官方儀表板內容;對不上的記下來,或另外寫補充的儀表板。', 'node_exporter 補磁碟、kafka_exporter 補 consumer lag;兩個都用 mTLS 保護,Kafka 帳號只給 Describe。', 'Grafana 的使用者與群組以 AD 為準,本機 admin 只留給 break-glass;告警統一走 Prometheus 與 Alertmanager。', 'kafka_exporter 是社群專案,上線前評估維護狀況;磁碟告警的門檻與 lag 門檻都是範例值。'] },
+  31: { scene: ['Lab 24 他用手搬過分區:存回退檔、審計畫、限速、收尾,一晚上只搬得動一批。官方有個「Self-Balancing」說會自己搬,他先不信,決定從啟用開始一步一步試。',
+      '第一個意外是啟用本身:他只在 broker 上打開,狀態卻一直是 DISABLED;原來 KRaft 下它跑在 controller 上,controller 也要設,而且還要告訴它用哪個 listener 連 broker。接著他啟動一台空的 broker,等了將近二十分鐘才開始搬——不是機器慢,是它要先蒐集足夠的指標視窗;搬家期間同時寫入兩萬筆全部成功。',
+      '他再試下線:一個 kafka-remove-brokers 就把副本搬走、broker 自動關機,筆數不變。最後他故意把資料全擠在兩台上,等著看它出手——什麼都沒發生。翻回文件才看到:只有副本數與超過 20% 的磁碟用量才會觸發。他在報告裡寫明:它是擴縮容的好工具,不是把小差距抹平的魔法,磁碟監控仍要自己做。'],
+    mission: ['正確啟用 Self-Balancing(controller 與 broker)。', '加入一台空 broker,看它自動搬副本且寫入不中斷。', '用一個指令下線 broker 並確認資料不變。', '弄清楚負載不均什麼時候會觸發、什麼時候不會。'],
+    recap: ['KRaft 下 balancer 跑在 active controller:controller 與 broker 都要設 enable 與 inter.broker.listener.name,要滾動重啟。', '加 / 移除 broker 的計畫要有 6 個有效指標視窗,新建 topic 後約 18 分鐘內算不出來:排程要把這段算進去。', 'kafka-remove-brokers 一個指令完成;完成後用 kafka-cluster unregister 清掉註冊。', '負載不均只在副本數與超過 20% 磁碟用量時觸發;磁碟用量仍要自己監控。', '沒測:磁碟超過 20% 的實際重平衡、rack 感知、故障後自動補副本、授權範圍。'] },
+  32: { scene: ['採購問的另一半是磁碟。Ming 試的是 Tiered Storage:寫滿的舊資料上傳到物件儲存,broker 本機只留最近一段。他用 MinIO 代替行內的物件儲存,走 HTTPS、專用帳號、只給官方列的四項權限。',
+      '他踩了三個坑:憑證檔要的是 accessKey、secretKey 兩個欄位的 properties 檔,不是 AWS 的格式;Kafka 預設要求伺服器端加密,物件儲存沒有 KMS 就回 501,上傳一直重試——topic 看起來完全正常,只是 bucket 裡沒有東西;走 HTTPS 時 Java 用自己的信任庫,要把行內 CA 給它。',
+      '修好後數字很漂亮:約 100 MB 寫進去,本機從三百降到二十 MB,從頭讀還是全部讀到,broker 重啟也在。但他在報告裡寫明:歷史資料現在多了一個依賴,物件儲存掛掉時的行為他還沒測;而且 kafka-log-dirs 顯示的還是邏輯大小,看磁碟要自己量。'],
+    mission: ['建立專用帳號與 bucket(最小權限、HTTPS),讓 broker 啟用 Tiered Storage。', '確認資料真的上傳、本機真的變小。', '從頭讀與重啟 broker 後仍讀到全部資料。', '確認物件儲存本身受保護。'],
+    recap: ['cred.file.path 要 accessKey= / secretKey= 的 properties 檔;預設要求伺服器端加密,物件儲存要能支援;HTTPS 要讓 JVM 信任行內 CA。', 'topic 層級開 confluent.tier.enable 與 hotset;broker 預設保持 false,影響最小。', 'kafka-log-dirs 是邏輯大小,看磁碟占用要量 broker 目錄。', '物件儲存是歷史資料的依賴:專用帳號只限單一 bucket,匿名被拒,密碼走唯讀檔。', '沒測:物件儲存中斷、回補 30 天的讀取效能、壓縮 topic、物件鎖、授權範圍。'] },
   30: { scene: ['值班表上寫著「看 Grafana」,Ming 看了一眼,默默把它劃掉:半夜三點,沒有人會盯著儀表板。告警目前只亮在 Alertmanager 的畫面上,他得讓它「找上人」。',
       '行內本來就有自架的郵件伺服器,所以他選了最不需要新東西的通道:Alertmanager 寄信。但寄信本身有幾個陷阱,他一個一個試:不分輕重的話,輕微的告警也會把值班的人叫醒,所以 critical 與 warning 要寄給不同的人;一台壞掉常常同時觸發一串告警,不合併的話信箱會被灌爆;最後他停掉一台 broker,真的在信箱收到 FIRING,恢復後又收到 RESOLVED。',
       '最後是郵件伺服器自己:告警信裡有主機名稱與錯誤訊息。他確認伺服器強制 STARTTLS、要帳密,Alertmanager 的密碼從檔案讀、不在設定裡。他在報告裡寫明:信件只是通道之一,簡訊、通訊軟體與靜音、抑制、Alertmanager 高可用都還沒做。'],

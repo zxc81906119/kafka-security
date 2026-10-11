@@ -1,0 +1,17 @@
+▶ 把觸發條件設為 ANY_UNEVEN_LOAD(任何時候都檢查負載不均;預設 EMPTY_BROKER 只在加空 broker 時處理)
+Completed updating default config for brokers in the cluster.
+▶ 造出不均:cap.skew 的 12 個副本全放在 broker1、broker2(約 400 MB),其他 broker 沒有這個 topic 的資料
+每台 broker 上 cap.skew 的資料量:
+  broker 11   198 MB  分區: 0,1,2,3,4,5
+  broker 12   198 MB  分區: 0,1,2,3,4,5
+  broker 13     0 MB  分區: (無)
+判定:資料全擠在 broker1、broker2,broker3 是空的(負載不均;新增 broker 後也是這種狀態)
+▶ 等偵測器的結論(每分鐘一輪;broker 有變動後它會先暫停一段時間,demo 縮短為 3 分鐘,預設是 30 分鐘)
+   223 秒後:偵測器輸出『沒有違反目標』(最多 8 分鐘)
+  [2026-10-11 06:40:59,155] INFO Skipping goal violation detection due to previous new broker change - will resume at 06:42:33.663 (1791700953663) (com.linkedin.kafka.cruisecontrol.detector.GoalViolatio
+  [2026-10-11 07:02:59,173] INFO Goal violation detector did not detect any violated goals. (com.linkedin.kafka.cruisecontrol.detector.GoalViolationDetector)
+觸發條件: HealUnevenLoadTrigger: ANY_UNEVEN_LOAD
+    broker 11   198 MB  分區: 0,1,2,3,4,5
+    broker 12   198 MB  分區: 0,1,2,3,4,5
+    broker 13     0 MB  分區: (無)
+判定:資料量低於官方觸發門檻(副本數與超過 20% 的磁碟用量才會觸發),偵測器判定沒有違反目標,不搬;小叢集不均不代表 Self-Balancing 失效

@@ -27,14 +27,14 @@ current_mode() {
 
 # 清除所有 profile 的容器與資料(失敗也繼續,可能本來就沒有)。
 remove_everything() {
-  docker compose --profile c3 --profile restproxy --profile cyberark --profile sr --profile grafana --profile observability --profile connect down -v >/dev/null 2>&1 || true
+  docker compose --profile c3 --profile restproxy --profile cyberark --profile sr --profile grafana --profile observability --profile connect --profile tier --profile sbc down -v >/dev/null 2>&1 || true
   # Conjur 的資料卷已清掉,舊的 admin.key / 各 host 的 API key 就失效了;不清的話第 18 章會『Unable to authenticate』(conjur.env 的 data key 保留)
   rm -f config/conjur/admin.key config/conjur/policy.out; rm -rf config/conjur/keys
 }
 
 # 改 .env:HA 模式加上 COMPOSE_FILE(兩個 compose 檔疊加);基礎模式移除。
 set_compose_files() {
-  sed -i '/^COMPOSE_PATH_SEPARATOR=/d;/^COMPOSE_FILE=/d' .env
+  sed -i '/^COMPOSE_PATH_SEPARATOR=/d;/^COMPOSE_FILE=/d;/^SBC_ENABLE=/d' .env   # SBC_ENABLE(第 31 章)也清掉,避免新環境預設開著 Self-Balancing
   if [ "$1" = ha ]; then
     printf 'COMPOSE_PATH_SEPARATOR=,\nCOMPOSE_FILE=docker-compose.yml,docker-compose.ha.yml\n' >> .env
   fi
