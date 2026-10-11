@@ -136,7 +136,7 @@ add(
   new Paragraph({ spacing: { after: 300 }, children: [new TextRun({ text: S.SUBTITLE + (BRIEF.size ? '(精簡版)' : ''), font: FONT, size: 36, bold: true, color: TEAL })] }),
   ...(BRIEF.size ? [P([run('精簡版:只留每步的指令、預期結果與 Lab 地圖,拿掉實際輸出、截圖、專案包好的指令、附錄 B 到 D 與選修 Lab 8、9。上課時放在手邊照做;要對照輸出與畫面請翻完整版(Confluent-Security-Lab-Story-Guide-v2.docx)。', { size: 20, color: MUTE })])] : []),
   new Paragraph({ spacing: { after: 400 }, children: [new TextRun({ text: BRIEF.size ? S.TAGLINE.replace('每個 Lab 都附可直接貼上的指令與實際執行的輸出', '每個 Lab 都附可直接貼上的指令與預期結果') : S.TAGLINE, font: FONT, size: 24, color: MUTE })] }),
-  P([run('這是一個故事:新進維運工程師「Ming」,在前三週裡一個個處理真實會遇到的問題。每個 Lab 先說「為什麼要做這件事」,再給可直接貼上的指令,' + (BRIEF.size ? '並寫明預期結果(實際輸出與畫面見完整版)。' : '最後附上本環境實際執行的輸出與畫面。'), { size: 22 })]),
+  P([run('這是一個故事:新進維運工程師「Ming」,在到職的前兩個月裡一個個處理真實會遇到的問題。每個 Lab 先說「為什麼要做這件事」,再給可直接貼上的指令,' + (BRIEF.size ? '並寫明預期結果(實際輸出與畫面見完整版)。' : '最後附上本環境實際執行的輸出與畫面。'), { size: 22 })]),
   spacer(),
   ...table([
     ['項目', '內容'],
@@ -230,7 +230,7 @@ S.SETTING.forEach(t => add(P(t)));
 add(...table([['規矩', '意思'], ...S.RULES], [2400, 6626], { size: 19 }));
 add(H2('角色'));
 add(...table([['角色', '在故事裡是誰', 'Demo 帳號'], ...S.CAST], [1500, 3900, 3626], { size: 18 }));
-add(H2('三週的路線圖'));
+add(H2('八週的路線圖'));
 add(...table([['時間', '主題', '對應 Lab'], ...S.ACTS.map(a => [a.when, a.title.replace(/^[^::]*[::]\s*/, ''), a.labs.map(n => 'Lab ' + n).join('、')])], [1800, 4926, 2300], { size: 18 }));
 add(...callout('tip', '每個 Lab 的編號就是 ./demo.sh 的章節編號(Lab 5 對應 ./demo.sh 5)。選修的 Lab 8、9 不影響後面的內容,趕時間可以跳過。'));
 
@@ -363,7 +363,7 @@ for (const act of S.ACTS) {
 
 // 終章
 add(H1(S.EPILOGUE.title));
-add(...storyBox('一個月後', S.EPILOGUE.scene));
+add(...storyBox('兩個月後', S.EPILOGUE.scene));
 add(...table([['還沒驗證或要補的', '說明'], ...S.EPILOGUE.todo], [2600, 6426], { size: 18 }));
 
 // ---------- 附錄 ----------
@@ -509,7 +509,7 @@ if (!BRIEF.has('appendix')) {
 }
 
 const doc = new Document({
-  creator: 'Claude', title: 'Confluent Platform 安全方案:Ming 的前三週(故事版 Lab 手冊)', description: 'AD 只放 user/group 的 Confluent 安全方案實作手冊,以新進維運工程師的故事串起所有 Lab',
+  creator: 'Claude', title: 'Confluent Platform 安全方案:Ming 的前兩個月(故事版 Lab 手冊)', description: 'AD 只放 user/group 的 Confluent 安全方案實作手冊,以新進維運工程師的故事串起所有 Lab',
   features: { updateFields: true },
   styles: {
     default: { document: { run: { font: FONT, size: 21 } } },
@@ -525,7 +525,7 @@ const doc = new Document({
   ] },
   sections: [{
     properties: { page: { size: { width: 11906, height: 16838 }, margin: { top: 1300, bottom: 1200, left: 1440, right: 1440 } } },
-    headers: { default: new Header({ children: [new Paragraph({ alignment: AlignmentType.RIGHT, children: [new TextRun({ text: 'Confluent Platform 安全方案 · Ming 的前三週', font: FONT, size: 16, color: MUTE })] })] }) },
+    headers: { default: new Header({ children: [new Paragraph({ alignment: AlignmentType.RIGHT, children: [new TextRun({ text: 'Confluent Platform 安全方案 · Ming 的前兩個月', font: FONT, size: 16, color: MUTE })] })] }) },
     footers: { default: new Footer({ children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ children: ['第 ', PageNumber.CURRENT, ' 頁 / 共 ', PageNumber.TOTAL_PAGES, ' 頁'], font: FONT, size: 16, color: MUTE })] })] }) },
     children: kids,
   }],
