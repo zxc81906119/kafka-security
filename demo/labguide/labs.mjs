@@ -87,9 +87,7 @@ openssl genrsa -out server.key 2048
 openssl req -new -key server.key -out server.csr -config san.cnf
 openssl x509 -req -in server.csr -CA ca.pem -CAkey ca.key -CAcreateserial -out server.pem -days 825 -sha256 -extfile san.cnf -extensions v3
 openssl pkcs12 -export -in server.pem -inkey server.key -certfile ca.pem -name server -out server.keystore.p12 -passout pass:changeit
-printf "[v3]
-extendedKeyUsage=clientAuth
-" > client-eku.cnf   # client 憑證標明用途 clientAuth
+printf "[v3]\nextendedKeyUsage=clientAuth\n" > client-eku.cnf   # client 憑證標明用途 clientAuth
 for n in c3 restproxy bootstrap legacy-orders schema-registry monitor connect; do
   openssl genrsa -out client-$n.key 2048
   openssl req -new -key client-$n.key -subj "/CN=$n/O=Demo" -out client-$n.csr
