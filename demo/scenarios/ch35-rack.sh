@@ -42,6 +42,6 @@ step rack-three-down "【rack-a 斷電(2 台)】每個分區還有 2 份同步�
 
 step rack-off "【還原】移除機架設定(客戶機架配置確定後再設);既有 topic 的副本位置不會自動重排,要用重新指派或 Self-Balancing" \
   "scripts/rack-setup.sh off" \
-  'bash "$RS" off 2>&1 | tail -3; kc_del(){ "$DEMO_ROOT/scripts/k.sh" kafka-topics --bootstrap-server "$BOOT" --command-config /clients/token-bootstrap.properties --delete --if-exists --topic "$1" >/dev/null 2>&1; }; kc_del rack2.t; kc_del rack3.t; echo "已刪除 rack2.t、rack3.t"' '已移除'
+  'bash "$RS" off 2>&1 | tail -6; kc_del(){ "$DEMO_ROOT/scripts/k.sh" kafka-topics --bootstrap-server "$BOOT" --command-config /clients/token-bootstrap.properties --delete --if-exists --topic "$1" >/dev/null 2>&1; }; kc_del rack2.t; kc_del rack3.t; echo "已刪除 rack2.t、rack3.t"' '已移除'
 
 ch_end

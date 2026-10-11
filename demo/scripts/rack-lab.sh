@@ -60,9 +60,11 @@ case "${1:-}" in
     under=$(kafka_topics --describe --topic "$t" --under-min-isr-partitions 2>/dev/null | grep -c "Partition:")
     kafka_topics --describe --topic "$t" --under-min-isr-partitions 2>/dev/null | grep -oE 'Partition: [0-9]+.*Isr: [0-9,]*' | sed 's/^/  /'
     echo "  共 $under 個分區(總共 6 個)"
-    sent=$(DELIVERY_MS=30000 PRODUCE_TIMEOUT=120 produce_test "$t" 600 all)
+    # 用 RoundRobinPartitioner 讓每個分區都分到資料(等同「每個 key 都要寫得進去」):預設的自適應分區會把沒有 key 的訊息
+    #   繞到健康的分區(實測:3 個分區低於 min.isr 時 600 筆仍全部寫入),那只對無 key 訊息有效;有 key 的訊息仍會失敗
+    sent=$(DELIVERY_MS=30000 PRODUCE_TIMEOUT=120 PRODUCER_EXTRA="partitioner.class=org.apache.kafka.clients.producer.RoundRobinPartitioner" produce_test "$t" 600 all)
     got=$(( $(topic_message_count "$t") - before ))
-    echo "acks=all 寫 600 筆(平均分到 6 個分區):topic 實際多了 $got 筆"
+    echo "acks=all 寫 600 筆(輪流寫到 6 個分區,每個分區約 100 筆):topic 實際多了 $got 筆"
     start_containers $b; wait_healthy $b >/dev/null
     wait_until "副本補齊" 300 bash -c "[ -z \"\$(\"$DEMO_DIR/scripts/k.sh\" kafka-topics --bootstrap-server $KAFKA_BOOTSTRAP --command-config $KAFKA_ADMIN_CONFIG --describe --under-replicated-partitions 2>/dev/null | grep Partition)\" ]" >/dev/null || true
     if [ "$under" = 0 ] && [ "$got" = 600 ]; then
