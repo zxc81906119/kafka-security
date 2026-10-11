@@ -118,7 +118,7 @@ verify_until_done() {
 
 lab_skew() {
   say "建立一個 6 分區、副本 3 的 topic,故意把所有副本都放在 broker1~3,寫入約 200 MB;broker4 完全沒有資料(就像剛加入的新 broker)"
-  local sent assign p sep=""
+  local sent assign="" p sep=""
   kafka_topics --delete --if-exists --topic "$TOPIC" >/dev/null; sleep 3
   write_skew_plan /tmp/cap-skew-assign.json
   for p in $(seq 0 $((PARTITIONS - 1))); do

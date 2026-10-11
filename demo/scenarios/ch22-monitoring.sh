@@ -35,7 +35,7 @@ step mon-controller-tel "【A:controller】停 1 台 controller → KafkaControl
 
 step mon-jmx-endpoint "【路徑 B:JMX exporter】Prometheus 官方的 Java agent(從 Maven Central 下載、校驗 SHA-1),每個 broker 與 controller 在 7778 埠開 /metrics。只匯出告警需要的 MBean(config/jmx/kafka.yml),不匯出全部" \
   "JVM 參數 -javaagent:…=7778:kafka.yml;curl <節點>:7778/metrics" \
-  'bash "$MON" jmx-endpoint 2>&1' '判定:6 個節點都開了 JMX exporter'
+  'bash "$MON" jmx-endpoint 2>&1' '判定:7 個節點都開了 JMX exporter'
 
 step mon-rules-jmx "【B】同一組 7 條告警,指標換成 JMX 的名稱(config/c3/ops_rules_jmx.yml);另加「監控的監控」KafkaJmxScrapeDown(抓不到 exporter)。每 15 秒抓、每 15 秒評估" \
   "GET /api/v1/rules(kafka-platform-jmx)" \

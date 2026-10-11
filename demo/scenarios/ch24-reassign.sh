@@ -19,15 +19,15 @@ source "$(dirname "$0")/../scripts/lib-ev.sh"
 ch_begin ch24 "容量與再平衡:分區重新指派加限速"
 RL="$DEMO_ROOT/scripts/reassign-lab.sh"
 
-step reassign-skew "【造出不均】6 分區的 topic,所有副本只放在 broker1、broker2,寫入約 200 MB;broker3 是空的(新增 broker 之後就是這種狀態)" \
+step reassign-skew "【造出不均】6 分區、副本 3 的 topic,所有副本只放在 broker1~3,寫入約 200 MB;broker4 是空的(新增 broker 之後就是這種狀態)" \
   "kafka-topics --create --replica-assignment …;kafka-producer-perf-test;kafka-log-dirs --describe" \
-  'bash "$RL" skew 2>&1' '判定:資料全擠在 broker1、broker2'
+  'bash "$RL" skew 2>&1' '判定:資料全擠在 broker1~3'
 
 step reassign-plan "【回退檔與計畫】先把目前的指派存成回退檔;看工具建議的新指派(--generate,只是草稿);寫出審過的均衡計畫" \
   "kafka-reassign-partitions --generate --topics-to-move-json-file … --broker-list 11,12,13" \
   'bash "$RL" plan 2>&1' '判定:已存回退檔'
 
-step reassign-execute "【限速搬家】背景持續寫入 600 筆,同時限速 4 MB/s 搬家;--verify 追到完成並自動移除限速;三台 broker 的資料量變平均" \
+step reassign-execute "【限速搬家】背景持續寫入 600 筆,同時限速 4 MB/s 搬家;--verify 追到完成並自動移除限速;4 台 broker 的資料量變平均" \
   "kafka-reassign-partitions --execute --throttle 4000000;--verify;kafka-log-dirs" \
   'bash "$RL" execute 2>&1' '判定:限速搬家期間寫入零失敗'
 
