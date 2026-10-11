@@ -9,7 +9,7 @@ const here = path.dirname(fileURLToPath(import.meta.url));
 // 元件晶片(與「Demo 部署元件」圖對應)
 const COMP = {
   browser: '瀏覽器', postman: 'Postman', cli: 'Kafka CLI / curl(kc、hc)', opmenu: 'OP menu', certs: '憑證',
-  ad: '模擬 AD(openldap)', ldapadmin: 'phpLDAPadmin', controller: 'controller', broker: 'broker + MDS', rp: 'REST Proxy', c3: 'Control Center', prom: 'Prometheus', am: 'Alertmanager', legacy: 'legacy app', conjur: 'CyberArk(Conjur)',
+  ad: '模擬 AD(openldap)', ldapadmin: 'phpLDAPadmin', controller: 'controller', broker: 'broker + MDS', rp: 'REST Proxy', c3: 'Control Center', prom: 'Prometheus', am: 'Alertmanager', legacy: 'legacy app', conjur: 'CyberArk(Conjur)', wd: '外部看門狗', dr: 'DR 站(Cluster Linking)',
 };
 // 每個 Lab:prove 一句話;use 用到的元件;flows [誰 / 做什麼, 經過哪裡, 結果]
 export const MAPS = [
@@ -83,6 +83,12 @@ export const MAPS = [
     flows: [['寫入 100 MB', 'topic 啟用 tier、segment 5 MB', '✔ 20 到 30 秒內開始上傳到 MinIO'], ['hotset 到期', '下一輪保留檢查清本機', '✔ 本機約 300 → 20 MB;筆數不變'], ['從頭讀 / 重啟 broker1', '舊資料從物件儲存取回', '✔ 讀到 100000 筆'], ['存取保護', 'HTTPS、專用帳號、policy', '✘ 匿名 403、建別的 bucket 被拒;✔ 專用帳號只能動 kafka-tier']] },
   { n: 30, prove: '告警要「找上人」:寄成信、依嚴重度分流、同類合併、解除也通知;郵件伺服器強制 STARTTLS 並要帳密,Alertmanager 的密碼不寫在設定裡', use: ['cli', 'broker', 'prom', 'am', 'certs'],
     flows: [['測試告警', 'Alertmanager → SMTP(STARTTLS + 帳密)→ 郵件伺服器', '✔ 收到信,主旨寫明狀態、名稱、嚴重度'], ['critical / warning', 'route 依 severity 分流', '✔ critical 寄值班信箱、warning 寄維運群組信箱'], ['同一種告警 3 個實例', 'group_by alertname、severity', '✔ 合併成 1 封,不洗版'], ['停 broker3 再恢復', 'URP 規則 → Alertmanager → 郵件', '✔ FIRING → RESOLVED 兩封'], ['不用 TLS / 沒帳密 / 錯密碼', '郵件伺服器', '✘ 都被拒 → ✔ 正確帳密才收']] },
+  { n: 34, prove: '看門狗:監控自己壞掉時不會有任何告警;讓「心跳停了」本身變成告警,連 HA 察覺不到的設定錯誤都抓得到', use: ['cli', 'prom', 'am', 'wd', 'certs'],
+    flows: [['Watchdog(vector(1))', 'Prometheus → Alertmanager → 外部看門狗(每 60 秒,HTTPS + Basic)', '✔ 心跳 OK'], ['停 Alertmanager', '心跳停止', '✘ 逾時後判定監控鏈路失效'], ['停 Prometheus', 'Alertmanager 手上的 Watchdog 過期後才停', '✘ 較慢發現(要寫進值班 SOP)'], ['兩者都健康、密碼設錯', 'webhook 401', '✘ 只有看門狗發現']] },
+  { n: 35, prove: '多機架:副本 3 / min.isr 2 要撐過整個機架斷電,至少要 3 個機架;2 個機架時部分分區會暫停寫入', use: ['cli', 'broker'],
+    flows: [['broker.rack(2 個機架)', '新 topic 每分區橫跨 2 個機架', '✔ 一定有一個機架放 2 份'], ['rack-b 整排斷電', 'acks=all 寫入', '✘ 部分分區低於 min.isr、寫不進去'], ['broker.rack(3 個機架)', '每分區 3 份各在一個機架', '✔'], ['rack-a 整排斷電(2 台)', 'acks=all 寫入', '✔ 全部照常寫入']] },
+  { n: 36, prove: 'DR 與演練:Cluster Linking 鏡像到 DR 站;主站整站斷電時 failover、應用程式改連、量測 RPO / RTO、切回,並留下演練紀錄', use: ['cli', 'broker', 'controller', 'dr', 'ad'],
+    flows: [['主站 → DR 站', 'Cluster Linking(DR 主動連;SCRAM 唯讀帳號)', '✔ 資料與 consumer offset 同步'], ['yujie 在 DR 站', 'DR 站自己的 MDS', '✘ 授權沒同步 → 補建後 ✔'], ['主站整站斷電', 'DR 站 failover、client 改連', '✔ 恢復寫入;遺失 = 斷電當下的鏡像落後'], ['主站恢復', '重建為鏡像 → promote → 改回', '✔ 切回;產生演練紀錄']] },
 ];
 
 const esc = s => s.replace(/&/g, '&amp;').replace(/</g, '&lt;');
