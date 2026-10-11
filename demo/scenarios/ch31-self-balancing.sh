@@ -4,7 +4,7 @@
 # ----------------------------------------------------------------------------
 # 白話:第 24 章是人工搬分區。Self-Balancing 是 Confluent 內建的自動版:新 broker 加進來自己搬、要下線一台下一個指令就搬走並關機。
 #   這一章驗證它「會動」與「不會動」的情況,以及移除 broker 的完整過程。
-# 前置條件:HA 模式:scripts/ha.sh on --with-c3(c3 非必要);第一步會執行 scripts/sbc-setup.sh on(依序重建 controller 與 broker)
+# 前置條件:叢集已啟動(scripts/up.sh);第一步會執行 scripts/sbc-setup.sh on(依序重建 controller 與 broker)
 # 用法:
 #   ./demo.sh 31                  經由講解控制台跑這一章(DEMO_PAUSE=0 不暫停)
 #   ./scenarios/ch31-self-balancing.sh    直接跑

@@ -5,7 +5,7 @@
 # 白話:日誌和 trace 先寫進 Kafka 再送進 Loki / Tempo。這支腳本逐項驗證:資料真的有流過去、
 #   Loki 停掉時資料留在 Kafka 不掉、一個 trace 能跨過 Kafka 把「寫入端」和「讀取端」串在一起、
 #   稽核事件也能在 Loki 查到、各元件的 Kafka 帳號權限最小。
-# 前置條件:HA 模式 + scripts/grafana.sh on + scripts/observability.sh on
+# 前置條件:叢集已啟動 + scripts/grafana.sh on + scripts/observability.sh on
 # 用法:
 #   scripts/observe-lab.sh flow     日誌流向:平台容器 → Kafka(otel-logs)→ Loki;Loki 與 Tempo 要 mTLS
 #   scripts/observe-lab.sh buffer   Loki 停掉期間產生的日誌,恢復後一筆不少(Kafka 當緩衝)

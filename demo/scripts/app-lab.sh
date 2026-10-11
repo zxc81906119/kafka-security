@@ -5,7 +5,7 @@
 # 白話:叢集再穩,應用程式的寫法不對一樣會重複或掉資料。這支腳本用 apps/ 底下幾支很短的 Java 程式,
 #   實際製造狀況(broker 暫停、consumer 當機、新成員加入、交易放棄),並數結果。
 #   程式是『一個檔案一個 main』,用 JDK 映像直接執行,不必在自己的電腦安裝 Java。
-# 前置條件:HA 模式(scripts/ha.sh on:3 台 broker,交易需要至少 3 台);第一次執行會下載 JDK 映像(約 740 MB)。
+# 前置條件:叢集已啟動(scripts/up.sh;交易需要至少 3 台 broker);第一次執行會下載 JDK 映像(約 740 MB)。
 # 用法:
 #   scripts/app-lab.sh idempotent    broker 暫停造成逾時重送:關閉冪等會寫出重複訊息,開啟冪等則不會
 #   scripts/app-lab.sh atleast       consumer 處理完、提交前當機:重啟後重複處理(at-least-once)

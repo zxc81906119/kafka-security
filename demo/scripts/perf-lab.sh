@@ -8,7 +8,7 @@
 # 重要限制:這是 docker 容器在一台筆電上跑出來的數字,資源互相搶(3 broker + 3 controller 共用同一台機器的 CPU 與磁碟),
 #   **絕對值不能拿來決定正式環境台數**,只能看「比例」(壓縮省多少、acks=all 多花多少)與「方法」。
 #   正式環境要在真實硬體與網路上,以同樣的腳本重測。
-# 前置條件:HA 模式(scripts/ha.sh on),叢集健康
+# 前置條件:叢集已啟動(scripts/up.sh),叢集健康
 # 用法:
 #   scripts/perf-lab.sh producer     寫入矩陣:acks(1、all)× 壓縮(none、lz4、zstd),每格 RECORDS 筆
 #   scripts/perf-lab.sh partitions   分區數(1、3、6、12)對 acks=all 寫入吞吐的影響

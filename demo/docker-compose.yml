@@ -584,6 +584,10 @@ services:
     container_name: schema-registry1
     hostname: schema-registry1
     profiles: ["sr", "full"]
+    # 服務名稱 schema-registry 由兩台共用(Docker DNS 輪詢,代替正式環境前端的 F5 VIP);schema-registry2 經 extends 一併繼承
+    networks:
+      default:
+        aliases: [schema-registry]
     depends_on:
       broker1: { condition: service_healthy }
       broker2: { condition: service_healthy }
@@ -649,10 +653,8 @@ services:
     extends: { service: schema-registry1 }
     container_name: schema-registry2
     hostname: schema-registry2
-    networks:
-      default:
-        aliases: [schema-registry]
-    ports:
+    # extends 會把 schema-registry1 的 ports 合併進來(兩台搶 8085,實測:driver failed programming external connectivity);!override 改成只用自己的埠
+    ports: !override
       - "${HOST_PORT_SR2:-8185}:8081"
     environment:
       SCHEMA_REGISTRY_HOST_NAME: schema-registry2
@@ -1133,10 +1135,8 @@ services:
     extends: { service: connect1 }
     container_name: connect2
     hostname: connect2
-    networks:
-      default:
-        aliases: [connect]
-    ports: ["${HOST_PORT_CONNECT2:-8183}:8083"]
+    # extends 會把 connect1 的 ports 合併進來(兩台搶 8083,實測:driver failed programming external connectivity);!override 改成只用自己的埠
+    ports: !override ["${HOST_PORT_CONNECT2:-8183}:8083"]
     environment:
       CONNECT_REST_ADVERTISED_HOST_NAME: connect2
 

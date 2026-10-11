@@ -5,7 +5,7 @@
 # 白話:日誌和 trace 不直接送進 Loki 與 Tempo,而是先寫進 Kafka,再由另一段讀出來送進去。
 #   好處:Loki 或 Tempo 掛掉、升級時,資料留在 Kafka,恢復後補上,不掉。
 #   這支腳本備妥 Kafka 這一側(兩個專用帳號、只開需要的 ACL、兩個 topic),再啟動三個容器。
-# 前置條件:HA 模式(scripts/ha.sh on)與 Grafana(scripts/grafana.sh on);記憶體吃緊時先停 Control Center:
+# 前置條件:叢集已啟動(scripts/up.sh)與 Grafana(scripts/grafana.sh on);記憶體吃緊時先停 Control Center:
 #   docker stop control-center(本 Lab 不需要它)
 # 用法:
 #   scripts/observability.sh on       備妥並啟動(可重複執行)

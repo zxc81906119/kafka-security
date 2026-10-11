@@ -6,7 +6,7 @@
 #   (1) 誰能建立、查看、刪除連接器——交給 AD 群組與 RBAC(和其他元件同一套);
 #   (2) 連接器讀寫 Kafka 用什麼身分——每個連接器用自己的 AD 服務帳號(最小權限),不共用 worker 的大權限。
 #   這支腳本備妥:worker 的 client 憑證與角色、連接器的 AD 服務帳號與角色、使用者(群組)對連接器的角色、外掛、密碼檔。
-# 前置條件:HA 模式(scripts/ha.sh on);記憶體吃緊時先 scripts/observability.sh off、docker stop control-center
+# 前置條件:叢集已啟動(scripts/up.sh);記憶體吃緊時先 scripts/observability.sh off、docker stop control-center
 # 用法:
 #   scripts/connect-setup.sh on       備妥並啟動(可重複執行)
 #   scripts/connect-setup.sh off      停掉 Connect(topic、角色、帳號保留)

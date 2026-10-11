@@ -6,7 +6,7 @@
 #   誰能建立與看到連接器(RBAC)、連接器用自己的最小權限身分而不是 worker 的大權限、
 #   壞資料不會拖垮整個連接器(DLQ)、連接器的密碼不會寫在設定裡被人從 REST 或 topic 讀走。
 #   連接器用 Apache Kafka 自帶的 FileStreamSink(寫進檔案),只為了示範 Connect 本身的行為。
-# 前置條件:HA 模式 + scripts/connect-setup.sh on
+# 前置條件:叢集已啟動 + scripts/connect-setup.sh on
 # 用法:
 #   scripts/connect-lab.sh rbac       AD 群組決定誰能建立、看到、刪除連接器
 #   scripts/connect-lab.sh identity   連接器用自己的服務帳號(最小權限);用 worker 身分或讀沒授權的 topic 會失敗

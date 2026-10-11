@@ -3,7 +3,7 @@
 # ch22-monitoring.sh — 第 22 章:平台監控與告警——官方列的必設告警(URP、離線分區、active controller)真的被觸發,兩條收集路徑各測一次
 # ----------------------------------------------------------------------------
 # 白話:監控的價值在「出事時真的會響」。這一章把 broker、controller 實際停掉,看 Prometheus 的告警規則有沒有在預期時間觸發、有沒有送到 Alertmanager、恢復後有沒有解除;也檢查監控端點本身有沒有被保護(HTTPS、帳密、mTLS、帳號分開)。
-# 前置條件:需要 HA 模式與 Prometheus、Alertmanager:scripts/ha.sh on;docker compose --profile c3 up -d prometheus alertmanager
+# 前置條件:需要 Prometheus、Alertmanager:docker compose --profile c3 up -d prometheus alertmanager
 # 用法:
 #   ./demo.sh 22                  經由講解控制台跑這一章(DEMO_PAUSE=0 不暫停)
 #   ./scenarios/ch22-monitoring.sh    直接跑

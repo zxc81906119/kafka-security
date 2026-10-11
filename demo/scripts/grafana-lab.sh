@@ -5,7 +5,7 @@
 # 白話:Control Center 只看得到 broker 與 controller;Grafana 把 Kafka、主機、consumer 放在同一個畫面。
 #   這支腳本逐項檢查:Grafana 本身有沒有被保護好(HTTPS、AD 登入)、官方儀表板真的有資料嗎(不是只有匯入成功)、
 #   主機磁碟指標、consumer 落後多少(故意讓 consumer 落後,看告警響不響)。
-# 前置條件:HA 模式,且已執行 scripts/grafana.sh on(會啟動 Grafana、node_exporter、kafka_exporter)
+# 前置條件:叢集已啟動,且已執行 scripts/grafana.sh on(會啟動 Grafana、node_exporter、kafka_exporter)
 # 用法:
 #   scripts/grafana-lab.sh stack        Grafana 的 HTTPS、資料來源、儀表板都就緒
 #   scripts/grafana-lab.sh dashboards   官方儀表板的每個查詢是否有資料(不是只有匯入成功)

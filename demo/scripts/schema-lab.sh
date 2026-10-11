@@ -6,7 +6,7 @@
 #   還沒更新的另一端壞掉?Schema Registry 用「相容性模式」把關:改壞了就拒絕註冊(HTTP 409)。
 #   這支腳本實際試:哪些改法過、哪些被擋、三種模式差在哪、transitive 為什麼重要、
 #   授權(誰能註冊)和相容性(能不能這樣改)是兩道獨立的關卡、命名策略如何影響授權、資料契約規則(CEL)能不能擋壞資料。
-# 前置條件:HA 模式或基礎環境,且 Schema Registry 已啟動(scripts/sr-setup.sh);帳密沿用第 20 章(gary、yujie)
+# 前置條件:叢集已啟動,且 Schema Registry 已啟動(scripts/sr-setup.sh);帳密沿用第 20 章(gary、yujie)
 # 用法:
 #   scripts/schema-lab.sh evolve      演進:加有預設值的欄位過、加必填欄位 409、改型別 409、相容性檢查 API
 #   scripts/schema-lab.sh modes       BACKWARD / FORWARD / FULL 對同樣三種改法的結果(3×3 對照)

@@ -5,7 +5,7 @@
 # 白話:以前有「基礎環境」與「HA 環境」兩種模式要用這支腳本切換。現在叢集一開始就是 3 controller + 4 broker、副本 3,
 #   不再有模式之分;這支腳本只剩「清掉一切、從零重建」的用途,保留名稱是因為手冊與其他腳本都這樣稱呼。
 # 用法:
-#   scripts/ha.sh on  [up.sh 參數]    清掉現有資料 → 全新重建(例:scripts/ha.sh on --with-c3 --with-restproxy)
+#   scripts/ha.sh on  [up.sh 參數]    清掉現有資料 → 全新重建(不帶參數 = 全部元件,與客戶 HA 拓樸相同)
 #   scripts/ha.sh off [up.sh 參數]    同 on(舊名稱,相容用)
 #   scripts/ha.sh status              顯示目前拓樸(controller 與 broker 數量)
 # 會改動什麼:`docker compose down -v`(清除所有 profile 的容器與資料,含 Conjur);移除 .env 裡舊的 COMPOSE_FILE / SBC_ENABLE;

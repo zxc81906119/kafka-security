@@ -6,7 +6,7 @@
 #   Kafka(官方儀表板)、主機的磁碟與 CPU(node_exporter)、consumer 落後多少(kafka_exporter)。
 #   這支腳本把要用的東西一次備妥:密碼、AD 查詢帳號、kafka_exporter 專用的 Kafka 帳號(只有 Describe 權限)、
 #   官方儀表板(固定版本、校驗雜湊),再啟動三個容器並讓 Prometheus 載入新的抓取設定與告警規則。
-# 前置條件:HA 模式(scripts/ha.sh on),Prometheus、Alertmanager 已啟動
+# 前置條件:叢集已啟動(scripts/up.sh),Prometheus、Alertmanager 已啟動
 #   (docker compose --profile c3 up -d prometheus alertmanager);需要網路下載儀表板與 node_exporter 映像。
 # 用法:
 #   scripts/grafana.sh on       備妥並啟動(可重複執行)

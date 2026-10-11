@@ -5,7 +5,7 @@
 # 白話:監控的價值在「出事時真的會響」。這支腳本實際把 broker 或 controller 停掉,
 #   看 Prometheus 的告警規則有沒有在預期時間內觸發、有沒有送到 Alertmanager、恢復後有沒有解除。
 #   另外檢查「監控自己」的安全:各個 exporter 與 Prometheus 是不是都要帳密或憑證才能連。
-# 前置條件:HA 模式(scripts/ha.sh on),且 prometheus、alertmanager 已啟動
+# 前置條件:叢集已啟動(scripts/up.sh),且 prometheus、alertmanager 已啟動
 #   (docker compose --profile c3 up -d prometheus alertmanager)
 # 用法:
 #   scripts/monitor-lab.sh jmx-endpoint  每個 broker、controller 都開了 JMX exporter(7778 埠),關鍵指標都在
@@ -35,7 +35,7 @@ need_container prometheus "先執行:docker compose --profile c3 up -d prometheu
 
 SRC="${SRC:-telemetry}"
 RULE_GROUP=$([ "$SRC" = jmx ] && echo kafka-platform-jmx || echo kafka-platform)
-NODES="broker1 broker2 broker3 controller1 controller2 controller3"
+NODES="broker1 broker2 broker3 broker4 controller1 controller2 controller3"
 # 平台告警的名稱都以 Kafka 開頭;KafkaAuthFailuresBurst 是另一章(認證失敗)的告警,這裡不算
 PLATFORM_ALERTS='^Kafka'
 NOT_PLATFORM='KafkaAuthFailuresBurst|KafkaConsumerLagHigh|KafkaExporterDown'   # 其他章節(認證失敗、第 26 章的 consumer lag)的告警,這裡不算

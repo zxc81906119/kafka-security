@@ -3,7 +3,7 @@
 # ch23-cert-rotation.sh — 第 23 章:憑證到期監控與不停機換憑證
 # ----------------------------------------------------------------------------
 # 白話:憑證過期是常見的停機原因。這一章用 blackbox 探測各端點「實際送出」的憑證算剩餘天數,並實測不重啟 broker 的換憑證流程(預檢、金絲雀、帶外回退),以及 SAN 不對、換成別的 CA 簽的憑證會發生什麼事。
-# 前置條件:需要 HA 模式、Prometheus、Alertmanager、blackbox-exporter:scripts/ha.sh on;docker compose --profile c3 up -d prometheus alertmanager blackbox-exporter
+# 前置條件:需要 Prometheus、Alertmanager、blackbox-exporter:docker compose --profile c3 up -d prometheus alertmanager blackbox-exporter
 # 用法:
 #   ./demo.sh 23                  經由講解控制台跑這一章(DEMO_PAUSE=0 不暫停)
 #   ./scenarios/ch23-cert-rotation.sh    直接跑

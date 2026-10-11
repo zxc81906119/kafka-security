@@ -6,7 +6,7 @@
 #   會吃網路與磁碟,搬太快會拖慢正在服務的讀寫,所以要『限速(throttle)』。限速是寫在叢集設定裡的,
 #   搬完如果沒有收尾(--verify),限速會一直留著,之後別的複製流量(例如重啟的 broker 追資料)也被默默限速。
 #   這支腳本依序練習:造出不均的叢集 → 存回退檔 → 限速搬家(寫入不中斷)→ 取消搬到一半的搬家 → 忘了收尾的殘留與清除。
-# 前置條件:HA 模式(scripts/ha.sh on:3 台 broker)
+# 前置條件:叢集已啟動(scripts/up.sh)
 # 用法:
 #   scripts/reassign-lab.sh skew       建 6 分區 topic cap.skew,所有副本只放在 broker1、broker2,寫入約 200 MB;broker3 是空的
 #   scripts/reassign-lab.sh plan       存目前的指派當回退檔;看工具建議的新指派(--generate);寫出審過的均衡計畫

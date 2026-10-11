@@ -3,7 +3,7 @@
 # ch29-connect.sh — 第 29 章:Kafka Connect 的安全與可靠性——RBAC、連接器各用自己的身分、壞資料(DLQ)、密碼不落地(config provider)
 # ----------------------------------------------------------------------------
 # 白話:Connect 的連接器長期在背景跑、手上常握著別的系統的帳密。這一章實測它的安全與可靠性:誰能管連接器(RBAC)、連接器用自己的最小權限身分、壞資料不拖垮整個連接器(DLQ)、密碼不寫在設定裡(config provider)。
-# 前置條件:需要 HA 模式:scripts/ha.sh on;記憶體吃緊時先 scripts/observability.sh off、docker stop control-center schema-registry
+# 前置條件:叢集已啟動(scripts/up.sh);記憶體吃緊時先 scripts/observability.sh off、docker stop control-center schema-registry
 # 用法:
 #   ./demo.sh 29                  經由講解控制台跑這一章(DEMO_PAUSE=0 不暫停)
 #   ./scenarios/ch29-connect.sh    直接跑

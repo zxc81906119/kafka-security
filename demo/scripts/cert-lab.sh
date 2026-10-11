@@ -6,7 +6,7 @@
 #   (1) 監控:用 blackbox 探測各端點「實際送出」的憑證,算出剩幾天,快到期就告警;
 #   (2) 換憑證:用 Kafka 的動態設定,一台一台換 broker 的對外憑證,不用重啟、寫入不中斷;
 #       並故意做錯(SAN 不對、換成別的 CA 簽的)看 broker 怎麼反應,以及怎麼安全回退。
-# 前置條件:HA 模式(scripts/ha.sh on),且 prometheus、alertmanager、blackbox-exporter 已啟動
+# 前置條件:叢集已啟動(scripts/up.sh),且 prometheus、alertmanager、blackbox-exporter 已啟動
 #   (docker compose --profile c3 up -d prometheus alertmanager blackbox-exporter)
 # 用法:
 #   scripts/cert-lab.sh baseline      現況:各端點「實際送出」的憑證 vs 檔案;OP menu 第 17 項(檔案巡檢,含剩餘時間分級)
@@ -83,8 +83,8 @@ verify_served() {
     "openssl s_client -connect $1 -servername ${1%%:*} -CAfile /ca.pem -verify_return_error </dev/null 2>&1 | grep -E 'Verify return code|verify error' | head -1"
 }
 
-# brokers_serial:三台 broker CLIENT 埠(9094)目前送出的憑證序號。
-brokers_serial() { local b; for b in broker1 broker2 broker3; do echo -n "$(serial_of "$b:9094") "; done; echo; }
+# brokers_serial:每台 broker CLIENT 埠(9094)目前送出的憑證序號。
+brokers_serial() { local b; for b in broker1 broker2 broker3 broker4; do echo -n "$(serial_of "$b:9094") "; done; echo; }
 
 # ---------- 動態換憑證 ----------
 
@@ -141,7 +141,7 @@ lab_baseline() {
   say "看各端點『實際送出』的憑證序號,和磁碟上 certs/server.pem 比對——監控要看實際送出的,不是只看檔案"
   local e a b f
   echo "各端點「實際送出」的憑證(TLS 握手收到的):"
-  for e in broker1:9094 broker2:9094 broker3:9094 broker1:8091; do echo "  $e → $(served $e)"; done
+  for e in broker1:9094 broker2:9094 broker3:9094 broker4:9094 broker1:8091; do echo "  $e → $(served $e)"; done
   echo "磁碟上的檔案 certs/server.pem:$(file_info server.pem)"
   echo "OP menu 第 17 項(檔案巡檢)的前幾列:"
   ( cd opmenu && OPMENU_USER=gary OPMENU_PASS=gary-pw OPMENU_YES=1 ./opmenu.sh --run 17 2>&1 | grep -E "\.pem" | head -4 | sed 's/^/  /' )
@@ -159,8 +159,8 @@ lab_monitor() {
     [ "$n" = 12 ] && { ok=1; break; }
     sleep 10
   done
-  for e in broker1:9094 broker2:9094 broker3:9094 broker1:8091 broker2:8092 broker3:8093; do echo "  $e → 剩 $(days_left $e) 天"; done
-  for e in broker1:9092 broker2:9092 broker3:9092 controller1:9093 controller2:9093 controller3:9093; do echo "  $e(內部 mTLS)→ 剩 $(days_left $e) 天"; done
+  for e in broker1:9094 broker2:9094 broker3:9094 broker4:9094 broker1:8091 broker2:8092 broker3:8093 broker4:8094; do echo "  $e → 剩 $(days_left $e) 天"; done
+  for e in broker1:9092 broker2:9092 broker3:9092 broker4:9092 controller1:9093 controller2:9093 controller3:9093; do echo "  $e(內部 mTLS)→ 剩 $(days_left $e) 天"; done
   echo "目前 firing 的憑證告警:$(cert_firing)"
   [ "$ok" = 1 ] && [ "$(cert_firing)" = "-" ] \
     && verdict "12 個 TLS 端點(6 個對外、6 個內部 mTLS)的探測都成功並有剩餘天數,基準狀態沒有憑證告警"
@@ -172,7 +172,7 @@ lab_expiring() {
   echo "簽一張只有 20 天效期的 server 憑證(同 DN、同 SAN),動態換到 CLIENT 埠:"; mkcert srv-short 20
   precheck srv-short || { echo "預檢未過,不套用"; exit 1; }
   apply srv-short | grep -E "Completed|rror"; sleep 8
-  echo "三台 broker CLIENT 埠送出的序號:$(brokers_serial)"
+  echo "4 台 broker CLIENT 埠送出的序號:$(brokers_serial)"
   echo "MDS(8091)送出的序號(不在動態重載範圍):$(serial_of broker1:8091)"
   wait_cert_alert KafkaTlsCertExpiringSoon broker1:9094 present 240 && f1=1
   echo "到期告警目前:$(cert_firing)"
@@ -186,7 +186,7 @@ lab_rotate() {
   say "背景持續寫入 300 筆,同時不重啟換成 825 天的新憑證:先換一台當金絲雀驗證,再換其餘兩台"
   local before after sent have pp f2=0 new old
   echo "簽新憑證(825 天、同 DN 與 SAN):"; mkcert srv-new 825
-  before=$(docker inspect -f '{{.State.StartedAt}}' broker1 broker2 broker3 | tr '\n' ' ')
+  before=$(docker inspect -f '{{.State.StartedAt}}' broker1 broker2 broker3 broker4 | tr '\n' ' ')
   kafka_topics --delete --if-exists --topic cert.roll >/dev/null 2>&1; sleep 3
   kafka_topics --create --topic cert.roll --partitions 3 --replication-factor 3 --config min.insync.replicas=2 | grep -E "Created|rror"
   "$DEMO_DIR/scripts/k.sh" kafka-producer-perf-test --topic cert.roll --num-records 300 --throughput 5 --record-size 100 \
@@ -202,11 +202,11 @@ lab_rotate() {
     *)        echo "   金絲雀驗證失敗,停止並回退"; revert; exit 1 ;;
   esac
   sleep 8
-  echo "三台 broker CLIENT 埠送出的序號:$(brokers_serial)"
+  echo "4 台 broker CLIENT 埠送出的序號:$(brokers_serial)"
   wait "$pp"
   sent=$(grep -aoE '^[0-9]+ records sent' /tmp/cert-roll.out | tail -1 | awk '{print $1}')
   have=$(topic_message_count cert.roll)
-  after=$(docker inspect -f '{{.State.StartedAt}}' broker1 broker2 broker3 | tr '\n' ' ')
+  after=$(docker inspect -f '{{.State.StartedAt}}' broker1 broker2 broker3 broker4 | tr '\n' ' ')
   echo "producer 送出 ${sent:-?} 筆;topic 實際 $have 筆;broker 啟動時間 $([ "$before" = "$after" ] && echo "沒有變(沒重啟)" || echo "變了(有重啟)")"
   wait_cert_alert KafkaTlsCertExpiringSoon broker1:9094 absent 240 && f2=1
   new=$(serial_of broker1:9094); old=$(file_info server.pem | awk '{print $1}')
@@ -256,7 +256,7 @@ lab_reject_ca() {
   say "為了看後果,故意不理預檢,只換 broker1 一台(金絲雀),其他台不動"
   echo "為了看後果,故意不理預檢,只換一台當金絲雀(broker1 = id 11):"
   apply srv-rogue 11 | grep -E "Completed|rror" | head -1; sleep 8
-  echo "三台 broker 送出的序號:$(brokers_serial)"
+  echo "4 台 broker 送出的序號:$(brokers_serial)"
   v=$(verify_served broker1:9094); echo "從 client 角度驗證 broker1 送出的鏈:$v"
   echo -n "client(只信任行內 CA)連 broker1:"
   r=$("$DEMO_DIR/scripts/k.sh" kafka-topics --bootstrap-server broker1:9094 --command-config "$KAFKA_ADMIN_CONFIG" --list 2>&1 \
@@ -291,13 +291,13 @@ lab_persist() {
 }
 
 lab_cleanup() {
-  say "移除動態設定(走帶外路徑),讓三台 broker 回到靜態檔 certs/server.pem 的憑證"
+  say "移除動態設定(走帶外路徑),讓4 台 broker 回到靜態檔 certs/server.pem 的憑證"
   local serials static matched
   revert; sleep 8
   serials=$(brokers_serial); static=$(file_info server.pem | awk '{print $1}')
   echo "序號:$serials"; echo "靜態檔 server.pem:$static"
   matched=$(echo "$serials" | tr ' ' '\n' | grep -c "^$static$")
-  [ "$matched" = 3 ] && verdict "已回到靜態檔的憑證(三台 broker 送出的序號都與 certs/server.pem 相同)"
+  [ "$matched" = 4 ] && verdict "已回到靜態檔的憑證(4 台 broker 送出的序號都與 certs/server.pem 相同)"
 }
 
 case "${1:-}" in

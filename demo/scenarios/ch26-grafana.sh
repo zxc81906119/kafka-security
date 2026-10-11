@@ -3,7 +3,7 @@
 # ch26-grafana.sh — 第 26 章:Grafana 全元件監控——官方儀表板、node_exporter(主機)、kafka_exporter(consumer lag)、AD 登入
 # ----------------------------------------------------------------------------
 # 白話:Control Center 只看得到 broker 與 controller。這一章接上 Grafana 看全部:官方儀表板、主機磁碟(node_exporter)、consumer lag(kafka_exporter),並讓這些元件自己也受保護(HTTPS、AD 登入、mTLS、最小權限帳號)。
-# 前置條件:需要 HA 模式與 Prometheus、Alertmanager:scripts/ha.sh on;docker compose --profile c3 up -d prometheus alertmanager blackbox-exporter
+# 前置條件:需要 Prometheus、Alertmanager:docker compose --profile c3 up -d prometheus alertmanager blackbox-exporter
 # 用法:
 #   ./demo.sh 26                  經由講解控制台跑這一章(DEMO_PAUSE=0 不暫停)
 #   ./scenarios/ch26-grafana.sh    直接跑

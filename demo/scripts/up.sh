@@ -1,12 +1,14 @@
 #!/usr/bin/env bash
 # ============================================================================
-# up.sh — 一鍵啟動核心環境(LDAP + 3 台 KRaft controller + 4 台 broker + MDS RBAC),並完成初始化
+# up.sh — 一鍵啟動完整 HA 環境(LDAP + 3 台 KRaft controller + 4 台 broker + MDS RBAC + 生態系元件),並完成初始化
 # ----------------------------------------------------------------------------
 # 白話:把整個 demo 從零啟動:產生憑證、起 LDAP(模擬 AD)與密碼政策、起 controller 與 broker、等 MDS 就緒、
 #   建第一批 role binding、建立服務帳號與 topic。可重複執行。
 # 前置條件:Docker 已啟動;映像可下載或已在本機。
 # 用法:
-#   scripts/up.sh [--with-restproxy] [--with-sr] [--with-connect] [--with-c3]    選用元件(記憶體吃緊,用到才開)
+#   scripts/up.sh                  預設:全部啟動(與客戶正式環境相同的 HA 拓樸;所有章節都以這個環境為準)
+#   scripts/up.sh --core-only      只起叢集核心(除錯用;不作為驗證環境)
+#   scripts/up.sh [--with-restproxy] [--with-sr] [--with-connect] [--with-c3]    只起指定元件(除錯用)
 #   拓樸固定:3 controller(動態 quorum)+ 4 broker、副本 3、min.insync.replicas 2;REST Proxy、Schema Registry、Connect 各 2 台,Control Center 1 台。
 #   主機埠可在 .env 以 HOST_PORT_* 覆蓋(Windows 保留埠範圍時用)。
 # 會改動什麼:啟動容器(openldap、ldapadmin、controller、broker,加選用元件);必要時補產 certs/;
@@ -34,12 +36,14 @@ ldap_admin_search() {
 
 # ---------- 參數與模式 ----------
 
-PROFILES=""
+PROFILES=""; WITH_SR=""; WITH_CONNECT=""
+# 沒帶參數 = 全部啟動(HA 為準);帶 --core-only 或 --with-* 才改成部分啟動
+[ $# -eq 0 ] && set -- --with-restproxy --with-sr --with-connect --with-c3
 for a in "$@"; do
   case "$a" in
     --with-restproxy) PROFILES="$PROFILES --profile restproxy" ;;   # REST Proxy 2 台 + L4 負載平衡器
-    --with-sr)        PROFILES="$PROFILES --profile sr" ;;           # Schema Registry 2 台
-    --with-connect)   PROFILES="$PROFILES --profile connect" ;;      # Connect 2 個 worker
+    --with-sr)        WITH_SR=1 ;;                                    # Schema Registry 2 台(交給 sr-setup.sh:先授權再啟動)
+    --with-connect)   WITH_CONNECT=1 ;;                               # Connect 2 個 worker(交給 connect-setup.sh:先授權再啟動)
     --with-c3)        PROFILES="$PROFILES --profile c3" ;;           # Control Center 1 台(+ Prometheus、Alertmanager)
   esac
 done
@@ -101,4 +105,8 @@ if [ -n "$PROFILES" ]; then
   echo "[up] 啟動選用元件: $PROFILES"
   docker compose $PROFILES up -d --wait --wait-timeout 300
 fi
+# SR 與 Connect 一定要「先建 role binding、再啟動」:先啟動的話,第一次存取 _schemas 等 topic 被拒,
+#   controller 的授權快取會留著這次拒絕,之後補綁定也一直 TopicAuthorizationException(實測;只能依序重啟 controller 清掉)。
+[ -n "$WITH_SR" ] && bash scripts/sr-setup.sh
+[ -n "$WITH_CONNECT" ] && bash scripts/connect-setup.sh on
 echo "[up] 完成。"

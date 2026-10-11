@@ -4,7 +4,7 @@
 # ----------------------------------------------------------------------------
 # 白話:舊 segment 上傳到物件儲存,broker 本機只留最近一段;讀舊資料時 broker 從物件儲存取回。
 #   這一章驗證:資料真的上傳、本機真的變小、從頭讀還是讀得到全部、broker 重啟後仍在,以及物件儲存的存取保護。
-# 前置條件:HA 模式:scripts/ha.sh on;第一步會執行 scripts/tier-setup.sh on(啟動 MinIO、broker 依序重建)
+# 前置條件:叢集已啟動(scripts/up.sh);第一步會執行 scripts/tier-setup.sh on(啟動 MinIO、broker 依序重建)
 # 用法:
 #   ./demo.sh 32                  經由講解控制台跑這一章(DEMO_PAUSE=0 不暫停)
 #   ./scenarios/ch32-tiered-storage.sh    直接跑

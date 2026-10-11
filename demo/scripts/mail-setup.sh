@@ -5,7 +5,7 @@
 # 白話:告警只在 Prometheus 與 Alertmanager 裡亮燈,值班的人不會知道。這支腳本讓 Alertmanager 把告警寄成信,
 #   寄到郵件伺服器。demo 用 Mailpit(輕量的測試用郵件伺服器,有網頁可看收到的信)代替行內自架的郵件伺服器;
 #   設定的形狀(位址、埠、STARTTLS、帳密、寄件人與收件人)和接到行內伺服器時相同。
-# 前置條件:Prometheus 與 Alertmanager 已啟動(docker compose --profile c3 up -d prometheus alertmanager;HA 或基礎環境皆可)
+# 前置條件:Prometheus 與 Alertmanager 已啟動(docker compose --profile c3 up -d prometheus alertmanager)
 # 用法:
 #   scripts/mail-setup.sh on       備妥並啟動(可重複執行)
 #   scripts/mail-setup.sh off      停掉郵件伺服器,Alertmanager 的設定還原成原本的

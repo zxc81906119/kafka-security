@@ -3,7 +3,7 @@
 # ch25-app-reliability.sh — 第 25 章:應用程式端的可靠性——冪等 producer、at-least-once、rebalance、靜態成員、交易
 # ----------------------------------------------------------------------------
 # 白話:叢集再穩,應用程式寫法不對一樣會重複或掉資料。這一章用幾支短的 Java 程式實際製造狀況(broker 凍結、consumer 當機、新成員加入、交易 abort)並數結果。
-# 前置條件:需要 HA 模式(scripts/ha.sh on);第一次執行會下載 JDK 映像(eclipse-temurin:21-jdk,約 740 MB)並複製 Kafka jar 到 Docker volume
+# 前置條件:叢集已啟動(scripts/up.sh);第一次執行會下載 JDK 映像(eclipse-temurin:21-jdk,約 740 MB)並複製 Kafka jar 到 Docker volume
 # 用法:
 #   ./demo.sh 25                  經由講解控制台跑這一章(DEMO_PAUSE=0 不暫停)
 #   ./scenarios/ch25-app-reliability.sh    直接跑
