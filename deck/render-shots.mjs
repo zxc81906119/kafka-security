@@ -1,11 +1,13 @@
 // 方案簡報 Live Demo 用:把 evidence 的 log 渲染成窄版終端截圖(字級放大,投影片上可讀)
+// 帶參數時(例:node render-shots.mjs ch06/06-audit ch14/01-anon)改為產生手冊用的終端截圖,寫回 evidence/<章>/<步>.png
 import { chromium } from '../demo/e2e/node_modules/playwright/index.mjs';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 const here = path.dirname(fileURLToPath(import.meta.url));
 const ev = path.join(here, '..', 'demo', 'evidence');
-const SHOTS = ['ch01/04-valid-no-perm', 'ch03/05-ming-denied', 'ch04/05-ming-write', 'ch07/05-svc-denied', 'ch11/07-ops-noread', 'ch12/04-ok', 'ch13/02-mds-as-user', 'ch14/04-ming-topics'];
+const ARGS = process.argv.slice(2);
+const SHOTS = ARGS.length ? ARGS : ['ch01/04-valid-no-perm', 'ch03/05-ming-denied', 'ch04/05-ming-write', 'ch07/05-svc-denied', 'ch11/07-ops-noread', 'ch12/04-ok', 'ch13/02-mds-as-user', 'ch14/04-ming-topics'];
 const esc = s => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 const colorize = l => { const e = esc(l);
   if (l.startsWith('$ ')) return `<span class="cmd"><span class="p">$</span> ${e.slice(2)}</span>`;
@@ -23,6 +25,6 @@ for (const s of SHOTS) {
 pre{margin:0;padding:14px 16px;color:#d6deeb;font-size:14.5px;line-height:1.5;white-space:pre-wrap;word-break:break-all}
 .cmd{color:#fff;font-weight:700}.p,.ok{color:#7ee787}.bad{color:#ff7b72}</style>
 <div class="win"><div class="bar"><span class="d" style="background:#ff5f56"></span><span class="d" style="background:#ffbd2e"></span><span class="d" style="background:#27c93f"></span></div><pre>${lines.map(colorize).join('\n')}</pre></div>`);
-  await (await page.$('.win')).screenshot({ path: path.join(here, 'demo-shots', s.replace('/', '-') + '.png') });
+  await (await page.$('.win')).screenshot({ path: ARGS.length ? path.join(ev, s + '.png') : path.join(here, 'demo-shots', s.replace('/', '-') + '.png') });
 }
 await browser.close(); console.log('ok');
