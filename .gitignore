@@ -69,3 +69,6 @@ demo/config/c3/alertmanager-generated.yml.orig
 
 # --- 第 32 章 Tiered Storage 的帳密與 TLS 檔(tier-setup.sh 產生) ---
 demo/config/tier/
+# 第 34 章看門狗:Alertmanager 送心跳的帳密(隨機產生)
+demo/config/watchdog/secrets/
+demo/config/c3/watchdog-am.pw

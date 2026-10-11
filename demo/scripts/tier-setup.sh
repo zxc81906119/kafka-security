@@ -98,16 +98,13 @@ case "${1:-status}" in
     wait_healthy minio >/dev/null || die "minio 沒有 healthy:docker logs minio"
     say "建立 bucket $BUCKET 與專用帳號 $KAFKA_USER(權限只限這個 bucket)"
     create_bucket_and_user
-    if ! tier_in_env; then
-      sed -i '/^COMPOSE_PATH_SEPARATOR=/d;/^COMPOSE_FILE=/d' .env
-      printf 'COMPOSE_PATH_SEPARATOR=,\nCOMPOSE_FILE=docker-compose.yml,docker-compose.tier.yml\n' >> .env
-    fi
+    compose_file_add docker-compose.tier.yml          # 只加自己的檔(可與第 35 章的 rack 檔並存)
     say "broker 依序重建,讀入 Tiered Storage 設定"
     roll_brokers
     note "[tier] 完成:bucket=$BUCKET,endpoint=https://minio:9000,控制台 https://localhost:9001(未對外開放埠;需要時 docker exec)" ;;
   off)
     say "還原 .env,broker 依序重建(不再載入 Tiered Storage 設定),停掉 MinIO"
-    sed -i '/^COMPOSE_PATH_SEPARATOR=/d;/^COMPOSE_FILE=/d' .env
+    compose_file_remove docker-compose.tier.yml
     roll_brokers
     docker compose --profile tier stop minio >/dev/null 2>&1; docker compose --profile tier rm -f minio >/dev/null 2>&1
     note "[tier] 已關閉(MinIO 資料卷 minio-data 保留;ha.sh 重建時會一併清除)" ;;

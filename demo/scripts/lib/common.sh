@@ -66,3 +66,17 @@ start_containers() { docker start "$@" >/dev/null; }
 
 # dcurl <curl 參數...>:在 demo 的 docker 網路內跑 curl,信任行內 CA;最後一行印出 [HTTP 狀態碼](連不上是 000)。
 dcurl() { bash "$DEMO_DIR/scripts/dcurl.sh" "$@"; }
+
+# compose_file_add <檔名> / compose_file_remove <檔名>:把疊加的 compose 檔加進 / 移出 .env 的 COMPOSE_FILE。
+#   多個實驗(第 32 章 tier、第 35 章 rack)可以同時疊加,互不覆蓋;全部移除後連 COMPOSE_FILE 一起刪掉。
+compose_file_add() {
+  local f="$1" env="$DEMO_DIR/.env"
+  grep -q '^COMPOSE_FILE=' "$env" || printf 'COMPOSE_PATH_SEPARATOR=,\nCOMPOSE_FILE=docker-compose.yml\n' >> "$env"
+  grep -q "^COMPOSE_FILE=.*$f" "$env" || sed -i "s|^COMPOSE_FILE=\(.*\)$|COMPOSE_FILE=\1,$f|" "$env"
+}
+compose_file_remove() {
+  local f="$1" env="$DEMO_DIR/.env"
+  sed -i "s|,$f||" "$env"
+  grep -q '^COMPOSE_FILE=docker-compose.yml$' "$env" && sed -i '/^COMPOSE_FILE=docker-compose.yml$/d;/^COMPOSE_PATH_SEPARATOR=/d' "$env"
+  return 0
+}

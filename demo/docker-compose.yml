@@ -685,6 +685,30 @@ services:
       retries: 12
       start_period: 10s
 
+  # 第 34 章:外部看門狗(dead man's switch)。Alertmanager 每分鐘送 Watchdog 心跳來,超過 TIMEOUT_SEC 沒收到就判定「監控鏈路失效」。
+  #   代表行內既有的企業監控平台(正式環境接那個平台,不部署這個容器)。用 scripts/watchdog-setup.sh on 啟動。
+  watchdog:
+    image: python:3-alpine                              # 測試時本機已有的版本;只用標準函式庫
+    container_name: watchdog
+    hostname: watchdog
+    profiles: ["watchdog"]
+    command: ["python3", "/app/deadman.py"]
+    environment:
+      TIMEOUT_SEC: "180"                                # Alertmanager 每 60 秒重送一次,容許漏 2 次
+      USER_FILE: /etc/watchdog/user
+      TLS_CERT: /etc/tls/server.pem
+      TLS_KEY: /etc/tls/server.key
+    volumes:
+      - ./config/watchdog/deadman.py:/app/deadman.py:ro
+      - ./config/watchdog/secrets:/etc/watchdog:ro
+      - ./certs:/etc/tls:ro
+    mem_limit: 64m
+    healthcheck:
+      test: ["CMD-SHELL", "python3 -c \"import socket; socket.create_connection(('localhost', 9443), 2)\""]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+
   # 第 30 章:測試用的郵件伺服器(收告警信、有網頁可看)。正式環境是行內自架的郵件伺服器;這裡用 Mailpit 代替,
   # SMTP 啟用 STARTTLS 並強制、要帳密;網頁與 API 走 HTTPS + Basic。用 scripts/mail-setup.sh on 啟動。
   mailpit:
