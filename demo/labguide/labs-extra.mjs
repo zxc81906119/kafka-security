@@ -562,7 +562,7 @@ hc -u gary:gary-pw -X POST -H "$J" -d "$ORDER_ENC_BODY" https://schema-registry:
         manual: ['bash scripts/observability.sh on'],
         ev: 'obs-on', re: /\[observability\] 完成/, expect: '產生密碼檔、建立 alloy-producer 與 alloy-consumer、ACL(2 與 4 個資源)、下載 agent、啟動容器;最後 [observability] 完成。',
         warn: '重跑是安全的。Kafka 的 SCRAM 帳號 off 時不刪除(KAFKA-20774)。Alloy 掛了 Docker socket 是為了讀測試容器的日誌;正式環境讀 RHEL 上的日誌檔(local.file_match + loki.source.file),不需要 socket(socket 等於 root 權限)。' },
-      { t: '27.2 日誌流向:容器 → Kafka → Loki', why: 'Alloy 讀 broker 與 controller 的容器日誌,寫進 Kafka 的 otel-logs,再由另一段(alloy-consumer)讀出送進 Loki。實測 6 個節點的日誌都進了 Loki,Kafka topic 累計筆數持續增加。第一次啟動時 Docker 會把容器從啟動以來的全部日誌交出來(數十萬行),所以設定只留最近 15 分鐘的(stage.drop older_than),並讓佇列滿時背壓而不是丟棄(block_on_overflow)——這兩個設定是實測踩到 "sending queue is full" 後加的。',
+      { t: '27.2 日誌流向:容器 → Kafka → Loki', why: 'Alloy 讀 broker 與 controller 的容器日誌,寫進 Kafka 的 otel-logs,再由另一段(alloy-consumer)讀出送進 Loki。實測 7 個節點(4 台 broker、3 台 controller)的日誌都進了 Loki,Kafka topic 累計筆數持續增加。第一次啟動時 Docker 會把容器從啟動以來的全部日誌交出來(數十萬行),所以設定只留最近 15 分鐘的(stage.drop older_than),並讓佇列滿時背壓而不是丟棄(block_on_overflow)——這兩個設定是實測踩到 "sending queue is full" 後加的。',
         manual: ['bash scripts/observe-lab.sh flow'],
         ev: 'obs-flow', re: /判定:平台日誌經 Kafka[^;]*7 個節點都有/, expect: '7 個節點(4 台 broker、3 台 controller)最近 30 分鐘各有日誌行數;Kafka topic otel-logs 累計 N 筆;Loki 與 Tempo 不帶 client 憑證 [HTTP 000]、帶 monitor 憑證能連(Loki 剛重啟時可能暫時 503);判定:平台日誌經 Kafka…。',
         warn: 'Loki 裡的每一行是 OTLP 轉換後的 JSON({"body":"原始日誌"}),查詢時用 | json 取出;若要保留原始格式與標籤,需要在 Alloy 加處理步驟(本 Lab 沒做)。日誌可能含敏感資料(帳號、IP),Loki 的保留期與存取權限要依規定訂(本 Lab 保留 7 天是範例值)。' },
