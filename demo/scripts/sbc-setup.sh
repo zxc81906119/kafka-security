@@ -61,6 +61,8 @@ case "${1:-status}" in
   off)
     say "停掉第 5 台 broker(若有),SBC_ENABLE 還原為 false,依序重建"
     docker compose --profile sbc stop broker5 >/dev/null 2>&1; docker compose --profile sbc rm -f broker5 >/dev/null 2>&1
+    # 容器移除不等於離開叢集:node 15 的註冊若還在,之後新建的 topic 可能把副本放上去(實測:broker5 啟動失敗後,新 topic 有副本落在 15)
+    "$DEMO_DIR/scripts/k.sh" kafka-cluster unregister --bootstrap-server "$KAFKA_BOOTSTRAP" --command-config "$KAFKA_ADMIN_CONFIG" --id 15 >/dev/null 2>&1 || true
     set_sbc_env false
     roll_all
     note "[sbc] 已關閉" ;;
