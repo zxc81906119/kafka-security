@@ -208,7 +208,7 @@ add(...table([
 // Demo 架構
 add(H1('Demo 架構'));
 add(P('先看兩張圖:第一張是「有哪些東西、在哪個埠」,第二張是「誰用什麼身分進來」。之後每個 Lab 開頭都有一張「Lab 地圖」,把這堂用到的元件打亮、標出走的路與結果。'));
-add(...image('../labguide/img/arch-deploy.png', 'Demo 部署元件(與客戶正式環境相同的 HA 拓樸)+ 你電腦上的工具')); /* TODO-REVERIFY: arch-deploy.png 仍是舊拓樸(1 controller、2 broker、9 個容器)的圖,需重畫 */
+add(...image('../labguide/img/arch-deploy.png', 'Demo 部署元件(與客戶正式環境相同的 HA 拓樸)+ 你電腦上的工具'));
 add(...table([
   ['元件', '主機埠(容器埠)', '協定 / 身分'],
   ['模擬 AD(openldap)', '389;636 只在容器內(broker 走 LDAPS)', 'bind DN 唯讀查詢帳號;使用者名稱 = CN'],
