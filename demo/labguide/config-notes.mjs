@@ -96,6 +96,7 @@ export const NOTES = {
   },
   connect: {
     'group.id': { why: '兩台 worker 同一個 group,連接器工作分擔、一台停機另一台接手', src: '實測 Lab 29' },
+    'listeners.https.ssl.truststore.location': { why: '2 台以上 worker 時,非 leader 收到的請求(建立連接器等)要以 HTTPS 轉給 leader,轉送的 REST client 用這組信任庫驗證對方', miss: '只設 keystore 時轉送失敗(PKIX path building failed),使用者拿到 HTTP 500;單台時不會轉送,看不出來', src: '實測(HA 基線)' },
     'rest.extension.classes': { why: 'ConnectSecurityExtension:連接器的建立、查看、刪除交給 RBAC', src: '官方 Connect RBAC;實測 Lab 29' },
     'rest.servlet.initializor.classes': { why: '人用 AD 帳密、C3 轉送使用者 token', src: '實測 Lab 29' },
     'connector.client.config.override.policy': { why: '允許每個連接器用自己的服務帳號(最小權限),不共用 worker 的身分', src: '實測 Lab 29' },
@@ -144,7 +145,7 @@ export const LAB_CONF = {
   21: [{ comp: 'broker', keys: ['default.replication.factor', 'min.insync.replicas'] }, { comp: 'controller', keys: ['controller.quorum.bootstrap.servers'] }],
   22: [{ comp: 'broker', keys: ['metric.reporters'] }, { comp: 'controller', keys: ['metric.reporters'] }],
   29: [
-    { comp: 'connect', keys: ['group.id', 'rest.extension.classes', 'rest.servlet.initializor.classes', 'connector.client.config.override.policy', 'config.providers', 'plugin.path'] },
+    { comp: 'connect', keys: ['group.id', 'listeners.https.ssl.truststore.location', 'rest.extension.classes', 'rest.servlet.initializor.classes', 'connector.client.config.override.policy', 'config.providers', 'plugin.path'] },
     { comp: 'control-center', keys: ['confluent.controlcenter.connect.connect.cluster'] },
   ],
   31: [{ comp: 'controller', keys: ['confluent.balancer.enable', 'inter.broker.listener.name'] }, { comp: 'broker', keys: ['confluent.balancer.enable'] }],

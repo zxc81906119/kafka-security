@@ -1978,6 +1978,24 @@
         "note": ""
       },
       {
+        "key": "listeners.https.ssl.truststore.location",
+        "value": "<SSL_DIR>/truststore.p12",
+        "env": "CONNECT_LISTENERS_HTTPS_SSL_TRUSTSTORE_LOCATION",
+        "note": "2 台 worker 時,非 leader 收到的 REST 請求(建立連接器等)要轉給 leader:轉送用的 REST client 也讀 listeners.https.* 的 TLS 設定, 沒有 truststore 就不信任對方憑證(實測:PKIX path building failed → 使用者拿到 HTTP 500)。單台時不會轉送,看不出來"
+      },
+      {
+        "key": "listeners.https.ssl.truststore.password",
+        "value": "<由 CyberArk 提供>",
+        "env": "CONNECT_LISTENERS_HTTPS_SSL_TRUSTSTORE_PASSWORD",
+        "note": ""
+      },
+      {
+        "key": "listeners.https.ssl.truststore.type",
+        "value": "PKCS12",
+        "env": "CONNECT_LISTENERS_HTTPS_SSL_TRUSTSTORE_TYPE",
+        "note": ""
+      },
+      {
         "key": "offset.storage.replication.factor",
         "value": "3",
         "env": "CONNECT_OFFSET_STORAGE_REPLICATION_FACTOR",
