@@ -683,7 +683,7 @@ hc -u gary:gary-pw -X POST -H "$J" -d "$ORDER_ENC_BODY" https://schema-registry:
         ev: 'sbc-status', re: /判定:balancer 已啟用/, expect: 'Balancer status: ENABLED;Balancer is running on brokers: [某個 controller 的 id];HealUnevenLoadTrigger 與 Current: BALANCED;判定:balancer 已啟用…。' },
       { t: '31.3 加 broker:自動搬副本,寫入不中斷', why: '先建 sbc.data(6 分區、副本 3)寫入 60000 筆,再啟動空的 broker5(node id 15)。Self-Balancing 偵測到空 broker 後先蒐集指標視窗、計算搬移計畫(實測 15 到 20 分鐘,日誌反覆出現 Insufficient metric windows… will attempt retry,每 90 秒重試),計畫算好就自動搬;搬家期間同時以 acks=all 寫入 20000 筆全部成功。對照 Lab 24:人工路徑要自己存回退檔、審計畫、限速、收尾;自動路徑你不寫計畫,但也看不到計畫(要審計畫的環境仍用 Lab 24 的人工流程或 --rebalance-dry-run)。',
         manual: ['bash scripts/sbc-lab.sh add'],
-        ev: 'sbc-add', re: /判定:空的新 broker 自動取得副本/, expect: '約 15 到 20 分鐘後 broker 15 取得副本(數十到一百個,含內部 topic);筆數 60000 → 80000;判定:空的新 broker 自動取得副本…。', /* TODO-REVERIFY: 15 到 20 分鐘、副本數是「3 台加到第 4 台」時量到的 */
+        ev: 'sbc-add', re: /判定:空的新 broker 自動取得副本/, expect: '啟動 broker5 後約 12 分鐘(實測 726 秒,要先蒐集指標視窗)broker 15 取得 100 個副本(含內部 topic);搬家期間 20000 筆 acks=all 寫入全數成功,筆數 60000 → 80000;判定:空的新 broker 自動取得副本…。',
         warn: '等待時間是蒐集指標視窗的結果,不是搬資料慢:資料量小(60 MB)搬得很快。官方文件說 Self-Balancing 啟動後需要一段時間蒐集指標;加 broker 後馬上要它搬是做不到的,排程擴容要把這段算進去。預設限速 10 MB/s(confluent.balancer.throttle.bytes.per.second,動態可調),量大時搬家時間照這個算。沒有測:rack 感知(broker.rack)、多 AZ。' },
       { t: '31.4 移除 broker:一個指令搬走並關機', why: 'kafka-remove-brokers --delete:先把 broker 排除在新副本之外(Broker Replica Exclusion)、再搬走它的所有副本(Partition Reassignment)、最後關機(Broker Shutdown),--describe 看三個子任務。實測約 2 分鐘搬完 100 多個副本,筆數不變、broker 容器自動 Exited(0)。完成後 KRaft 還記得這個 broker 的註冊資訊,官方文件寫要用 kafka-cluster unregister 清掉。需要 SystemAdmin 權限(官方)。對照 Lab 24 的人工做法要自己算計畫與逐一確認,這裡是一個指令。',
         manual: ['bash scripts/sbc-lab.sh remove'],

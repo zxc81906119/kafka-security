@@ -558,7 +558,7 @@ C.push(H1('第 8 章  待確認與未驗證事項'),
     ['CSFLE 加密、解密、金鑰輪替', '未驗證(授權擋住)'],
     ['3 台 controller 與副本 3 的容錯與滾動重啟', '已在與正式環境相同的拓樸(3 台 controller 動態 quorum、4 台 broker)以容器實測(Lab 21,滾動重啟 2400 = 2400);真實 VM 未驗證'],
     ['Cluster Linking、Multi-Region、MirrorMaker 2', '只有文件整理,未實測'],
-    ['Self-Balancing、Tiered Storage(MinIO)', '已以容器實測(Lab 31、32);真實 VM 與客戶物件儲存未驗證'], /* TODO-REVERIFY: Lab 31、32 需在新拓樸重跑 */
+    ['Self-Balancing、Tiered Storage(MinIO)', '已在與正式環境相同的拓樸以容器實測(Lab 31:新 broker 約 12 分鐘後自動取得 100 個副本、移除 broker 副本全數搬走;Lab 32:舊 segment 上傳到 MinIO、從頭讀與重啟後資料完整);真實 VM 與客戶物件儲存未驗證'],
     ['Grafana 全元件監控(Lab 26)', '已實測:官方 KRaft 儀表板 150 個查詢約 108 個有資料(107 到 108,隨環境略有出入)、node_exporter 與 kafka_exporter、AD 登入;未測:磁碟告警實際觸發、Grafana 高可用與外部資料庫、Grafana 告警(本案告警走 Prometheus)、raft 與 socket-server 指標缺漏的原因'],
     ['分區重新指派的大資料量搬家時間與對服務延遲的影響', '以 200 MB、限速 4 MB/s 在容器環境實測流程(Lab 24);數百 GB 的搬家時間、延遲影響、新增第 4 台 broker 後的搬家未實測'],
     ['真實 AD(巢狀群組、實際延遲、憑證鏈)', '以模擬的目錄服務測試'],

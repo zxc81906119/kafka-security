@@ -400,7 +400,7 @@ gary 在 C3 指派 `orders-read` → DeveloperRead;LDAP 介面把 ming 從 devel
 |---|---|
 | 啟用 | `confluent.balancer.enable=true` 設在每台 controller 與 broker(`docker-compose.yml` 的 `KAFKA_CONFLUENT_BALANCER_ENABLE: ${SBC_ENABLE:-false}`);controller 另需 `inter.broker.listener.name=INTERNAL`、`listener.security.protocol.map` 含 INTERNAL、INTERNAL 的 client 憑證(CN=kafka-internal,在 super.users);否則狀態 DISABLED 或 `IllegalArgumentException: Bootstrap server endpoint was not provided` |
 | 狀態 | `kafka-rebalance-cluster --status / --describe`:Balancer is running on brokers: [controller 的 id](KRaft 下跑在 active controller) |
-| 加 broker | `docker compose --profile sbc up -d broker5`(第 5 台,node id 15,SAN 補 broker5);約 15 到 20 分鐘後<!-- TODO-REVERIFY: 時間是 3 台加到第 4 台時量到的 -->(日誌 `Insufficient metric windows… will attempt retry`,每 90 秒)自動搬副本;搬家期間 20000 筆 acks=all 寫入全成功 |
+| 加 broker | `docker compose --profile sbc up -d broker5`(第 5 台,node id 15,SAN 補 broker5);約 12 分鐘後(2026-10-12 實測 726 秒)(日誌 `Insufficient metric windows… will attempt retry`,每 90 秒)自動搬副本;搬家期間 20000 筆 acks=all 寫入全成功 |
 | 負載不均 | 資料量低於官方觸發門檻(副本數與 >20% 磁碟用量):日誌 `did not detect any violated goals`,不搬;broker 有變動後偵測器暫停 `confluent.balancer.goal.violation.delay.on.new.brokers.ms`(預設 1800000,demo 設 180000) |
 | 移除 | `kafka-remove-brokers --broker-id 15 --delete`(約 2 分鐘):Broker Replica Exclusion → Partition Reassignment → Broker Shutdown;筆數不變;完成後 `kafka-cluster unregister --id 15`(官方) |
 
