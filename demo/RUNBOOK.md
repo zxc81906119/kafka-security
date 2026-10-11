@@ -397,7 +397,8 @@ gary 在 C3 指派 `orders-read` → DeveloperRead;LDAP 介面把 ming 從 devel
 | docker-compose 的 `KAFKA_*` 環境變數 | `/etc/kafka/server.properties`(broker)、`controller.properties`;同名小寫句點(`KAFKA_LISTENER_NAME_CLIENT_...` → `listener.name.client....`) |
 | `certs/` | `/etc/kafka/secrets/`(權限 600、owner `cp-kafka`);AD CS 根憑證同時放系統信任(`update-ca-trust`)與 Java truststore |
 | 各元件 SCRAM 密碼 | Secret Protection / 檔案權限 600 + systemd 獨立使用者;Vault 為後續 |
-| `ensure-controller.sh`(`--add-scram`) | 每個 controller 節點首次啟動前:`kafka-storage format --cluster-id <id> -c controller.properties --add-scram '...'`(**順序錯誤需重新 format**) |
+| `ensure-controller.sh`(`--add-scram`) | 每個 controller 節點首次啟動前:`kafka-storage format --cluster-id <id> -c controller.properties --add-scram '...'`(**順序錯誤需重新 format**)。CP 8.3 的 `kafka-storage format` 另須指定 `--standalone`、`--initial-controllers` 或 `--no-initial-controllers` 其中之一(Rocky 9 實測) |
+| systemd(RPM 安裝) | unit `confluent-server`,預設讀 `/etc/kafka/server.properties`、`Restart=no`、`LimitNOFILE=1000000`;預設 `log.dirs` 在 `/tmp`,必須改到 `/var/lib/kafka/...`(見 DESIGN-BASIS 2026-10-11 RHEL 9 手動安裝實測) |
 | `.env`(audit router) | `server.properties`:`confluent.security.event.router.config=<JSON 單行>` |
 | 防火牆 | 9092(INTERNAL)、9093(CONTROLLER)只開放給 broker/controller 節點;Prometheus(9090)、Alertmanager(9093,另一台主機時)只開放給 C3 與必要的監控來源,除非已啟用其 TLS + Basic 認證;8091 為 MDS 與 Admin REST 共用,需對使用者與元件開放,保護靠第 14 章的安全擴充 |
 
