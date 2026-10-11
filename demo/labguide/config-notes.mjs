@@ -1,0 +1,153 @@
+// ============================================================================
+// config-notes.mjs — 「必要設定」的說明(用途、漏設會怎樣、依據)與各 Lab 要列出的設定
+// ----------------------------------------------------------------------------
+// 設定的「值」不寫在這裡:由 tools/config-export.mjs 從已驗證的 docker-compose 產生 config-ref/config-ref.json,
+//   手冊產生器把兩者合併,所以值永遠等於實測環境。這裡只放「為什麼」。
+// 欄位:why = 用途;miss = 漏設或設錯會怎樣(只寫實測過或官方明載的);src = 依據(實測 Lab N / 官方文件)
+// 元件代號(= config-ref.json 的 key):controller、broker、broker-tier、restproxy、schema-registry、connect、control-center
+// ============================================================================
+
+export const COMPONENT_LABEL = {
+  controller: 'KRaft controller(controller.properties)',
+  broker: 'broker(server.properties)',
+  'broker-tier': 'broker 的 Tiered Storage 部分(server.properties)',
+  restproxy: 'REST Proxy(kafka-rest.properties)',
+  'schema-registry': 'Schema Registry(schema-registry.properties)',
+  connect: 'Connect worker(connect-distributed.properties)',
+  'control-center': 'Control Center(control-center.properties)',
+};
+
+// NOTES[元件][設定名稱] = { why, miss?, src }
+export const NOTES = {
+  controller: {
+    'process.roles': { why: '這台只當 controller(KRaft quorum 成員),不服務 client', src: '官方 KRaft 設定' },
+    'controller.quorum.bootstrap.servers': { why: '動態 quorum:client 與 broker 從這裡找到 quorum;名單本身存在叢集 metadata,汰換 controller 不必改每台設定', miss: '舊式 controller.quorum.voters 是靜態名單,換 controller 要改所有節點並重啟', src: '官方 KRaft 動態 quorum;實測 Lab 33' },
+    'controller.listener.names': { why: 'controller 之間與 broker 連 controller 用的 listener', src: '官方 KRaft 設定' },
+    'listener.name.controller.ssl.client.auth': { why: 'controller 埠強制 mTLS:只有持內部憑證(CN=kafka-internal)的節點能加入', src: '實測 Lab 9' },
+    'inter.broker.listener.name': { why: 'controller 也要設:Self-Balancing 在 KRaft 下跑在 active controller,要以 client 身分連 broker 的 INTERNAL 埠', miss: 'Self-Balancing 狀態一直是 DISABLED / 啟動時 IllegalArgumentException', src: '官方 SBC 文件;實測 Lab 31' },
+    'confluent.balancer.enable': { why: 'Self-Balancing 開關;controller 與 broker 都要設', miss: '只在 broker 動態開啟無效,狀態仍是 DISABLED', src: '實測 Lab 31' },
+    'confluent.metadata.server.kraft.controller.enabled': { why: '讓 controller 參與 RBAC 授權(controller 端也做授權判斷)', src: '官方 KRaft + RBAC' },
+    'super.users': { why: '只放「內部通道身分」與 bootstrap 身分;人員不放(人走 AD 群組 + RBAC)', src: '實測 Lab 0、9' },
+    'metric.reporters': { why: 'Kafka 4.x 設了 metric.reporters 就要把 JmxReporter 列出來', miss: 'JMX exporter 抓不到 raft、socket-server 等指標(儀表板一半空白)', src: '實測 Lab 22' },
+  },
+  broker: {
+    'listeners': { why: 'INTERNAL(broker 之間,mTLS)與 CLIENT(人、服務、元件)分開', src: '實測 Lab 0、9' },
+    'listener.security.protocol.map': { why: '每個 listener 的協定;CLIENT 是 SASL_SSL(一律加密 + 認證)', src: '官方' },
+    'inter.broker.listener.name': { why: 'broker 之間走 INTERNAL(mTLS,內部憑證)', src: '實測 Lab 9' },
+    'listener.name.client.sasl.enabled.mechanisms': { why: '同一個埠接三種身分:PLAIN(人,AD 帳密)、SCRAM-SHA-512(服務帳號)、OAUTHBEARER(元件,MDS token)', src: '實測 Lab 1、7、0' },
+    'listener.name.client.plain.sasl.server.callback.handler.class': { why: 'PLAIN 的帳密交給 AD 驗證(LDAP),不在 Kafka 存人員密碼', src: '實測 Lab 1、3' },
+    'listener.name.client.connections.max.reauth.ms': { why: 'SASL 連線定期重新認證:帳號被停用後,舊連線最晚在這段時間內斷開', miss: '不設時,被停用的帳號已建立的連線會一直有效', src: '實測 Lab 19(demo 用 60 秒,正式環境依政策)' },
+    'authorizer.class.name': { why: 'ConfluentServerAuthorizer:RBAC 與 ACL 一起判斷', src: '官方 RBAC' },
+    'allow.everyone.if.no.acl.found': { why: '預設全部拒絕:沒有任何授權就什麼都不能做', miss: '設 true 時,沒有綁定的資源人人可存取', src: '實測 Lab 1' },
+    'super.users': { why: '只放內部通道與 bootstrap 身分;人員一律走 AD 群組', src: '實測 Lab 0、11' },
+    'confluent.metadata.server.listeners': { why: 'MDS(授權中樞)的 HTTPS 埠,每台 broker 都有一份', src: '官方 MDS' },
+    'confluent.metadata.server.authentication.method': { why: 'MDS 接受 Basic(AD 帳密)換 token,也接受 Bearer', src: '官方 MDS' },
+    'confluent.metadata.server.ssl.client.authentication': { why: 'MDS 也接受平台元件用 client 憑證認證(C3、REST Proxy、SR、Connect 不需要 AD 帳號)', src: '實測 Lab 0、13' },
+    'confluent.metadata.server.token.key.path': { why: 'MDS 簽發 token 的私鑰(所有 broker 同一把;各元件用對應公鑰驗證)', src: '官方 MDS' },
+    'confluent.metadata.server.token.max.lifetime.ms': { why: 'token 效期上限', src: '官方 MDS' },
+    'confluent.metadata.server.impersonation.super.users': { why: '只有 REST Proxy 的憑證能代人申請 token(legacy app 經 REST Proxy)', src: '實測 Lab 12' },
+    'confluent.metadata.server.impersonation.protected.users': { why: '特權身分不能被代:即使 REST Proxy 憑證外洩也代不了 GARY、c3、bootstrap', miss: '清單區分大小寫,要寫 AD 記錄的 User:GARY', src: '實測 Lab 12' },
+    'ldap.java.naming.provider.url': { why: '連 AD 走 LDAPS(636 / 3269)', src: '實測 Lab 17' },
+    'ldap.ssl.truststore.location': { why: '只有連 AD 的 JVM 需要信任 AD 的 CA', miss: '不信任 AD 憑證鏈 → LDAPS 連線失敗,人員全部無法登入', src: '實測 Lab 17' },
+    'ldap.java.naming.security.principal': { why: '唯讀查詢帳號(bind DN):只查使用者與群組,不驗證人員密碼', src: '實測 Lab 0' },
+    'ldap.java.naming.security.credentials': { why: '查詢帳號的密碼;正式環境用 Secret Protection 加密、主金鑰放 CyberArk', src: '實測 Lab 18' },
+    'ldap.user.name.attribute': { why: '客戶 AD 的使用者名稱 = CN', src: '客戶前提' },
+    'ldap.user.search.scope': { why: '使用者分散在多層 OU,要搜尋整個子樹(2)', miss: '官方預設 1(只搜一層),下層 OU 的人登入失敗', src: '實測 Lab 3' },
+    'ldap.group.member.attribute.pattern': { why: '從群組的 member DN 取出帳號(客戶格式 CN=<帳號>,OU=…)', src: '實測 Lab 3' },
+    'ldap.group.object.class': { why: '群組的 objectClass', miss: '真實 AD 是 group;demo 的 OpenLDAP 是 groupOfNames,上線要改', src: '客戶環境待確認' },
+    'ldap.refresh.interval.ms': { why: '群組異動多久生效(MDS 快取)', src: '實測 Lab 3、15' },
+    'ssl.enabled.protocols': { why: '只留 TLS 1.2 / 1.3,明確列出不靠 JDK 預設', src: '實測 Lab 19' },
+    'ssl.cipher.suites': { why: '只留 AEAD 套件(GCM / CHACHA20)', src: '實測 Lab 19' },
+    'ssl.principal.mapping.rules': { why: '憑證主體取 CN(CN=kafka-internal → kafka-internal)', src: '實測 Lab 8、9' },
+    'confluent.security.event.router.config': { why: 'audit log:記錄哪些事件、寫到哪個 topic、保留多久', src: '實測 Lab 10' },
+    'default.replication.factor': { why: '副本 3:4 台 broker 中任 1 台停機仍有 2 份同步副本', src: '官方建議;實測 Lab 21' },
+    'min.insync.replicas': { why: 'acks=all 至少 2 份副本確認才算寫入成功', miss: '設 1 時,只剩 1 份副本也接受寫入,該台再壞就遺失資料', src: '官方建議;實測 Lab 21' },
+    'metric.reporters': { why: 'Kafka 4.x 設了 metric.reporters 就要把 JmxReporter 列出來', miss: 'JMX exporter 抓不到 raft、socket-server、auth-store 指標', src: '實測 Lab 22' },
+    'kafka.rest.rest.servlet.initializor.classes': { why: 'broker 內建 Admin REST(/kafka/v3)也要認證', miss: '不設時匿名可呼叫 Admin REST', src: '實測 Lab 14' },
+    'confluent.balancer.enable': { why: 'Self-Balancing 開關(controller 也要設)', src: '實測 Lab 31' },
+  },
+  'broker-tier': {
+    'confluent.tier.feature': { why: '開啟 Tiered Storage 功能(個別 topic 再用 confluent.tier.enable 開)', src: '官方;實測 Lab 32' },
+    'confluent.tier.backend': { why: 'S3 相容物件儲存(客戶行內的物件儲存須在官方認證清單)', src: '官方' },
+    'confluent.tier.s3.aws.endpoint.override': { why: '指向行內物件儲存(HTTPS);信任它的 CA 要放進 JVM truststore', src: '實測 Lab 32' },
+    'confluent.tier.s3.cred.file.path': { why: '專用帳號的憑證檔,格式是 properties:accessKey= / secretKey=', miss: '用 AWS CLI 的 [default] 格式 → broker 起不來', src: '實測 Lab 32' },
+    'confluent.tier.s3.force.path.style.access': { why: '多數地端 S3 相容儲存要用 path-style', src: '官方' },
+    'confluent.tier.metadata.replication.factor': { why: 'Tiered Storage 內部 topic 也用副本 3', src: '官方' },
+  },
+  restproxy: {
+    'id': { why: '多台時每台 id 必須唯一', src: '官方' },
+    'rest.servlet.initializor.classes': { why: '人用 Basic(AD 帳密)、元件用 Bearer', src: '實測 Lab 12' },
+    'ssl.client.authentication': { why: 'legacy app 用 client 憑證連 REST Proxy;REST Proxy 再代它向 MDS 申請 token', src: '實測 Lab 12' },
+    'auth.ssl.principal.mapping.rules': { why: 'legacy app 的憑證主體取 CN(CN=legacy-orders → legacy-orders)', src: '實測 Lab 12' },
+    'confluent.metadata.bootstrap.server.urls': { why: '4 台 MDS 都列出:任一台停機仍能換 token', src: '實測 Lab 21' },
+    'client.sasl.login.callback.handler.class': { why: 'REST Proxy 自己用 client 憑證向 MDS 換 token 連 broker(不需要 AD 帳號)', src: '實測 Lab 12' },
+  },
+  'schema-registry': {
+    'rest.servlet.initializor.classes': { why: '同時接受 client 憑證(mTLS)與 Token / AD 帳密:C3 的背景健康檢查只帶 client 憑證,使用者仍用自己的身分', miss: '只用 InstallBearerOrBasicSecurityHandler(官方 RBAC 範例)時,C3 健康檢查一律 401,C3 判定 SR 全掛', src: '實測(C3 2.6.1);組合認證待 Confluent 確認支援範圍' },
+    'ssl.client.authentication': { why: '有帶 client 憑證就驗(必須是行內 CA 簽的),沒帶照常走 Token / 帳密', src: '實測' },
+    'auth.ssl.principal.mapping.rules': { why: '憑證主體取 CN(CN=c3 → c3;在 SR 沒有任何角色)', src: '實測' },
+    'confluent.schema.registry.auth.mechanism': { why: 'JETTY_AUTH:身分交給上面的認證處理器', src: '官方 SR RBAC' },
+    'confluent.schema.registry.authorizer.class': { why: 'RbacAuthorizer:subject 與 KEK 的授權交給 MDS', src: '官方 SR RBAC' },
+    'resource.extension.class': { why: 'DekRegistry(KEK / DEK 管理)與 RuleSet(資料契約規則)', miss: '沒加 RuleSet 時註冊 schema 會默默丟掉規則,卡號以明文寫入,不報錯', src: '實測 Lab 20' },
+    'dek.registry.rbac.enable': { why: 'KEK 端點依 Kek:<名稱> 的角色授權', miss: '不設時 KEK 端點對所有人 403', src: '實測 Lab 20' },
+    'inter.instance.protocol': { why: '兩台 SR 之間轉送寫入(follower → leader)用 HTTPS', miss: '只開 HTTPS 時不設 → 啟動失敗', src: '實測 Lab 20' },
+    'schema.registry.group.id': { why: '兩台同一個 group:由 Kafka 選出 leader,寫入轉給 leader;leader 停機約 43 秒後另一台接手', src: '實測(HA 基線)' },
+    'kafkastore.bootstrap.servers': { why: '4 台 broker 都列出', src: '官方' },
+  },
+  connect: {
+    'group.id': { why: '兩台 worker 同一個 group,連接器工作分擔、一台停機另一台接手', src: '實測 Lab 29' },
+    'rest.extension.classes': { why: 'ConnectSecurityExtension:連接器的建立、查看、刪除交給 RBAC', src: '官方 Connect RBAC;實測 Lab 29' },
+    'rest.servlet.initializor.classes': { why: '人用 AD 帳密、C3 轉送使用者 token', src: '實測 Lab 29' },
+    'connector.client.config.override.policy': { why: '允許每個連接器用自己的服務帳號(最小權限),不共用 worker 的身分', src: '實測 Lab 29' },
+    'config.providers': { why: '連接器設定裡的密碼用引用(${file:…}),不寫明文', src: '實測 Lab 29' },
+    'plugin.path': { why: '只掃外掛目錄', miss: '掃整個 /usr/share/java 要數分鐘', src: '實測 Lab 29' },
+    'config.storage.replication.factor': { why: 'Connect 內部 topic 副本 3', src: '官方' },
+  },
+  'control-center': {
+    'confluent.controlcenter.rest.authentication.method': { why: 'C3 要求 Bearer:使用者以 AD 帳密經 MDS 登入', src: '官方 C3 RBAC' },
+    'confluent.metadata.bootstrap.server.urls': { why: '4 台 MDS 都列出', src: '官方 C3 RBAC' },
+    'confluent.metadata.ssl.keystore.location': { why: 'C3 用自己的 client 憑證(CN=c3)向 MDS 認證,不需要 AD 帳號', src: '實測 Lab 13' },
+    'public.key.path': { why: '驗證 MDS 簽的 token(與 MDS 私鑰成對)', src: '官方' },
+    'confluent.controlcenter.rest.listeners': { why: '對外只開 HTTPS;HTTP 只給容器內健康檢查', src: '實測 Lab 17' },
+    'confluent.controlcenter.schema.registry.url': { why: '兩台 SR 都列出(C3 用一台,失敗改試另一台)', src: '官方' },
+    'confluent.controlcenter.schema.registry.schema.registry.alias.name': { why: '指定 C3 連 SR 時用哪張 client 憑證(c3)', miss: '不指定時 C3 拿自己對外 HTTPS 的 server 憑證去連,SR 看到的身分是共用 server 憑證', src: '官方設定;實測' },
+    'confluent.controlcenter.schema.registry.schema.registry.ssl.keystore.location': { why: 'C3 連 SR 的 client 憑證(CN=c3)', src: '官方設定;實測' },
+    'confluent.controlcenter.connect.connect.cluster': { why: '兩台 Connect 都列出;健康檢查打 /v1/metadata/id(免認證)', src: '官方;實測' },
+    'confluent.controlcenter.replication.factor': { why: 'C3 內部 topic 副本 3', src: '官方' },
+  },
+};
+
+// 每個 Lab 要列出的必要設定:[{ comp, keys }];keys 會依 config-ref.json 實際存在者輸出
+export const LAB_CONF = {
+  0: [
+    { comp: 'controller', keys: ['process.roles', 'controller.quorum.bootstrap.servers', 'controller.listener.names', 'listener.name.controller.ssl.client.auth', 'super.users'] },
+    { comp: 'broker', keys: ['listeners', 'listener.security.protocol.map', 'inter.broker.listener.name', 'listener.name.client.sasl.enabled.mechanisms', 'authorizer.class.name', 'super.users', 'confluent.metadata.server.listeners', 'confluent.metadata.server.ssl.client.authentication', 'confluent.metadata.server.token.key.path', 'default.replication.factor', 'min.insync.replicas'] },
+  ],
+  1: [{ comp: 'broker', keys: ['allow.everyone.if.no.acl.found', 'listener.name.client.plain.sasl.server.callback.handler.class'] }],
+  3: [{ comp: 'broker', keys: ['ldap.user.name.attribute', 'ldap.user.search.scope', 'ldap.group.object.class', 'ldap.group.member.attribute.pattern', 'ldap.refresh.interval.ms'] }],
+  7: [{ comp: 'broker', keys: ['listener.name.client.sasl.enabled.mechanisms'] }],
+  9: [{ comp: 'broker', keys: ['inter.broker.listener.name', 'ssl.principal.mapping.rules', 'super.users'] }, { comp: 'controller', keys: ['listener.name.controller.ssl.client.auth'] }],
+  10: [{ comp: 'broker', keys: ['confluent.security.event.router.config'] }],
+  12: [
+    { comp: 'restproxy', keys: ['id', 'rest.servlet.initializor.classes', 'ssl.client.authentication', 'auth.ssl.principal.mapping.rules', 'client.sasl.login.callback.handler.class', 'confluent.metadata.bootstrap.server.urls'] },
+    { comp: 'broker', keys: ['confluent.metadata.server.impersonation.super.users', 'confluent.metadata.server.impersonation.protected.users'] },
+  ],
+  13: [{ comp: 'control-center', keys: ['confluent.controlcenter.rest.authentication.method', 'confluent.metadata.bootstrap.server.urls', 'confluent.metadata.ssl.keystore.location', 'public.key.path'] }],
+  14: [{ comp: 'broker', keys: ['kafka.rest.rest.servlet.initializor.classes'] }],
+  17: [{ comp: 'broker', keys: ['ldap.java.naming.provider.url', 'ldap.ssl.truststore.location'] }, { comp: 'control-center', keys: ['confluent.controlcenter.rest.listeners'] }],
+  18: [{ comp: 'broker', keys: ['ldap.java.naming.security.principal', 'ldap.java.naming.security.credentials'] }],
+  19: [{ comp: 'broker', keys: ['listener.name.client.connections.max.reauth.ms', 'ssl.enabled.protocols', 'ssl.cipher.suites'] }],
+  20: [
+    { comp: 'schema-registry', keys: ['rest.servlet.initializor.classes', 'ssl.client.authentication', 'auth.ssl.principal.mapping.rules', 'confluent.schema.registry.auth.mechanism', 'confluent.schema.registry.authorizer.class', 'resource.extension.class', 'dek.registry.rbac.enable', 'inter.instance.protocol', 'schema.registry.group.id'] },
+    { comp: 'control-center', keys: ['confluent.controlcenter.schema.registry.url', 'confluent.controlcenter.schema.registry.schema.registry.ssl.keystore.location', 'confluent.controlcenter.schema.registry.schema.registry.alias.name'] },
+  ],
+  21: [{ comp: 'broker', keys: ['default.replication.factor', 'min.insync.replicas'] }, { comp: 'controller', keys: ['controller.quorum.bootstrap.servers'] }],
+  22: [{ comp: 'broker', keys: ['metric.reporters'] }, { comp: 'controller', keys: ['metric.reporters'] }],
+  29: [
+    { comp: 'connect', keys: ['group.id', 'rest.extension.classes', 'rest.servlet.initializor.classes', 'connector.client.config.override.policy', 'config.providers', 'plugin.path'] },
+    { comp: 'control-center', keys: ['confluent.controlcenter.connect.connect.cluster'] },
+  ],
+  31: [{ comp: 'controller', keys: ['confluent.balancer.enable', 'inter.broker.listener.name'] }, { comp: 'broker', keys: ['confluent.balancer.enable'] }],
+  32: [{ comp: 'broker-tier', keys: ['confluent.tier.feature', 'confluent.tier.backend', 'confluent.tier.s3.aws.endpoint.override', 'confluent.tier.s3.cred.file.path', 'confluent.tier.s3.force.path.style.access', 'confluent.tier.metadata.replication.factor'] }],
+  33: [{ comp: 'controller', keys: ['controller.quorum.bootstrap.servers'] }],
+};

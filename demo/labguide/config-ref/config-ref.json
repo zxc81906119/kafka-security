@@ -1,0 +1,2624 @@
+{
+  "controller": {
+    "file": "controller.properties",
+    "source": "controller1",
+    "props": [
+      {
+        "key": "allow.everyone.if.no.acl.found",
+        "value": "false",
+        "env": "KAFKA_ALLOW_EVERYONE_IF_NO_ACL_FOUND",
+        "note": ""
+      },
+      {
+        "key": "authorizer.class.name",
+        "value": "io.confluent.kafka.security.authorizer.ConfluentServerAuthorizer",
+        "env": "KAFKA_AUTHORIZER_CLASS_NAME",
+        "note": "--- 授權 ---"
+      },
+      {
+        "key": "confluent.authorizer.access.rule.providers",
+        "value": "CONFLUENT,KRAFT_ACL",
+        "env": "KAFKA_CONFLUENT_AUTHORIZER_ACCESS_RULE_PROVIDERS",
+        "note": ""
+      },
+      {
+        "key": "confluent.balancer.enable",
+        "value": "false",
+        "env": "KAFKA_CONFLUENT_BALANCER_ENABLE",
+        "note": "第 31 章:scripts/sbc-setup.sh on 會在 .env 設 SBC_ENABLE=true(controller 與 broker 都要)"
+      },
+      {
+        "key": "confluent.balancer.goal.violation.delay.on.new.brokers.ms",
+        "value": "180000",
+        "env": "KAFKA_CONFLUENT_BALANCER_GOAL_VIOLATION_DELAY_ON_NEW_BROKERS_MS",
+        "note": "第 31 章 demo 專用:預設 1800000(30 分鐘);官方設定頁沒列這項,正式環境維持預設"
+      },
+      {
+        "key": "confluent.balancer.topic.replication.factor",
+        "value": "3",
+        "env": "KAFKA_CONFLUENT_BALANCER_TOPIC_REPLICATION_FACTOR",
+        "note": ""
+      },
+      {
+        "key": "confluent.cluster.link.metadata.topic.replication.factor",
+        "value": "3",
+        "env": "KAFKA_CONFLUENT_CLUSTER_LINK_METADATA_TOPIC_REPLICATION_FACTOR",
+        "note": ""
+      },
+      {
+        "key": "confluent.license.topic.replication.factor",
+        "value": "3",
+        "env": "KAFKA_CONFLUENT_LICENSE_TOPIC_REPLICATION_FACTOR",
+        "note": ""
+      },
+      {
+        "key": "confluent.metadata.bootstrap.servers",
+        "value": "<BROKER1_HOST>:9092,<BROKER2_HOST>:9092,<BROKER3_HOST>:9092,<BROKER4_HOST>:9092",
+        "env": "KAFKA_CONFLUENT_METADATA_BOOTSTRAP_SERVERS",
+        "note": "controller 端 RBAC provider 需連到 brokers 讀取 MDS 的授權資料(_confluent-metadata-auth),以獨立的內部 SCRAM 身分 kafka-controller(super user;與 broker 的 kafka-broker 分開,audit 與撤銷才分得清)"
+      },
+      {
+        "key": "confluent.metadata.security.protocol",
+        "value": "SSL",
+        "env": "KAFKA_CONFLUENT_METADATA_SECURITY_PROTOCOL",
+        "note": ""
+      },
+      {
+        "key": "confluent.metadata.server.kraft.controller.enabled",
+        "value": "true",
+        "env": "KAFKA_CONFLUENT_METADATA_SERVER_KRAFT_CONTROLLER_ENABLED",
+        "note": "官方(MDS 設定頁):RBAC 下 KRaft controller 設 kraft.controller.enabled=true 並提供 token key;controller 不需要 ldap.*(只有 MDS writer broker 連 LDAP,實測 ch11 通過)"
+      },
+      {
+        "key": "confluent.metadata.server.token.key.path",
+        "value": "<SSL_DIR>/keypair.pem",
+        "env": "KAFKA_CONFLUENT_METADATA_SERVER_TOKEN_KEY_PATH",
+        "note": ""
+      },
+      {
+        "key": "confluent.metadata.ssl.keystore.location",
+        "value": "<SSL_DIR>/internal.keystore.p12",
+        "env": "KAFKA_CONFLUENT_METADATA_SSL_KEYSTORE_LOCATION",
+        "note": ""
+      },
+      {
+        "key": "confluent.metadata.ssl.keystore.password",
+        "value": "<由 CyberArk 提供>",
+        "env": "KAFKA_CONFLUENT_METADATA_SSL_KEYSTORE_PASSWORD",
+        "note": ""
+      },
+      {
+        "key": "confluent.metadata.ssl.keystore.type",
+        "value": "PKCS12",
+        "env": "KAFKA_CONFLUENT_METADATA_SSL_KEYSTORE_TYPE",
+        "note": ""
+      },
+      {
+        "key": "confluent.metadata.ssl.key.password",
+        "value": "<由 CyberArk 提供>",
+        "env": "KAFKA_CONFLUENT_METADATA_SSL_KEY_PASSWORD",
+        "note": ""
+      },
+      {
+        "key": "confluent.metadata.ssl.truststore.location",
+        "value": "<SSL_DIR>/truststore.p12",
+        "env": "KAFKA_CONFLUENT_METADATA_SSL_TRUSTSTORE_LOCATION",
+        "note": ""
+      },
+      {
+        "key": "confluent.metadata.ssl.truststore.password",
+        "value": "<由 CyberArk 提供>",
+        "env": "KAFKA_CONFLUENT_METADATA_SSL_TRUSTSTORE_PASSWORD",
+        "note": ""
+      },
+      {
+        "key": "confluent.metadata.ssl.truststore.type",
+        "value": "PKCS12",
+        "env": "KAFKA_CONFLUENT_METADATA_SSL_TRUSTSTORE_TYPE",
+        "note": ""
+      },
+      {
+        "key": "confluent.metadata.topic.replication.factor",
+        "value": "3",
+        "env": "KAFKA_CONFLUENT_METADATA_TOPIC_REPLICATION_FACTOR",
+        "note": ""
+      },
+      {
+        "key": "confluent.security.event.logger.exporter.kafka.bootstrap.servers",
+        "value": "<BROKER1_HOST>:9092,<BROKER2_HOST>:9092,<BROKER3_HOST>:9092,<BROKER4_HOST>:9092",
+        "env": "KAFKA_CONFLUENT_SECURITY_EVENT_LOGGER_EXPORTER_KAFKA_BOOTSTRAP_SERVERS",
+        "note": "audit log 寫入器連線(controller 沒有 inter-broker 設定,需明列)"
+      },
+      {
+        "key": "confluent.security.event.logger.exporter.kafka.security.protocol",
+        "value": "SSL",
+        "env": "KAFKA_CONFLUENT_SECURITY_EVENT_LOGGER_EXPORTER_KAFKA_SECURITY_PROTOCOL",
+        "note": ""
+      },
+      {
+        "key": "confluent.security.event.logger.exporter.kafka.ssl.keystore.location",
+        "value": "<SSL_DIR>/internal.keystore.p12",
+        "env": "KAFKA_CONFLUENT_SECURITY_EVENT_LOGGER_EXPORTER_KAFKA_SSL_KEYSTORE_LOCATION",
+        "note": ""
+      },
+      {
+        "key": "confluent.security.event.logger.exporter.kafka.ssl.keystore.password",
+        "value": "<由 CyberArk 提供>",
+        "env": "KAFKA_CONFLUENT_SECURITY_EVENT_LOGGER_EXPORTER_KAFKA_SSL_KEYSTORE_PASSWORD",
+        "note": ""
+      },
+      {
+        "key": "confluent.security.event.logger.exporter.kafka.ssl.keystore.type",
+        "value": "PKCS12",
+        "env": "KAFKA_CONFLUENT_SECURITY_EVENT_LOGGER_EXPORTER_KAFKA_SSL_KEYSTORE_TYPE",
+        "note": ""
+      },
+      {
+        "key": "confluent.security.event.logger.exporter.kafka.ssl.key.password",
+        "value": "<由 CyberArk 提供>",
+        "env": "KAFKA_CONFLUENT_SECURITY_EVENT_LOGGER_EXPORTER_KAFKA_SSL_KEY_PASSWORD",
+        "note": ""
+      },
+      {
+        "key": "confluent.security.event.logger.exporter.kafka.ssl.truststore.location",
+        "value": "<SSL_DIR>/truststore.p12",
+        "env": "KAFKA_CONFLUENT_SECURITY_EVENT_LOGGER_EXPORTER_KAFKA_SSL_TRUSTSTORE_LOCATION",
+        "note": ""
+      },
+      {
+        "key": "confluent.security.event.logger.exporter.kafka.ssl.truststore.password",
+        "value": "<由 CyberArk 提供>",
+        "env": "KAFKA_CONFLUENT_SECURITY_EVENT_LOGGER_EXPORTER_KAFKA_SSL_TRUSTSTORE_PASSWORD",
+        "note": ""
+      },
+      {
+        "key": "confluent.security.event.logger.exporter.kafka.ssl.truststore.type",
+        "value": "PKCS12",
+        "env": "KAFKA_CONFLUENT_SECURITY_EVENT_LOGGER_EXPORTER_KAFKA_SSL_TRUSTSTORE_TYPE",
+        "note": ""
+      },
+      {
+        "key": "confluent.security.event.logger.exporter.kafka.topic.replicas",
+        "value": "3",
+        "env": "KAFKA_CONFLUENT_SECURITY_EVENT_LOGGER_EXPORTER_KAFKA_TOPIC_REPLICAS",
+        "note": ""
+      },
+      {
+        "key": "confluent.security.event.router.config",
+        "value": "{\"destinations\":{\"topics\":{\"confluent-audit-log-events\":{\"retention_ms\":604800000}}},\"default_topics\":{\"allowed\":\"confluent-audit-log-events\",\"denied\":\"confluent-audit-log-events\"},\"excluded_principals\":[\"User:kafka-broker\",\"User:kafka-controller\"],\"routes\":{\"crn:///kafka=*/topic=orders.*\":{\"produce\":{\"allowed\":\"confluent-audit-log-events\",\"denied\":\"confluent-audit-log-events\"},\"consume\":{\"allowed\":\"\",\"denied\":\"confluent-audit-log-events\"},\"describe\":{\"allowed\":\"\",\"denied\":\"confluent-audit-log-events\"}},\"crn:///kafka=*/topic=payments.*\":{\"produce\":{\"allowed\":\"confluent-audit-log-events\",\"denied\":\"confluent-audit-log-events\"},\"consume\":{\"allowed\":\"\",\"denied\":\"confluent-audit-log-events\"},\"describe\":{\"allowed\":\"\",\"denied\":\"confluent-audit-log-events\"}},\"crn:///kafka=*/topic=infra.*\":{\"produce\":{\"allowed\":\"confluent-audit-log-events\",\"denied\":\"confluent-audit-log-events\"},\"consume\":{\"allowed\":\"\",\"denied\":\"confluent-audit-log-events\"},\"describe\":{\"allowed\":\"\",\"denied\":\"confluent-audit-log-events\"}},\"crn:///kafka=*\":{\"produce\":{\"allowed\":\"\",\"denied\":\"confluent-audit-log-events\"},\"consume\":{\"allowed\":\"\",\"denied\":\"confluent-audit-log-events\"}}}}",
+        "env": "KAFKA_CONFLUENT_SECURITY_EVENT_ROUTER_CONFIG",
+        "note": "--- MDS:token ---"
+      },
+      {
+        "key": "confluent.telemetry.exporter.c3plusplus.api.key",
+        "value": "<由 CyberArk 提供>",
+        "env": "KAFKA_CONFLUENT_TELEMETRY_EXPORTER_C3PLUSPLUS_API_KEY",
+        "note": "api.key / api.secret 就是 Prometheus 的 Basic 帳密"
+      },
+      {
+        "key": "confluent.telemetry.exporter.c3plusplus.api.secret",
+        "value": "<由 CyberArk 提供>",
+        "env": "KAFKA_CONFLUENT_TELEMETRY_EXPORTER_C3PLUSPLUS_API_SECRET",
+        "note": ""
+      },
+      {
+        "key": "confluent.telemetry.exporter.c3plusplus.buffer.batch.items.max",
+        "value": "4000",
+        "env": "KAFKA_CONFLUENT_TELEMETRY_EXPORTER_C3PLUSPLUS_BUFFER_BATCH_ITEMS_MAX",
+        "note": ""
+      },
+      {
+        "key": "confluent.telemetry.exporter.c3plusplus.buffer.inflight.submissions.max",
+        "value": "10",
+        "env": "KAFKA_CONFLUENT_TELEMETRY_EXPORTER_C3PLUSPLUS_BUFFER_INFLIGHT_SUBMISSIONS_MAX",
+        "note": ""
+      },
+      {
+        "key": "confluent.telemetry.exporter.c3plusplus.buffer.pending.batches.max",
+        "value": "80",
+        "env": "KAFKA_CONFLUENT_TELEMETRY_EXPORTER_C3PLUSPLUS_BUFFER_PENDING_BATCHES_MAX",
+        "note": ""
+      },
+      {
+        "key": "confluent.telemetry.exporter.c3plusplus.client.base.url",
+        "value": "https://<PROMETHEUS_HOST>:9090/api/v1/otlp",
+        "env": "KAFKA_CONFLUENT_TELEMETRY_EXPORTER_C3PLUSPLUS_CLIENT_BASE_URL",
+        "note": ""
+      },
+      {
+        "key": "confluent.telemetry.exporter.c3plusplus.client.compression",
+        "value": "gzip",
+        "env": "KAFKA_CONFLUENT_TELEMETRY_EXPORTER_C3PLUSPLUS_CLIENT_COMPRESSION",
+        "note": ""
+      },
+      {
+        "key": "confluent.telemetry.exporter.c3plusplus.enabled",
+        "value": "true",
+        "env": "KAFKA_CONFLUENT_TELEMETRY_EXPORTER_C3PLUSPLUS_ENABLED",
+        "note": ""
+      },
+      {
+        "key": "confluent.telemetry.exporter.c3plusplus.https.ssl.truststore.location",
+        "value": "<SSL_DIR>/truststore.p12",
+        "env": "KAFKA_CONFLUENT_TELEMETRY_EXPORTER_C3PLUSPLUS_HTTPS_SSL_TRUSTSTORE_LOCATION",
+        "note": ""
+      },
+      {
+        "key": "confluent.telemetry.exporter.c3plusplus.https.ssl.truststore.password",
+        "value": "<由 CyberArk 提供>",
+        "env": "KAFKA_CONFLUENT_TELEMETRY_EXPORTER_C3PLUSPLUS_HTTPS_SSL_TRUSTSTORE_PASSWORD",
+        "note": ""
+      },
+      {
+        "key": "confluent.telemetry.exporter.c3plusplus.https.ssl.truststore.type",
+        "value": "PKCS12",
+        "env": "KAFKA_CONFLUENT_TELEMETRY_EXPORTER_C3PLUSPLUS_HTTPS_SSL_TRUSTSTORE_TYPE",
+        "note": ""
+      },
+      {
+        "key": "confluent.telemetry.exporter.c3plusplus.metrics.include",
+        "value": "io.confluent.kafka.server.controller.(?!.*delta).*|io.confluent.kafka.server.raft.(?!.*delta).*|io.confluent.kafka.server.kafka.controller.(?!.*delta).*",
+        "env": "KAFKA_CONFLUENT_TELEMETRY_EXPORTER_C3PLUSPLUS_METRICS_INCLUDE",
+        "note": "第 19 章:只加明確要用的指標(認證失敗/成功、重新認證失敗、連線數與上限)。名稱後面要加 (?!.*delta).*:同名的 delta 型態 Prometheus 不收,整批會被拒(實測,連原本的監控指標也跟著丟);也不要用萬用字元"
+      },
+      {
+        "key": "confluent.telemetry.exporter.c3plusplus.type",
+        "value": "http",
+        "env": "KAFKA_CONFLUENT_TELEMETRY_EXPORTER_C3PLUSPLUS_TYPE",
+        "note": ""
+      },
+      {
+        "key": "confluent.telemetry.metrics.collector.interval.ms",
+        "value": "60000",
+        "env": "KAFKA_CONFLUENT_TELEMETRY_METRICS_COLLECTOR_INTERVAL_MS",
+        "note": ""
+      },
+      {
+        "key": "confluent.telemetry.remoteconfig.confluent.enabled",
+        "value": "false",
+        "env": "KAFKA_CONFLUENT_TELEMETRY_REMOTECONFIG_CONFLUENT_ENABLED",
+        "note": ""
+      },
+      {
+        "key": "controller.listener.names",
+        "value": "CONTROLLER",
+        "env": "KAFKA_CONTROLLER_LISTENER_NAMES",
+        "note": ""
+      },
+      {
+        "key": "controller.quorum.bootstrap.servers",
+        "value": "<CONTROLLER1_HOST>:9093,<CONTROLLER2_HOST>:9093,<CONTROLLER3_HOST>:9093",
+        "env": "KAFKA_CONTROLLER_QUORUM_BOOTSTRAP_SERVERS",
+        "note": ""
+      },
+      {
+        "key": "default.replication.factor",
+        "value": "3",
+        "env": "KAFKA_DEFAULT_REPLICATION_FACTOR",
+        "note": ""
+      },
+      {
+        "key": "inter.broker.listener.name",
+        "value": "INTERNAL",
+        "env": "KAFKA_INTER_BROKER_LISTENER_NAME",
+        "note": "KRaft 下 Self-Balancing 跑在 controller,官方要求 controller 也設(第 31 章)"
+      },
+      {
+        "key": "listeners",
+        "value": "CONTROLLER://<CONTROLLER1_HOST>:9093",
+        "env": "KAFKA_LISTENERS",
+        "note": ""
+      },
+      {
+        "key": "listener.name.controller.ssl.client.auth",
+        "value": "required",
+        "env": "KAFKA_LISTENER_NAME_CONTROLLER_SSL_CLIENT_AUTH",
+        "note": ""
+      },
+      {
+        "key": "listener.name.controller.ssl.keystore.location",
+        "value": "<SSL_DIR>/internal.keystore.p12",
+        "env": "KAFKA_LISTENER_NAME_CONTROLLER_SSL_KEYSTORE_LOCATION",
+        "note": ""
+      },
+      {
+        "key": "listener.name.controller.ssl.keystore.password",
+        "value": "<由 CyberArk 提供>",
+        "env": "KAFKA_LISTENER_NAME_CONTROLLER_SSL_KEYSTORE_PASSWORD",
+        "note": ""
+      },
+      {
+        "key": "listener.name.controller.ssl.keystore.type",
+        "value": "PKCS12",
+        "env": "KAFKA_LISTENER_NAME_CONTROLLER_SSL_KEYSTORE_TYPE",
+        "note": ""
+      },
+      {
+        "key": "listener.name.controller.ssl.key.password",
+        "value": "<由 CyberArk 提供>",
+        "env": "KAFKA_LISTENER_NAME_CONTROLLER_SSL_KEY_PASSWORD",
+        "note": ""
+      },
+      {
+        "key": "listener.name.internal.ssl.keystore.location",
+        "value": "<SSL_DIR>/internal.keystore.p12",
+        "env": "KAFKA_LISTENER_NAME_INTERNAL_SSL_KEYSTORE_LOCATION",
+        "note": ""
+      },
+      {
+        "key": "listener.name.internal.ssl.keystore.password",
+        "value": "<由 CyberArk 提供>",
+        "env": "KAFKA_LISTENER_NAME_INTERNAL_SSL_KEYSTORE_PASSWORD",
+        "note": ""
+      },
+      {
+        "key": "listener.name.internal.ssl.keystore.type",
+        "value": "PKCS12",
+        "env": "KAFKA_LISTENER_NAME_INTERNAL_SSL_KEYSTORE_TYPE",
+        "note": ""
+      },
+      {
+        "key": "listener.name.internal.ssl.key.password",
+        "value": "<由 CyberArk 提供>",
+        "env": "KAFKA_LISTENER_NAME_INTERNAL_SSL_KEY_PASSWORD",
+        "note": ""
+      },
+      {
+        "key": "listener.security.protocol.map",
+        "value": "CONTROLLER:SSL,INTERNAL:SSL",
+        "env": "KAFKA_LISTENER_SECURITY_PROTOCOL_MAP",
+        "note": "controller 不監聽 INTERNAL,只是以 client 身分連 broker 的 INTERNAL 埠(balancer)"
+      },
+      {
+        "key": "metric.reporters",
+        "value": "org.apache.kafka.common.metrics.JmxReporter,io.confluent.telemetry.reporter.TelemetryReporter",
+        "env": "KAFKA_METRIC_REPORTERS",
+        "note": "Kafka 4.x:設了 metric.reporters 就不再自動帶 JmxReporter,要明確列出,否則 raft、socket-server 等指標不會出現在 JMX exporter"
+      },
+      {
+        "key": "min.insync.replicas",
+        "value": "2",
+        "env": "KAFKA_MIN_INSYNC_REPLICAS",
+        "note": ""
+      },
+      {
+        "key": "node.id",
+        "value": "1",
+        "env": "KAFKA_NODE_ID",
+        "note": ""
+      },
+      {
+        "key": "offsets.topic.replication.factor",
+        "value": "3",
+        "env": "KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR",
+        "note": ""
+      },
+      {
+        "key": "password.encoder.secret",
+        "value": "<由 CyberArk 提供>",
+        "env": "KAFKA_PASSWORD_ENCODER_SECRET",
+        "note": ""
+      },
+      {
+        "key": "process.roles",
+        "value": "controller",
+        "env": "KAFKA_PROCESS_ROLES",
+        "note": ""
+      },
+      {
+        "key": "ssl.cipher.suites",
+        "value": "TLS_AES_256_GCM_SHA384,TLS_AES_128_GCM_SHA256,TLS_CHACHA20_POLY1305_SHA256,TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256",
+        "env": "KAFKA_SSL_CIPHER_SUITES",
+        "note": "只留 AEAD(GCM / ChaCha20);實測未設定時 broker 接受 ECDHE-RSA-AES128-SHA(CBC + SHA-1)"
+      },
+      {
+        "key": "ssl.client.auth",
+        "value": "none",
+        "env": "KAFKA_SSL_CLIENT_AUTH",
+        "note": ""
+      },
+      {
+        "key": "ssl.enabled.protocols",
+        "value": "TLSv1.3,TLSv1.2",
+        "env": "KAFKA_SSL_ENABLED_PROTOCOLS",
+        "note": "第 19 章:只留 TLS 1.2 / 1.3(明確列出,不靠 JDK 預設)"
+      },
+      {
+        "key": "ssl.endpoint.identification.algorithm",
+        "value": "https",
+        "env": "KAFKA_SSL_ENDPOINT_IDENTIFICATION_ALGORITHM",
+        "note": ""
+      },
+      {
+        "key": "ssl.keystore.password",
+        "value": "<由 CyberArk 提供>",
+        "env": "KAFKA_SSL_KEYSTORE_CREDENTIALS",
+        "note": ""
+      },
+      {
+        "key": "ssl.keystore.location",
+        "value": "<SSL_DIR>/server.keystore.p12",
+        "env": "KAFKA_SSL_KEYSTORE_FILENAME",
+        "note": ""
+      },
+      {
+        "key": "ssl.keystore.type",
+        "value": "PKCS12",
+        "env": "KAFKA_SSL_KEYSTORE_TYPE",
+        "note": ""
+      },
+      {
+        "key": "ssl.key.password",
+        "value": "<由 CyberArk 提供>",
+        "env": "KAFKA_SSL_KEY_CREDENTIALS",
+        "note": ""
+      },
+      {
+        "key": "ssl.principal.mapping.rules",
+        "value": "RULE:^.*CN=([^,]*).*$/$1/,DEFAULT",
+        "env": "KAFKA_SSL_PRINCIPAL_MAPPING_RULES",
+        "note": "--- 內部通道:CONTROLLER(broker→controller)與 INTERNAL(broker↔broker)都是 mTLS,共用一張憑證 internal.keystore.p12(CN=kafka-internal)--- 不用 SASL:SCRAM 憑證存在 metadata 裡,刪除過 SCRAM 憑證後重啟 broker 會因為自己認證不過而起不來(見 RUNBOOK 第 19 章);mTLS 身分不依賴 metadata。 身分 = 憑證 CN(ssl.principal.mapping.rules)→ User:kafka-internal(在 super.users)。同一張憑證 broker 與 controller 共用,代價是 audit 看不出是哪一台。"
+      },
+      {
+        "key": "ssl.truststore.location",
+        "value": "<SSL_DIR>/truststore.p12",
+        "env": "KAFKA_SSL_TRUSTSTORE_LOCATION",
+        "note": ""
+      },
+      {
+        "key": "ssl.truststore.password",
+        "value": "<由 CyberArk 提供>",
+        "env": "KAFKA_SSL_TRUSTSTORE_PASSWORD",
+        "note": ""
+      },
+      {
+        "key": "ssl.truststore.type",
+        "value": "PKCS12",
+        "env": "KAFKA_SSL_TRUSTSTORE_TYPE",
+        "note": ""
+      },
+      {
+        "key": "super.users",
+        "value": "User:kafka-internal;User:kafka-broker;User:kafka-controller;User:bootstrap",
+        "env": "KAFKA_SUPER_USERS",
+        "note": ""
+      },
+      {
+        "key": "transaction.state.log.min.isr",
+        "value": "2",
+        "env": "KAFKA_TRANSACTION_STATE_LOG_MIN_ISR",
+        "note": ""
+      },
+      {
+        "key": "transaction.state.log.replication.factor",
+        "value": "3",
+        "env": "KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR",
+        "note": ""
+      }
+    ]
+  },
+  "broker": {
+    "file": "server.properties",
+    "source": "broker1",
+    "props": [
+      {
+        "key": "advertised.listeners",
+        "value": "INTERNAL://<BROKER1_HOST>:9092,CLIENT://<BROKER1_HOST>:9094",
+        "env": "KAFKA_ADVERTISED_LISTENERS",
+        "note": ""
+      },
+      {
+        "key": "allow.everyone.if.no.acl.found",
+        "value": "false",
+        "env": "KAFKA_ALLOW_EVERYONE_IF_NO_ACL_FOUND",
+        "note": ""
+      },
+      {
+        "key": "authorizer.class.name",
+        "value": "io.confluent.kafka.security.authorizer.ConfluentServerAuthorizer",
+        "env": "KAFKA_AUTHORIZER_CLASS_NAME",
+        "note": "--- 授權 ---"
+      },
+      {
+        "key": "confluent.authorizer.access.rule.providers",
+        "value": "CONFLUENT,KRAFT_ACL",
+        "env": "KAFKA_CONFLUENT_AUTHORIZER_ACCESS_RULE_PROVIDERS",
+        "note": ""
+      },
+      {
+        "key": "confluent.balancer.enable",
+        "value": "false",
+        "env": "KAFKA_CONFLUENT_BALANCER_ENABLE",
+        "note": "第 31 章:scripts/sbc-setup.sh on 會在 .env 設 SBC_ENABLE=true(controller 與 broker 都要)"
+      },
+      {
+        "key": "confluent.balancer.topic.replication.factor",
+        "value": "3",
+        "env": "KAFKA_CONFLUENT_BALANCER_TOPIC_REPLICATION_FACTOR",
+        "note": ""
+      },
+      {
+        "key": "confluent.cluster.link.metadata.topic.replication.factor",
+        "value": "3",
+        "env": "KAFKA_CONFLUENT_CLUSTER_LINK_METADATA_TOPIC_REPLICATION_FACTOR",
+        "note": ""
+      },
+      {
+        "key": "confluent.license.topic.replication.factor",
+        "value": "3",
+        "env": "KAFKA_CONFLUENT_LICENSE_TOPIC_REPLICATION_FACTOR",
+        "note": ""
+      },
+      {
+        "key": "confluent.metadata.server.advertised.listeners",
+        "value": "https://<BROKER1_HOST>:8091",
+        "env": "KAFKA_CONFLUENT_METADATA_SERVER_ADVERTISED_LISTENERS",
+        "note": ""
+      },
+      {
+        "key": "confluent.metadata.server.authentication.method",
+        "value": "BEARER",
+        "env": "KAFKA_CONFLUENT_METADATA_SERVER_AUTHENTICATION_METHOD",
+        "note": ""
+      },
+      {
+        "key": "confluent.metadata.server.auth.ssl.principal.mapping.rules",
+        "value": "RULE:.*CN=([a-zA-Z0-9.-]*).*$/$1/,DEFAULT",
+        "env": "KAFKA_CONFLUENT_METADATA_SERVER_AUTH_SSL_PRINCIPAL_MAPPING_RULES",
+        "note": ""
+      },
+      {
+        "key": "confluent.metadata.server.impersonation.protected.users",
+        "value": "User:bootstrap;User:kafka-broker;User:kafka-controller;User:c3;User:restproxy;User:GARY",
+        "env": "KAFKA_CONFLUENT_METADATA_SERVER_IMPERSONATION_PROTECTED_USERS",
+        "note": ""
+      },
+      {
+        "key": "confluent.metadata.server.impersonation.super.users",
+        "value": "User:restproxy",
+        "env": "KAFKA_CONFLUENT_METADATA_SERVER_IMPERSONATION_SUPER_USERS",
+        "note": ""
+      },
+      {
+        "key": "confluent.metadata.server.listeners",
+        "value": "https://0.0.0.0:8091",
+        "env": "KAFKA_CONFLUENT_METADATA_SERVER_LISTENERS",
+        "note": ""
+      },
+      {
+        "key": "confluent.metadata.server.ssl.client.authentication",
+        "value": "REQUESTED",
+        "env": "KAFKA_CONFLUENT_METADATA_SERVER_SSL_CLIENT_AUTHENTICATION",
+        "note": ""
+      },
+      {
+        "key": "confluent.metadata.server.ssl.keystore.location",
+        "value": "<SSL_DIR>/server.keystore.p12",
+        "env": "KAFKA_CONFLUENT_METADATA_SERVER_SSL_KEYSTORE_LOCATION",
+        "note": ""
+      },
+      {
+        "key": "confluent.metadata.server.ssl.keystore.password",
+        "value": "<由 CyberArk 提供>",
+        "env": "KAFKA_CONFLUENT_METADATA_SERVER_SSL_KEYSTORE_PASSWORD",
+        "note": ""
+      },
+      {
+        "key": "confluent.metadata.server.ssl.keystore.type",
+        "value": "PKCS12",
+        "env": "KAFKA_CONFLUENT_METADATA_SERVER_SSL_KEYSTORE_TYPE",
+        "note": ""
+      },
+      {
+        "key": "confluent.metadata.server.ssl.key.password",
+        "value": "<由 CyberArk 提供>",
+        "env": "KAFKA_CONFLUENT_METADATA_SERVER_SSL_KEY_PASSWORD",
+        "note": ""
+      },
+      {
+        "key": "confluent.metadata.server.ssl.truststore.location",
+        "value": "<SSL_DIR>/truststore.p12",
+        "env": "KAFKA_CONFLUENT_METADATA_SERVER_SSL_TRUSTSTORE_LOCATION",
+        "note": ""
+      },
+      {
+        "key": "confluent.metadata.server.ssl.truststore.password",
+        "value": "<由 CyberArk 提供>",
+        "env": "KAFKA_CONFLUENT_METADATA_SERVER_SSL_TRUSTSTORE_PASSWORD",
+        "note": ""
+      },
+      {
+        "key": "confluent.metadata.server.ssl.truststore.type",
+        "value": "PKCS12",
+        "env": "KAFKA_CONFLUENT_METADATA_SERVER_SSL_TRUSTSTORE_TYPE",
+        "note": ""
+      },
+      {
+        "key": "confluent.metadata.server.token.key.path",
+        "value": "<SSL_DIR>/keypair.pem",
+        "env": "KAFKA_CONFLUENT_METADATA_SERVER_TOKEN_KEY_PATH",
+        "note": ""
+      },
+      {
+        "key": "confluent.metadata.server.token.max.lifetime.ms",
+        "value": "3600000",
+        "env": "KAFKA_CONFLUENT_METADATA_SERVER_TOKEN_MAX_LIFETIME_MS",
+        "note": ""
+      },
+      {
+        "key": "confluent.metadata.server.token.signature.algorithm",
+        "value": "RS256",
+        "env": "KAFKA_CONFLUENT_METADATA_SERVER_TOKEN_SIGNATURE_ALGORITHM",
+        "note": ""
+      },
+      {
+        "key": "confluent.metadata.topic.replication.factor",
+        "value": "3",
+        "env": "KAFKA_CONFLUENT_METADATA_TOPIC_REPLICATION_FACTOR",
+        "note": ""
+      },
+      {
+        "key": "confluent.reporters.telemetry.auto.enable",
+        "value": "false",
+        "env": "KAFKA_CONFLUENT_REPORTERS_TELEMETRY_AUTO_ENABLE",
+        "note": ""
+      },
+      {
+        "key": "confluent.security.event.logger.exporter.kafka.topic.replicas",
+        "value": "3",
+        "env": "KAFKA_CONFLUENT_SECURITY_EVENT_LOGGER_EXPORTER_KAFKA_TOPIC_REPLICAS",
+        "note": ""
+      },
+      {
+        "key": "confluent.security.event.router.config",
+        "value": "{\"destinations\":{\"topics\":{\"confluent-audit-log-events\":{\"retention_ms\":604800000}}},\"default_topics\":{\"allowed\":\"confluent-audit-log-events\",\"denied\":\"confluent-audit-log-events\"},\"excluded_principals\":[\"User:kafka-broker\",\"User:kafka-controller\"],\"routes\":{\"crn:///kafka=*/topic=orders.*\":{\"produce\":{\"allowed\":\"confluent-audit-log-events\",\"denied\":\"confluent-audit-log-events\"},\"consume\":{\"allowed\":\"\",\"denied\":\"confluent-audit-log-events\"},\"describe\":{\"allowed\":\"\",\"denied\":\"confluent-audit-log-events\"}},\"crn:///kafka=*/topic=payments.*\":{\"produce\":{\"allowed\":\"confluent-audit-log-events\",\"denied\":\"confluent-audit-log-events\"},\"consume\":{\"allowed\":\"\",\"denied\":\"confluent-audit-log-events\"},\"describe\":{\"allowed\":\"\",\"denied\":\"confluent-audit-log-events\"}},\"crn:///kafka=*/topic=infra.*\":{\"produce\":{\"allowed\":\"confluent-audit-log-events\",\"denied\":\"confluent-audit-log-events\"},\"consume\":{\"allowed\":\"\",\"denied\":\"confluent-audit-log-events\"},\"describe\":{\"allowed\":\"\",\"denied\":\"confluent-audit-log-events\"}},\"crn:///kafka=*\":{\"produce\":{\"allowed\":\"\",\"denied\":\"confluent-audit-log-events\"},\"consume\":{\"allowed\":\"\",\"denied\":\"confluent-audit-log-events\"}}}}",
+        "env": "KAFKA_CONFLUENT_SECURITY_EVENT_ROUTER_CONFIG",
+        "note": "--- MDS:token ---"
+      },
+      {
+        "key": "confluent.telemetry.exporter.c3plusplus.api.key",
+        "value": "<由 CyberArk 提供>",
+        "env": "KAFKA_CONFLUENT_TELEMETRY_EXPORTER_C3PLUSPLUS_API_KEY",
+        "note": "api.key / api.secret 就是 Prometheus 的 Basic 帳密"
+      },
+      {
+        "key": "confluent.telemetry.exporter.c3plusplus.api.secret",
+        "value": "<由 CyberArk 提供>",
+        "env": "KAFKA_CONFLUENT_TELEMETRY_EXPORTER_C3PLUSPLUS_API_SECRET",
+        "note": ""
+      },
+      {
+        "key": "confluent.telemetry.exporter.c3plusplus.buffer.batch.items.max",
+        "value": "4000",
+        "env": "KAFKA_CONFLUENT_TELEMETRY_EXPORTER_C3PLUSPLUS_BUFFER_BATCH_ITEMS_MAX",
+        "note": ""
+      },
+      {
+        "key": "confluent.telemetry.exporter.c3plusplus.buffer.inflight.submissions.max",
+        "value": "10",
+        "env": "KAFKA_CONFLUENT_TELEMETRY_EXPORTER_C3PLUSPLUS_BUFFER_INFLIGHT_SUBMISSIONS_MAX",
+        "note": ""
+      },
+      {
+        "key": "confluent.telemetry.exporter.c3plusplus.buffer.pending.batches.max",
+        "value": "80",
+        "env": "KAFKA_CONFLUENT_TELEMETRY_EXPORTER_C3PLUSPLUS_BUFFER_PENDING_BATCHES_MAX",
+        "note": ""
+      },
+      {
+        "key": "confluent.telemetry.exporter.c3plusplus.client.base.url",
+        "value": "https://<PROMETHEUS_HOST>:9090/api/v1/otlp",
+        "env": "KAFKA_CONFLUENT_TELEMETRY_EXPORTER_C3PLUSPLUS_CLIENT_BASE_URL",
+        "note": ""
+      },
+      {
+        "key": "confluent.telemetry.exporter.c3plusplus.client.compression",
+        "value": "gzip",
+        "env": "KAFKA_CONFLUENT_TELEMETRY_EXPORTER_C3PLUSPLUS_CLIENT_COMPRESSION",
+        "note": ""
+      },
+      {
+        "key": "confluent.telemetry.exporter.c3plusplus.enabled",
+        "value": "true",
+        "env": "KAFKA_CONFLUENT_TELEMETRY_EXPORTER_C3PLUSPLUS_ENABLED",
+        "note": ""
+      },
+      {
+        "key": "confluent.telemetry.exporter.c3plusplus.https.ssl.truststore.location",
+        "value": "<SSL_DIR>/truststore.p12",
+        "env": "KAFKA_CONFLUENT_TELEMETRY_EXPORTER_C3PLUSPLUS_HTTPS_SSL_TRUSTSTORE_LOCATION",
+        "note": ""
+      },
+      {
+        "key": "confluent.telemetry.exporter.c3plusplus.https.ssl.truststore.password",
+        "value": "<由 CyberArk 提供>",
+        "env": "KAFKA_CONFLUENT_TELEMETRY_EXPORTER_C3PLUSPLUS_HTTPS_SSL_TRUSTSTORE_PASSWORD",
+        "note": ""
+      },
+      {
+        "key": "confluent.telemetry.exporter.c3plusplus.https.ssl.truststore.type",
+        "value": "PKCS12",
+        "env": "KAFKA_CONFLUENT_TELEMETRY_EXPORTER_C3PLUSPLUS_HTTPS_SSL_TRUSTSTORE_TYPE",
+        "note": ""
+      },
+      {
+        "key": "confluent.telemetry.exporter.c3plusplus.metrics.include",
+        "value": "io.confluent.kafka.server.request.(?!.*delta).*|io.confluent.kafka.server.server.broker.state|io.confluent.kafka.server.replica.manager.leader.count|io.confluent.kafka.server.request.queue.size|io.confluent.kafka.server.broker.topic.failed.produce.requests.rate.1.min|io.confluent.kafka.server.tier.archiver.total.lag|io.confluent.kafka.server.request.total.time.ms.p99|io.confluent.kafka.server.broker.topic.failed.fetch.requests.rate.1.min|io.confluent.kafka.server.broker.topic.total.fetch.requests.rate.1.min|io.confluent.kafka.server.partition.caught.up.replicas.count|io.confluent.kafka.server.partition.observer.replicas.count|io.confluent.kafka.server.tier.tasks.num.partitions.in.error|io.confluent.kafka.server.broker.topic.bytes.out.rate.1.min|io.confluent.kafka.server.request.total.time.ms.p95|io.confluent.kafka.server.controller.active.controller.count|io.confluent.kafka.server.request.total.time.ms.p999|io.confluent.kafka.server.controller.active.broker.count|io.confluent.kafka.server.request.handler.pool.request.handler.avg.idle.percent.rate.1.min|io.confluent.kafka.server.controller.unclean.leader.elections.rate.1.min|io.confluent.kafka.server.replica.manager.partition.count|io.confluent.kafka.server.controller.unclean.leader.elections.total|io.confluent.kafka.server.partition.replicas.count|io.confluent.kafka.server.broker.topic.total.produce.requests.rate.1.min|io.confluent.kafka.server.controller.offline.partitions.count|io.confluent.kafka.server.socket.server.network.processor.avg.idle.percent|io.confluent.kafka.server.partition.under.replicated|io.confluent.kafka.server.log.log.start.offset|io.confluent.kafka.server.log.tier.size|io.confluent.kafka.server.log.size|io.confluent.kafka.server.tier.fetcher.bytes.fetched.total|io.confluent.kafka.server.request.total.time.ms.p50|io.confluent.kafka.server.tenant.consumer.lag.offsets|io.confluent.kafka.server.log.log.end.offset|io.confluent.kafka.server.broker.topic.bytes.in.rate.1.min|io.confluent.kafka.server.partition.under.min.isr|io.confluent.kafka.server.partition.in.sync.replicas.count|io.confluent.telemetry.http.exporter.batches.dropped|io.confluent.telemetry.http.exporter.items.total|io.confluent.telemetry.http.exporter.items.succeeded|io.confluent.telemetry.http.exporter.send.time.total.millis|io.confluent.kafka.server.controller.leader.election.rate.(?!.*delta).*|io.confluent.telemetry.http.exporter.batches.failed|io.confluent.kafka.server.socket.server.failed.authentication.total(?!.*delta).*|io.confluent.kafka.server.socket.server.successful.authentication.total(?!.*delta).*|io.confluent.kafka.server.socket.server.failed.reauthentication.total(?!.*delta).*|io.confluent.kafka.server.socket.server.connection.count(?!.*delta).*|io.confluent.kafka.server.socket.server.connection.quotas.total.limit(?!.*delta).*",
+        "env": "KAFKA_CONFLUENT_TELEMETRY_EXPORTER_C3PLUSPLUS_METRICS_INCLUDE",
+        "note": "第 19 章:只加明確要用的指標(認證失敗/成功、重新認證失敗、連線數與上限)。名稱後面要加 (?!.*delta).*:同名的 delta 型態 Prometheus 不收,整批會被拒(實測,連原本的監控指標也跟著丟);也不要用萬用字元"
+      },
+      {
+        "key": "confluent.telemetry.exporter.c3plusplus.type",
+        "value": "http",
+        "env": "KAFKA_CONFLUENT_TELEMETRY_EXPORTER_C3PLUSPLUS_TYPE",
+        "note": ""
+      },
+      {
+        "key": "confluent.telemetry.metrics.collector.interval.ms",
+        "value": "60000",
+        "env": "KAFKA_CONFLUENT_TELEMETRY_METRICS_COLLECTOR_INTERVAL_MS",
+        "note": ""
+      },
+      {
+        "key": "confluent.telemetry.remoteconfig.confluent.enabled",
+        "value": "false",
+        "env": "KAFKA_CONFLUENT_TELEMETRY_REMOTECONFIG_CONFLUENT_ENABLED",
+        "note": ""
+      },
+      {
+        "key": "controller.listener.names",
+        "value": "CONTROLLER",
+        "env": "KAFKA_CONTROLLER_LISTENER_NAMES",
+        "note": ""
+      },
+      {
+        "key": "controller.quorum.bootstrap.servers",
+        "value": "<CONTROLLER1_HOST>:9093,<CONTROLLER2_HOST>:9093,<CONTROLLER3_HOST>:9093",
+        "env": "KAFKA_CONTROLLER_QUORUM_BOOTSTRAP_SERVERS",
+        "note": ""
+      },
+      {
+        "key": "default.replication.factor",
+        "value": "3",
+        "env": "KAFKA_DEFAULT_REPLICATION_FACTOR",
+        "note": ""
+      },
+      {
+        "key": "inter.broker.listener.name",
+        "value": "INTERNAL",
+        "env": "KAFKA_INTER_BROKER_LISTENER_NAME",
+        "note": "KRaft 下 Self-Balancing 跑在 controller,官方要求 controller 也設(第 31 章)"
+      },
+      {
+        "key": "kafka.rest.bootstrap.servers",
+        "value": "SASL_SSL://<BROKER1_HOST>:9094,SASL_SSL://<BROKER2_HOST>:9094,SASL_SSL://<BROKER3_HOST>:9094,SASL_SSL://<BROKER4_HOST>:9094",
+        "env": "KAFKA_KAFKA_REST_BOOTSTRAP_SERVERS",
+        "note": ""
+      },
+      {
+        "key": "kafka.rest.client.security.protocol",
+        "value": "SASL_SSL",
+        "env": "KAFKA_KAFKA_REST_CLIENT_SECURITY_PROTOCOL",
+        "note": ""
+      },
+      {
+        "key": "kafka.rest.client.ssl.truststore.location",
+        "value": "<SSL_DIR>/truststore.p12",
+        "env": "KAFKA_KAFKA_REST_CLIENT_SSL_TRUSTSTORE_LOCATION",
+        "note": ""
+      },
+      {
+        "key": "kafka.rest.client.ssl.truststore.password",
+        "value": "<由 CyberArk 提供>",
+        "env": "KAFKA_KAFKA_REST_CLIENT_SSL_TRUSTSTORE_PASSWORD",
+        "note": ""
+      },
+      {
+        "key": "kafka.rest.client.ssl.truststore.type",
+        "value": "PKCS12",
+        "env": "KAFKA_KAFKA_REST_CLIENT_SSL_TRUSTSTORE_TYPE",
+        "note": ""
+      },
+      {
+        "key": "kafka.rest.confluent.metadata.bootstrap.server.urls",
+        "value": "https://<BROKER1_HOST>:8091,https://<BROKER2_HOST>:8092,https://<BROKER3_HOST>:8093,https://<BROKER4_HOST>:8094",
+        "env": "KAFKA_KAFKA_REST_CONFLUENT_METADATA_BOOTSTRAP_SERVER_URLS",
+        "note": ""
+      },
+      {
+        "key": "kafka.rest.confluent.metadata.ssl.truststore.location",
+        "value": "<SSL_DIR>/truststore.p12",
+        "env": "KAFKA_KAFKA_REST_CONFLUENT_METADATA_SSL_TRUSTSTORE_LOCATION",
+        "note": ""
+      },
+      {
+        "key": "kafka.rest.confluent.metadata.ssl.truststore.password",
+        "value": "<由 CyberArk 提供>",
+        "env": "KAFKA_KAFKA_REST_CONFLUENT_METADATA_SSL_TRUSTSTORE_PASSWORD",
+        "note": ""
+      },
+      {
+        "key": "kafka.rest.confluent.metadata.ssl.truststore.type",
+        "value": "PKCS12",
+        "env": "KAFKA_KAFKA_REST_CONFLUENT_METADATA_SSL_TRUSTSTORE_TYPE",
+        "note": ""
+      },
+      {
+        "key": "kafka.rest.kafka.rest.resource.extension.class",
+        "value": "io.confluent.kafkarest.security.KafkaRestSecurityResourceExtension",
+        "env": "KAFKA_KAFKA_REST_KAFKA_REST_RESOURCE_EXTENSION_CLASS",
+        "note": ""
+      },
+      {
+        "key": "kafka.rest.public.key.path",
+        "value": "<SSL_DIR>/public.pem",
+        "env": "KAFKA_KAFKA_REST_PUBLIC_KEY_PATH",
+        "note": ""
+      },
+      {
+        "key": "kafka.rest.rest.servlet.initializor.classes",
+        "value": "io.confluent.common.security.jetty.initializer.InstallBearerOrBasicSecurityHandler",
+        "env": "KAFKA_KAFKA_REST_REST_SERVLET_INITIALIZOR_CLASSES",
+        "note": "--- broker 內建 Admin REST(/kafka/v3)的 RBAC 保護:屬性依官方 Admin REST Security 頁(kafka.rest. 前綴)。未設定時此 REST 完全無認證 ---"
+      },
+      {
+        "key": "ldap.com.sun.jndi.ldap.read.timeout",
+        "value": "3000",
+        "env": "KAFKA_LDAP_COM_SUN_JNDI_LDAP_READ_TIMEOUT",
+        "note": ""
+      },
+      {
+        "key": "ldap.group.member.attribute",
+        "value": "member",
+        "env": "KAFKA_LDAP_GROUP_MEMBER_ATTRIBUTE",
+        "note": ""
+      },
+      {
+        "key": "ldap.group.member.attribute.pattern",
+        "value": "(?i)CN=([^,]+),.*",
+        "env": "KAFKA_LDAP_GROUP_MEMBER_ATTRIBUTE_PATTERN",
+        "note": "客戶 AD 的 member 格式 CN=<帳號大寫>,OU=…;(?i) 讓 demo 不管 DN 屬性名稱大小寫"
+      },
+      {
+        "key": "ldap.group.name.attribute",
+        "value": "cn",
+        "env": "KAFKA_LDAP_GROUP_NAME_ATTRIBUTE",
+        "note": ""
+      },
+      {
+        "key": "ldap.group.object.class",
+        "value": "groupOfNames",
+        "env": "KAFKA_LDAP_GROUP_OBJECT_CLASS",
+        "note": ""
+      },
+      {
+        "key": "ldap.group.search.base",
+        "value": "ou=groups,<AD_BASE_DN>",
+        "env": "KAFKA_LDAP_GROUP_SEARCH_BASE",
+        "note": ""
+      },
+      {
+        "key": "ldap.java.naming.factory.initial",
+        "value": "com.sun.jndi.ldap.LdapCtxFactory",
+        "env": "KAFKA_LDAP_JAVA_NAMING_FACTORY_INITIAL",
+        "note": "--- LDAP(模擬 AD):bind DN 唯讀查詢帳號 + 以群組成員屬性對映 ---"
+      },
+      {
+        "key": "ldap.java.naming.provider.url",
+        "value": "ldaps://<AD_HOST>:636",
+        "env": "KAFKA_LDAP_JAVA_NAMING_PROVIDER_URL",
+        "note": "AD 走 LDAPS(正式環境連 AD 的 636 或 3269);只有連 AD 的 JVM 需要 ldap.ssl.truststore"
+      },
+      {
+        "key": "ldap.java.naming.security.authentication",
+        "value": "simple",
+        "env": "KAFKA_LDAP_JAVA_NAMING_SECURITY_AUTHENTICATION",
+        "note": ""
+      },
+      {
+        "key": "ldap.java.naming.security.credentials",
+        "value": "<由 CyberArk 提供>",
+        "env": "KAFKA_LDAP_JAVA_NAMING_SECURITY_CREDENTIALS",
+        "note": ""
+      },
+      {
+        "key": "ldap.java.naming.security.principal",
+        "value": "cn=svc-kafka-ldap,ou=system,<AD_BASE_DN>",
+        "env": "KAFKA_LDAP_JAVA_NAMING_SECURITY_PRINCIPAL",
+        "note": ""
+      },
+      {
+        "key": "ldap.java.naming.security.protocol",
+        "value": "SSL",
+        "env": "KAFKA_LDAP_JAVA_NAMING_SECURITY_PROTOCOL",
+        "note": ""
+      },
+      {
+        "key": "ldap.principal.mapping",
+        "value": "ldap",
+        "env": "KAFKA_LDAP_PRINCIPAL_MAPPING",
+        "note": "登入後的身分用 AD 紀錄的大小寫,不是使用者輸入的字串(實測 2026-10-05:使用者輸入 GARY 也對得到群組);原本只在 spike override,2026-10-06 納入主設定"
+      },
+      {
+        "key": "ldap.refresh.interval.ms",
+        "value": "5000",
+        "env": "KAFKA_LDAP_REFRESH_INTERVAL_MS",
+        "note": ""
+      },
+      {
+        "key": "ldap.search.mode",
+        "value": "GROUPS",
+        "env": "KAFKA_LDAP_SEARCH_MODE",
+        "note": ""
+      },
+      {
+        "key": "ldap.ssl.truststore.location",
+        "value": "<SSL_DIR>/truststore.p12",
+        "env": "KAFKA_LDAP_SSL_TRUSTSTORE_LOCATION",
+        "note": ""
+      },
+      {
+        "key": "ldap.ssl.truststore.password",
+        "value": "<由 CyberArk 提供>",
+        "env": "KAFKA_LDAP_SSL_TRUSTSTORE_PASSWORD",
+        "note": ""
+      },
+      {
+        "key": "ldap.ssl.truststore.type",
+        "value": "PKCS12",
+        "env": "KAFKA_LDAP_SSL_TRUSTSTORE_TYPE",
+        "note": ""
+      },
+      {
+        "key": "ldap.user.name.attribute",
+        "value": "cn",
+        "env": "KAFKA_LDAP_USER_NAME_ATTRIBUTE",
+        "note": "客戶的使用者名稱 = CN"
+      },
+      {
+        "key": "ldap.user.object.class",
+        "value": "inetOrgPerson",
+        "env": "KAFKA_LDAP_USER_OBJECT_CLASS",
+        "note": ""
+      },
+      {
+        "key": "ldap.user.search.base",
+        "value": "ou=users,<AD_BASE_DN>",
+        "env": "KAFKA_LDAP_USER_SEARCH_BASE",
+        "note": ""
+      },
+      {
+        "key": "ldap.user.search.scope",
+        "value": "2",
+        "env": "KAFKA_LDAP_USER_SEARCH_SCOPE",
+        "note": "使用者分散在多層 OU,要搜尋整個子樹(官方預設 1)"
+      },
+      {
+        "key": "listeners",
+        "value": "INTERNAL://<BROKER1_HOST>:9092,CLIENT://0.0.0.0:9094",
+        "env": "KAFKA_LISTENERS",
+        "note": ""
+      },
+      {
+        "key": "listener.name.client.connections.max.reauth.ms",
+        "value": "60000",
+        "env": "KAFKA_LISTENER_NAME_CLIENT_CONNECTIONS_MAX_REAUTH_MS",
+        "note": "第 19 章:SASL 連線每 60 秒重新認證(demo 為了讓實驗看得到效果;正式環境建議 1 小時,依 client 數量評估)。預設 0 = 連著就永遠有效,第 18 章實驗就是這個情況。這個設定不能動態改,要重啟 broker"
+      },
+      {
+        "key": "listener.name.client.oauthbearer.sasl.jaas.config",
+        "value": "org.apache.kafka.common.security.oauthbearer.OAuthBearerLoginModule required publicKeyPath=\"<SSL_DIR>/public.pem\";",
+        "env": "KAFKA_LISTENER_NAME_CLIENT_OAUTHBEARER_SASL_JAAS_CONFIG",
+        "note": ""
+      },
+      {
+        "key": "listener.name.client.oauthbearer.sasl.login.callback.handler.class",
+        "value": "io.confluent.kafka.server.plugins.auth.token.TokenBearerServerLoginCallbackHandler",
+        "env": "KAFKA_LISTENER_NAME_CLIENT_OAUTHBEARER_SASL_LOGIN_CALLBACK_HANDLER_CLASS",
+        "note": ""
+      },
+      {
+        "key": "listener.name.client.oauthbearer.sasl.server.callback.handler.class",
+        "value": "io.confluent.kafka.server.plugins.auth.token.TokenBearerValidatorCallbackHandler",
+        "env": "KAFKA_LISTENER_NAME_CLIENT_OAUTHBEARER_SASL_SERVER_CALLBACK_HANDLER_CLASS",
+        "note": "--- CLIENT listener 同時接受 MDS 簽發的 token(OAUTHBEARER):C3 / REST Proxy 代表使用者、人用 confluent login 的腳本 ---"
+      },
+      {
+        "key": "listener.name.client.plain.sasl.jaas.config",
+        "value": "org.apache.kafka.common.security.plain.PlainLoginModule required;",
+        "env": "KAFKA_LISTENER_NAME_CLIENT_PLAIN_SASL_JAAS_CONFIG",
+        "note": ""
+      },
+      {
+        "key": "listener.name.client.plain.sasl.server.callback.handler.class",
+        "value": "io.confluent.security.auth.provider.ldap.LdapAuthenticateCallbackHandler",
+        "env": "KAFKA_LISTENER_NAME_CLIENT_PLAIN_SASL_SERVER_CALLBACK_HANDLER_CLASS",
+        "note": ""
+      },
+      {
+        "key": "listener.name.client.sasl.enabled.mechanisms",
+        "value": "PLAIN,SCRAM-SHA-512,OAUTHBEARER",
+        "env": "KAFKA_LISTENER_NAME_CLIENT_SASL_ENABLED_MECHANISMS",
+        "note": "--- CLIENT listener:人 = PLAIN + LDAP;服務 = SCRAM ---"
+      },
+      {
+        "key": "listener.name.client.scram-sha-512.sasl.jaas.config",
+        "value": "org.apache.kafka.common.security.scram.ScramLoginModule required;",
+        "env": "KAFKA_LISTENER_NAME_CLIENT_SCRAM___SHA___512_SASL_JAAS_CONFIG",
+        "note": ""
+      },
+      {
+        "key": "listener.name.controller.ssl.client.auth",
+        "value": "required",
+        "env": "KAFKA_LISTENER_NAME_CONTROLLER_SSL_CLIENT_AUTH",
+        "note": ""
+      },
+      {
+        "key": "listener.name.controller.ssl.keystore.location",
+        "value": "<SSL_DIR>/internal.keystore.p12",
+        "env": "KAFKA_LISTENER_NAME_CONTROLLER_SSL_KEYSTORE_LOCATION",
+        "note": ""
+      },
+      {
+        "key": "listener.name.controller.ssl.keystore.password",
+        "value": "<由 CyberArk 提供>",
+        "env": "KAFKA_LISTENER_NAME_CONTROLLER_SSL_KEYSTORE_PASSWORD",
+        "note": ""
+      },
+      {
+        "key": "listener.name.controller.ssl.keystore.type",
+        "value": "PKCS12",
+        "env": "KAFKA_LISTENER_NAME_CONTROLLER_SSL_KEYSTORE_TYPE",
+        "note": ""
+      },
+      {
+        "key": "listener.name.controller.ssl.key.password",
+        "value": "<由 CyberArk 提供>",
+        "env": "KAFKA_LISTENER_NAME_CONTROLLER_SSL_KEY_PASSWORD",
+        "note": ""
+      },
+      {
+        "key": "listener.name.internal.ssl.client.auth",
+        "value": "required",
+        "env": "KAFKA_LISTENER_NAME_INTERNAL_SSL_CLIENT_AUTH",
+        "note": ""
+      },
+      {
+        "key": "listener.name.internal.ssl.keystore.location",
+        "value": "<SSL_DIR>/internal.keystore.p12",
+        "env": "KAFKA_LISTENER_NAME_INTERNAL_SSL_KEYSTORE_LOCATION",
+        "note": ""
+      },
+      {
+        "key": "listener.name.internal.ssl.keystore.password",
+        "value": "<由 CyberArk 提供>",
+        "env": "KAFKA_LISTENER_NAME_INTERNAL_SSL_KEYSTORE_PASSWORD",
+        "note": ""
+      },
+      {
+        "key": "listener.name.internal.ssl.keystore.type",
+        "value": "PKCS12",
+        "env": "KAFKA_LISTENER_NAME_INTERNAL_SSL_KEYSTORE_TYPE",
+        "note": ""
+      },
+      {
+        "key": "listener.name.internal.ssl.key.password",
+        "value": "<由 CyberArk 提供>",
+        "env": "KAFKA_LISTENER_NAME_INTERNAL_SSL_KEY_PASSWORD",
+        "note": ""
+      },
+      {
+        "key": "listener.security.protocol.map",
+        "value": "CONTROLLER:SSL,INTERNAL:SSL,CLIENT:SASL_SSL",
+        "env": "KAFKA_LISTENER_SECURITY_PROTOCOL_MAP",
+        "note": "controller 不監聽 INTERNAL,只是以 client 身分連 broker 的 INTERNAL 埠(balancer)"
+      },
+      {
+        "key": "metric.reporters",
+        "value": "org.apache.kafka.common.metrics.JmxReporter,io.confluent.telemetry.reporter.TelemetryReporter",
+        "env": "KAFKA_METRIC_REPORTERS",
+        "note": "Kafka 4.x:設了 metric.reporters 就不再自動帶 JmxReporter,要明確列出,否則 raft、socket-server 等指標不會出現在 JMX exporter"
+      },
+      {
+        "key": "min.insync.replicas",
+        "value": "2",
+        "env": "KAFKA_MIN_INSYNC_REPLICAS",
+        "note": ""
+      },
+      {
+        "key": "node.id",
+        "value": "11",
+        "env": "KAFKA_NODE_ID",
+        "note": ""
+      },
+      {
+        "key": "offsets.topic.replication.factor",
+        "value": "3",
+        "env": "KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR",
+        "note": ""
+      },
+      {
+        "key": "password.encoder.secret",
+        "value": "<由 CyberArk 提供>",
+        "env": "KAFKA_PASSWORD_ENCODER_SECRET",
+        "note": ""
+      },
+      {
+        "key": "process.roles",
+        "value": "broker",
+        "env": "KAFKA_PROCESS_ROLES",
+        "note": ""
+      },
+      {
+        "key": "ssl.cipher.suites",
+        "value": "TLS_AES_256_GCM_SHA384,TLS_AES_128_GCM_SHA256,TLS_CHACHA20_POLY1305_SHA256,TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256",
+        "env": "KAFKA_SSL_CIPHER_SUITES",
+        "note": "只留 AEAD(GCM / ChaCha20);實測未設定時 broker 接受 ECDHE-RSA-AES128-SHA(CBC + SHA-1)"
+      },
+      {
+        "key": "ssl.client.auth",
+        "value": "none",
+        "env": "KAFKA_SSL_CLIENT_AUTH",
+        "note": ""
+      },
+      {
+        "key": "ssl.enabled.protocols",
+        "value": "TLSv1.3,TLSv1.2",
+        "env": "KAFKA_SSL_ENABLED_PROTOCOLS",
+        "note": "第 19 章:只留 TLS 1.2 / 1.3(明確列出,不靠 JDK 預設)"
+      },
+      {
+        "key": "ssl.endpoint.identification.algorithm",
+        "value": "https",
+        "env": "KAFKA_SSL_ENDPOINT_IDENTIFICATION_ALGORITHM",
+        "note": ""
+      },
+      {
+        "key": "ssl.keystore.password",
+        "value": "<由 CyberArk 提供>",
+        "env": "KAFKA_SSL_KEYSTORE_CREDENTIALS",
+        "note": ""
+      },
+      {
+        "key": "ssl.keystore.location",
+        "value": "<SSL_DIR>/server.keystore.p12",
+        "env": "KAFKA_SSL_KEYSTORE_FILENAME",
+        "note": ""
+      },
+      {
+        "key": "ssl.keystore.type",
+        "value": "PKCS12",
+        "env": "KAFKA_SSL_KEYSTORE_TYPE",
+        "note": ""
+      },
+      {
+        "key": "ssl.key.password",
+        "value": "<由 CyberArk 提供>",
+        "env": "KAFKA_SSL_KEY_CREDENTIALS",
+        "note": ""
+      },
+      {
+        "key": "ssl.principal.mapping.rules",
+        "value": "RULE:^.*CN=([^,]*).*$/$1/,DEFAULT",
+        "env": "KAFKA_SSL_PRINCIPAL_MAPPING_RULES",
+        "note": "--- 內部通道:CONTROLLER(broker→controller)與 INTERNAL(broker↔broker)都是 mTLS,共用一張憑證 internal.keystore.p12(CN=kafka-internal)--- 不用 SASL:SCRAM 憑證存在 metadata 裡,刪除過 SCRAM 憑證後重啟 broker 會因為自己認證不過而起不來(見 RUNBOOK 第 19 章);mTLS 身分不依賴 metadata。 身分 = 憑證 CN(ssl.principal.mapping.rules)→ User:kafka-internal(在 super.users)。同一張憑證 broker 與 controller 共用,代價是 audit 看不出是哪一台。"
+      },
+      {
+        "key": "ssl.truststore.location",
+        "value": "<SSL_DIR>/truststore.p12",
+        "env": "KAFKA_SSL_TRUSTSTORE_LOCATION",
+        "note": ""
+      },
+      {
+        "key": "ssl.truststore.password",
+        "value": "<由 CyberArk 提供>",
+        "env": "KAFKA_SSL_TRUSTSTORE_PASSWORD",
+        "note": ""
+      },
+      {
+        "key": "ssl.truststore.type",
+        "value": "PKCS12",
+        "env": "KAFKA_SSL_TRUSTSTORE_TYPE",
+        "note": ""
+      },
+      {
+        "key": "super.users",
+        "value": "User:kafka-internal;User:kafka-broker;User:kafka-controller;User:bootstrap",
+        "env": "KAFKA_SUPER_USERS",
+        "note": ""
+      },
+      {
+        "key": "transaction.state.log.min.isr",
+        "value": "2",
+        "env": "KAFKA_TRANSACTION_STATE_LOG_MIN_ISR",
+        "note": ""
+      },
+      {
+        "key": "transaction.state.log.replication.factor",
+        "value": "3",
+        "env": "KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR",
+        "note": ""
+      }
+    ]
+  },
+  "restproxy": {
+    "file": "kafka-rest.properties",
+    "source": "restproxy1",
+    "props": [
+      {
+        "key": "auth.ssl.principal.mapping.rules",
+        "value": "RULE:^.*CN=([^,]*).*$/$1/,DEFAULT",
+        "env": "KAFKA_REST_AUTH_SSL_PRINCIPAL_MAPPING_RULES",
+        "note": ""
+      },
+      {
+        "key": "bootstrap.servers",
+        "value": "SASL_SSL://<BROKER1_HOST>:9094,SASL_SSL://<BROKER2_HOST>:9094,SASL_SSL://<BROKER3_HOST>:9094,SASL_SSL://<BROKER4_HOST>:9094",
+        "env": "KAFKA_REST_BOOTSTRAP_SERVERS",
+        "note": ""
+      },
+      {
+        "key": "client.sasl.jaas.config",
+        "value": "org.apache.kafka.common.security.oauthbearer.OAuthBearerLoginModule required metadataServerUrls=\"https://<BROKER1_HOST>:8091,https://<BROKER2_HOST>:8092,https://<BROKER3_HOST>:8093,https://<BROKER4_HOST>:8094\";",
+        "env": "KAFKA_REST_CLIENT_SASL_JAAS_CONFIG",
+        "note": ""
+      },
+      {
+        "key": "client.sasl.login.callback.handler.class",
+        "value": "io.confluent.kafka.clients.plugins.auth.token.TokenCertificateLoginCallbackHandler",
+        "env": "KAFKA_REST_CLIENT_SASL_LOGIN_CALLBACK_HANDLER_CLASS",
+        "note": ""
+      },
+      {
+        "key": "client.sasl.mechanism",
+        "value": "OAUTHBEARER",
+        "env": "KAFKA_REST_CLIENT_SASL_MECHANISM",
+        "note": "REST Proxy 自身(license 檢查、kafka-ready 健康檢查)用 client 憑證(CN=restproxy)向 MDS 換 token,以 OAUTHBEARER 連 broker(官方 mTLS RBAC 範例做法);代表使用者的請求改用該使用者的 MDS token"
+      },
+      {
+        "key": "client.security.protocol",
+        "value": "SASL_SSL",
+        "env": "KAFKA_REST_CLIENT_SECURITY_PROTOCOL",
+        "note": "連 broker 的 Kafka client:CLIENT listener(全部用 OAUTHBEARER:代表使用者/機器的請求帶該主體的 token;REST Proxy 自身用 CN=restproxy 憑證換的 token)"
+      },
+      {
+        "key": "client.ssl.keystore.location",
+        "value": "<SSL_DIR>/client-restproxy.keystore.p12",
+        "env": "KAFKA_REST_CLIENT_SSL_KEYSTORE_LOCATION",
+        "note": ""
+      },
+      {
+        "key": "client.ssl.keystore.password",
+        "value": "<由 CyberArk 提供>",
+        "env": "KAFKA_REST_CLIENT_SSL_KEYSTORE_PASSWORD",
+        "note": ""
+      },
+      {
+        "key": "client.ssl.keystore.type",
+        "value": "PKCS12",
+        "env": "KAFKA_REST_CLIENT_SSL_KEYSTORE_TYPE",
+        "note": ""
+      },
+      {
+        "key": "client.ssl.key.password",
+        "value": "<由 CyberArk 提供>",
+        "env": "KAFKA_REST_CLIENT_SSL_KEY_PASSWORD",
+        "note": ""
+      },
+      {
+        "key": "client.ssl.truststore.location",
+        "value": "<SSL_DIR>/truststore.p12",
+        "env": "KAFKA_REST_CLIENT_SSL_TRUSTSTORE_LOCATION",
+        "note": ""
+      },
+      {
+        "key": "client.ssl.truststore.password",
+        "value": "<由 CyberArk 提供>",
+        "env": "KAFKA_REST_CLIENT_SSL_TRUSTSTORE_PASSWORD",
+        "note": ""
+      },
+      {
+        "key": "client.ssl.truststore.type",
+        "value": "PKCS12",
+        "env": "KAFKA_REST_CLIENT_SSL_TRUSTSTORE_TYPE",
+        "note": ""
+      },
+      {
+        "key": "confluent.metadata.bootstrap.server.urls",
+        "value": "https://<BROKER1_HOST>:8091,https://<BROKER2_HOST>:8092,https://<BROKER3_HOST>:8093,https://<BROKER4_HOST>:8094",
+        "env": "KAFKA_REST_CONFLUENT_METADATA_BOOTSTRAP_SERVER_URLS",
+        "note": "REST Proxy 自身向 MDS 認證:mTLS(CN=restproxy),不是 AD 帳號"
+      },
+      {
+        "key": "confluent.metadata.server.urls.max.age.ms",
+        "value": "60000",
+        "env": "KAFKA_REST_CONFLUENT_METADATA_SERVER_URLS_MAX_AGE_MS",
+        "note": ""
+      },
+      {
+        "key": "confluent.metadata.ssl.keystore.location",
+        "value": "<SSL_DIR>/client-restproxy.keystore.p12",
+        "env": "KAFKA_REST_CONFLUENT_METADATA_SSL_KEYSTORE_LOCATION",
+        "note": ""
+      },
+      {
+        "key": "confluent.metadata.ssl.keystore.password",
+        "value": "<由 CyberArk 提供>",
+        "env": "KAFKA_REST_CONFLUENT_METADATA_SSL_KEYSTORE_PASSWORD",
+        "note": ""
+      },
+      {
+        "key": "confluent.metadata.ssl.keystore.type",
+        "value": "PKCS12",
+        "env": "KAFKA_REST_CONFLUENT_METADATA_SSL_KEYSTORE_TYPE",
+        "note": ""
+      },
+      {
+        "key": "confluent.metadata.ssl.key.password",
+        "value": "<由 CyberArk 提供>",
+        "env": "KAFKA_REST_CONFLUENT_METADATA_SSL_KEY_PASSWORD",
+        "note": ""
+      },
+      {
+        "key": "confluent.metadata.ssl.truststore.location",
+        "value": "<SSL_DIR>/truststore.p12",
+        "env": "KAFKA_REST_CONFLUENT_METADATA_SSL_TRUSTSTORE_LOCATION",
+        "note": ""
+      },
+      {
+        "key": "confluent.metadata.ssl.truststore.password",
+        "value": "<由 CyberArk 提供>",
+        "env": "KAFKA_REST_CONFLUENT_METADATA_SSL_TRUSTSTORE_PASSWORD",
+        "note": ""
+      },
+      {
+        "key": "confluent.metadata.ssl.truststore.type",
+        "value": "PKCS12",
+        "env": "KAFKA_REST_CONFLUENT_METADATA_SSL_TRUSTSTORE_TYPE",
+        "note": ""
+      },
+      {
+        "key": "host.name",
+        "value": "<RESTPROXY1_HOST>",
+        "env": "KAFKA_REST_HOST_NAME",
+        "note": ""
+      },
+      {
+        "key": "id",
+        "value": "<RESTPROXY1_HOST>",
+        "env": "KAFKA_REST_ID",
+        "note": "官方:多實例每台 id 必須唯一(預設空值在多台時不安全)"
+      },
+      {
+        "key": "kafka.rest.resource.extension.class",
+        "value": "io.confluent.kafkarest.security.KafkaRestSecurityResourceExtension",
+        "env": "KAFKA_REST_KAFKA_REST_RESOURCE_EXTENSION_CLASS",
+        "note": "RBAC + principal propagation(使用者以 Basic 進入,MDS 驗證後以其身分連 Kafka)"
+      },
+      {
+        "key": "listeners",
+        "value": "https://0.0.0.0:8086",
+        "env": "KAFKA_REST_LISTENERS",
+        "note": ""
+      },
+      {
+        "key": "public.key.path",
+        "value": "<SSL_DIR>/public.pem",
+        "env": "KAFKA_REST_PUBLIC_KEY_PATH",
+        "note": ""
+      },
+      {
+        "key": "rest.servlet.initializor.classes",
+        "value": "io.confluent.common.security.jetty.initializer.AuthenticationHandler",
+        "env": "KAFKA_REST_REST_SERVLET_INITIALIZOR_CLASSES",
+        "note": ""
+      },
+      {
+        "key": "ssl.client.authentication",
+        "value": "REQUESTED",
+        "env": "KAFKA_REST_SSL_CLIENT_AUTHENTICATION",
+        "note": ""
+      },
+      {
+        "key": "ssl.keystore.location",
+        "value": "<SSL_DIR>/server.keystore.p12",
+        "env": "KAFKA_REST_SSL_KEYSTORE_LOCATION",
+        "note": "REST Proxy 對外 HTTPS:共用 server 憑證"
+      },
+      {
+        "key": "ssl.keystore.password",
+        "value": "<由 CyberArk 提供>",
+        "env": "KAFKA_REST_SSL_KEYSTORE_PASSWORD",
+        "note": ""
+      },
+      {
+        "key": "ssl.keystore.type",
+        "value": "PKCS12",
+        "env": "KAFKA_REST_SSL_KEYSTORE_TYPE",
+        "note": ""
+      },
+      {
+        "key": "ssl.key.password",
+        "value": "<由 CyberArk 提供>",
+        "env": "KAFKA_REST_SSL_KEY_PASSWORD",
+        "note": ""
+      },
+      {
+        "key": "ssl.truststore.location",
+        "value": "<SSL_DIR>/truststore.p12",
+        "env": "KAFKA_REST_SSL_TRUSTSTORE_LOCATION",
+        "note": ""
+      },
+      {
+        "key": "ssl.truststore.password",
+        "value": "<由 CyberArk 提供>",
+        "env": "KAFKA_REST_SSL_TRUSTSTORE_PASSWORD",
+        "note": ""
+      },
+      {
+        "key": "ssl.truststore.type",
+        "value": "PKCS12",
+        "env": "KAFKA_REST_SSL_TRUSTSTORE_TYPE",
+        "note": ""
+      }
+    ]
+  },
+  "schema-registry": {
+    "file": "schema-registry.properties",
+    "source": "schema-registry1",
+    "props": [
+      {
+        "key": "auth.ssl.principal.mapping.rules",
+        "value": "RULE:^CN=([a-zA-Z0-9.-]*).*$/$1/,DEFAULT",
+        "env": "SCHEMA_REGISTRY_AUTH_SSL_PRINCIPAL_MAPPING_RULES",
+        "note": "憑證主體取 CN(CN=c3 → c3;沒有任何 SR 角色)"
+      },
+      {
+        "key": "confluent.metadata.bootstrap.server.urls",
+        "value": "https://<BROKER1_HOST>:8091,https://<BROKER2_HOST>:8092,https://<BROKER3_HOST>:8093,https://<BROKER4_HOST>:8094",
+        "env": "SCHEMA_REGISTRY_CONFLUENT_METADATA_BOOTSTRAP_SERVER_URLS",
+        "note": ""
+      },
+      {
+        "key": "confluent.metadata.server.urls.max.age.ms",
+        "value": "60000",
+        "env": "SCHEMA_REGISTRY_CONFLUENT_METADATA_SERVER_URLS_MAX_AGE_MS",
+        "note": ""
+      },
+      {
+        "key": "confluent.metadata.ssl.keystore.location",
+        "value": "<SSL_DIR>/client-schema-registry.keystore.p12",
+        "env": "SCHEMA_REGISTRY_CONFLUENT_METADATA_SSL_KEYSTORE_LOCATION",
+        "note": ""
+      },
+      {
+        "key": "confluent.metadata.ssl.keystore.password",
+        "value": "<由 CyberArk 提供>",
+        "env": "SCHEMA_REGISTRY_CONFLUENT_METADATA_SSL_KEYSTORE_PASSWORD",
+        "note": ""
+      },
+      {
+        "key": "confluent.metadata.ssl.keystore.type",
+        "value": "PKCS12",
+        "env": "SCHEMA_REGISTRY_CONFLUENT_METADATA_SSL_KEYSTORE_TYPE",
+        "note": ""
+      },
+      {
+        "key": "confluent.metadata.ssl.key.password",
+        "value": "<由 CyberArk 提供>",
+        "env": "SCHEMA_REGISTRY_CONFLUENT_METADATA_SSL_KEY_PASSWORD",
+        "note": ""
+      },
+      {
+        "key": "confluent.metadata.ssl.truststore.location",
+        "value": "<SSL_DIR>/truststore.p12",
+        "env": "SCHEMA_REGISTRY_CONFLUENT_METADATA_SSL_TRUSTSTORE_LOCATION",
+        "note": ""
+      },
+      {
+        "key": "confluent.metadata.ssl.truststore.password",
+        "value": "<由 CyberArk 提供>",
+        "env": "SCHEMA_REGISTRY_CONFLUENT_METADATA_SSL_TRUSTSTORE_PASSWORD",
+        "note": ""
+      },
+      {
+        "key": "confluent.metadata.ssl.truststore.type",
+        "value": "PKCS12",
+        "env": "SCHEMA_REGISTRY_CONFLUENT_METADATA_SSL_TRUSTSTORE_TYPE",
+        "note": ""
+      },
+      {
+        "key": "confluent.schema.registry.authorizer.class",
+        "value": "io.confluent.kafka.schemaregistry.security.authorizer.rbac.RbacAuthorizer",
+        "env": "SCHEMA_REGISTRY_CONFLUENT_SCHEMA_REGISTRY_AUTHORIZER_CLASS",
+        "note": ""
+      },
+      {
+        "key": "confluent.schema.registry.auth.mechanism",
+        "value": "JETTY_AUTH",
+        "env": "SCHEMA_REGISTRY_CONFLUENT_SCHEMA_REGISTRY_AUTH_MECHANISM",
+        "note": ""
+      },
+      {
+        "key": "dek.registry.rbac.enable",
+        "value": "true",
+        "env": "SCHEMA_REGISTRY_DEK_REGISTRY_RBAC_ENABLE",
+        "note": "沒設時 DEK Registry 的 KEK 端點對所有人 403(日誌:Couldn't find a corresponding operation to authorize);設了才依 Kek:<名稱> 的 role 授權"
+      },
+      {
+        "key": "host.name",
+        "value": "<SR1_HOST>",
+        "env": "SCHEMA_REGISTRY_HOST_NAME",
+        "note": ""
+      },
+      {
+        "key": "inter.instance.protocol",
+        "value": "https",
+        "env": "SCHEMA_REGISTRY_INTER_INSTANCE_PROTOCOL",
+        "note": "只開 HTTPS 時必設,否則啟動失敗:No listener configured with requested scheme http"
+      },
+      {
+        "key": "kafkastore.bootstrap.servers",
+        "value": "SASL_SSL://<BROKER1_HOST>:9094,SASL_SSL://<BROKER2_HOST>:9094,SASL_SSL://<BROKER3_HOST>:9094,SASL_SSL://<BROKER4_HOST>:9094",
+        "env": "SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS",
+        "note": "連 broker(_schemas topic):與 REST Proxy 相同做法——client 憑證(CN=schema-registry)向 MDS 換 token,OAUTHBEARER"
+      },
+      {
+        "key": "kafkastore.sasl.jaas.config",
+        "value": "org.apache.kafka.common.security.oauthbearer.OAuthBearerLoginModule required metadataServerUrls=\"https://<BROKER1_HOST>:8091,https://<BROKER2_HOST>:8092,https://<BROKER3_HOST>:8093,https://<BROKER4_HOST>:8094\";",
+        "env": "SCHEMA_REGISTRY_KAFKASTORE_SASL_JAAS_CONFIG",
+        "note": ""
+      },
+      {
+        "key": "kafkastore.sasl.login.callback.handler.class",
+        "value": "io.confluent.kafka.clients.plugins.auth.token.TokenCertificateLoginCallbackHandler",
+        "env": "SCHEMA_REGISTRY_KAFKASTORE_SASL_LOGIN_CALLBACK_HANDLER_CLASS",
+        "note": ""
+      },
+      {
+        "key": "kafkastore.sasl.mechanism",
+        "value": "OAUTHBEARER",
+        "env": "SCHEMA_REGISTRY_KAFKASTORE_SASL_MECHANISM",
+        "note": ""
+      },
+      {
+        "key": "kafkastore.security.protocol",
+        "value": "SASL_SSL",
+        "env": "SCHEMA_REGISTRY_KAFKASTORE_SECURITY_PROTOCOL",
+        "note": ""
+      },
+      {
+        "key": "kafkastore.ssl.keystore.location",
+        "value": "<SSL_DIR>/client-schema-registry.keystore.p12",
+        "env": "SCHEMA_REGISTRY_KAFKASTORE_SSL_KEYSTORE_LOCATION",
+        "note": ""
+      },
+      {
+        "key": "kafkastore.ssl.keystore.password",
+        "value": "<由 CyberArk 提供>",
+        "env": "SCHEMA_REGISTRY_KAFKASTORE_SSL_KEYSTORE_PASSWORD",
+        "note": ""
+      },
+      {
+        "key": "kafkastore.ssl.keystore.type",
+        "value": "PKCS12",
+        "env": "SCHEMA_REGISTRY_KAFKASTORE_SSL_KEYSTORE_TYPE",
+        "note": ""
+      },
+      {
+        "key": "kafkastore.ssl.key.password",
+        "value": "<由 CyberArk 提供>",
+        "env": "SCHEMA_REGISTRY_KAFKASTORE_SSL_KEY_PASSWORD",
+        "note": ""
+      },
+      {
+        "key": "kafkastore.ssl.truststore.location",
+        "value": "<SSL_DIR>/truststore.p12",
+        "env": "SCHEMA_REGISTRY_KAFKASTORE_SSL_TRUSTSTORE_LOCATION",
+        "note": ""
+      },
+      {
+        "key": "kafkastore.ssl.truststore.password",
+        "value": "<由 CyberArk 提供>",
+        "env": "SCHEMA_REGISTRY_KAFKASTORE_SSL_TRUSTSTORE_PASSWORD",
+        "note": ""
+      },
+      {
+        "key": "kafkastore.ssl.truststore.type",
+        "value": "PKCS12",
+        "env": "SCHEMA_REGISTRY_KAFKASTORE_SSL_TRUSTSTORE_TYPE",
+        "note": ""
+      },
+      {
+        "key": "listeners",
+        "value": "https://0.0.0.0:8081",
+        "env": "SCHEMA_REGISTRY_LISTENERS",
+        "note": ""
+      },
+      {
+        "key": "public.key.path",
+        "value": "<SSL_DIR>/public.pem",
+        "env": "SCHEMA_REGISTRY_PUBLIC_KEY_PATH",
+        "note": ""
+      },
+      {
+        "key": "resource.extension.class",
+        "value": "io.confluent.kafka.schemaregistry.security.SchemaRegistrySecurityResourceExtension,io.confluent.dekregistry.DekRegistryResourceExtension,io.confluent.kafka.schemaregistry.rulehandler.RuleSetResourceExtension",
+        "env": "SCHEMA_REGISTRY_RESOURCE_EXTENSION_CLASS",
+        "note": "RBAC:使用者以 Basic(AD 帳密)或 Bearer(MDS token)進來,授權交給 MDS DekRegistry = KEK / DEK 管理(沒加時 /dek-registry/v1/* 回 404);RuleSetResource = 資料合約的 ruleSet(沒加時註冊 schema 會默默丟掉 ruleSet,不報錯)。舊註解: 後者 = DEK Registry(欄位級加密的 KEK / DEK 管理);沒加時 /dek-registry/v1/* 回 404"
+      },
+      {
+        "key": "rest.servlet.initializor.classes",
+        "value": "io.confluent.common.security.jetty.initializer.InstallCompositeSecurityHandler",
+        "env": "SCHEMA_REGISTRY_REST_SERVLET_INITIALIZOR_CLASSES",
+        "note": "認證:同時接受「client 憑證(mTLS)」與「Token / AD 帳密」(InstallCompositeSecurityHandler)。 原因:C3 對 SR 的健康檢查固定打 / 且不帶使用者身分,只帶 client 憑證(CN=c3,C3 端以 alias.name 指定);若只用 InstallBearerOrBasicSecurityHandler(官方 RBAC 範例)會 401, C3 就判定 SR 全掛。使用者經 C3 的操作仍帶各自的 token(實測 gary 5 / yujie 1 / ming 0 個 subject)。 注意:這個 initializer 存在於官方安全外掛,但 SR 文件未寫 → 已列 CONFLUENT-QUESTIONS 確認支援範圍。"
+      },
+      {
+        "key": "schema.registry.group.id",
+        "value": "schema-registry",
+        "env": "SCHEMA_REGISTRY_SCHEMA_REGISTRY_GROUP_ID",
+        "note": ""
+      },
+      {
+        "key": "ssl.client.authentication",
+        "value": "REQUESTED",
+        "env": "SCHEMA_REGISTRY_SSL_CLIENT_AUTHENTICATION",
+        "note": "有帶 client 憑證就驗(必須是行內 CA 簽的),沒帶照常走 Token / 帳密"
+      },
+      {
+        "key": "ssl.keystore.location",
+        "value": "<SSL_DIR>/server.keystore.p12",
+        "env": "SCHEMA_REGISTRY_SSL_KEYSTORE_LOCATION",
+        "note": "對外 HTTPS:共用 server 憑證(SAN 含 schema-registry)"
+      },
+      {
+        "key": "ssl.keystore.password",
+        "value": "<由 CyberArk 提供>",
+        "env": "SCHEMA_REGISTRY_SSL_KEYSTORE_PASSWORD",
+        "note": ""
+      },
+      {
+        "key": "ssl.keystore.type",
+        "value": "PKCS12",
+        "env": "SCHEMA_REGISTRY_SSL_KEYSTORE_TYPE",
+        "note": ""
+      },
+      {
+        "key": "ssl.key.password",
+        "value": "<由 CyberArk 提供>",
+        "env": "SCHEMA_REGISTRY_SSL_KEY_PASSWORD",
+        "note": ""
+      },
+      {
+        "key": "ssl.truststore.location",
+        "value": "<SSL_DIR>/truststore.p12",
+        "env": "SCHEMA_REGISTRY_SSL_TRUSTSTORE_LOCATION",
+        "note": ""
+      },
+      {
+        "key": "ssl.truststore.password",
+        "value": "<由 CyberArk 提供>",
+        "env": "SCHEMA_REGISTRY_SSL_TRUSTSTORE_PASSWORD",
+        "note": ""
+      },
+      {
+        "key": "ssl.truststore.type",
+        "value": "PKCS12",
+        "env": "SCHEMA_REGISTRY_SSL_TRUSTSTORE_TYPE",
+        "note": ""
+      }
+    ]
+  },
+  "connect": {
+    "file": "connect-distributed.properties",
+    "source": "connect1",
+    "props": [
+      {
+        "key": "admin.sasl.jaas.config",
+        "value": "org.apache.kafka.common.security.oauthbearer.OAuthBearerLoginModule required metadataServerUrls=\"https://<BROKER1_HOST>:8091,https://<BROKER2_HOST>:8092,https://<BROKER3_HOST>:8093,https://<BROKER4_HOST>:8094\";",
+        "env": "CONNECT_ADMIN_SASL_JAAS_CONFIG",
+        "note": ""
+      },
+      {
+        "key": "admin.sasl.login.callback.handler.class",
+        "value": "io.confluent.kafka.clients.plugins.auth.token.TokenCertificateLoginCallbackHandler",
+        "env": "CONNECT_ADMIN_SASL_LOGIN_CALLBACK_HANDLER_CLASS",
+        "note": ""
+      },
+      {
+        "key": "admin.sasl.mechanism",
+        "value": "OAUTHBEARER",
+        "env": "CONNECT_ADMIN_SASL_MECHANISM",
+        "note": ""
+      },
+      {
+        "key": "admin.security.protocol",
+        "value": "SASL_SSL",
+        "env": "CONNECT_ADMIN_SECURITY_PROTOCOL",
+        "note": ""
+      },
+      {
+        "key": "admin.ssl.keystore.location",
+        "value": "<SSL_DIR>/client-connect.keystore.p12",
+        "env": "CONNECT_ADMIN_SSL_KEYSTORE_LOCATION",
+        "note": ""
+      },
+      {
+        "key": "admin.ssl.keystore.password",
+        "value": "<由 CyberArk 提供>",
+        "env": "CONNECT_ADMIN_SSL_KEYSTORE_PASSWORD",
+        "note": ""
+      },
+      {
+        "key": "admin.ssl.keystore.type",
+        "value": "PKCS12",
+        "env": "CONNECT_ADMIN_SSL_KEYSTORE_TYPE",
+        "note": ""
+      },
+      {
+        "key": "admin.ssl.key.password",
+        "value": "<由 CyberArk 提供>",
+        "env": "CONNECT_ADMIN_SSL_KEY_PASSWORD",
+        "note": ""
+      },
+      {
+        "key": "admin.ssl.truststore.location",
+        "value": "<SSL_DIR>/truststore.p12",
+        "env": "CONNECT_ADMIN_SSL_TRUSTSTORE_LOCATION",
+        "note": ""
+      },
+      {
+        "key": "admin.ssl.truststore.password",
+        "value": "<由 CyberArk 提供>",
+        "env": "CONNECT_ADMIN_SSL_TRUSTSTORE_PASSWORD",
+        "note": ""
+      },
+      {
+        "key": "admin.ssl.truststore.type",
+        "value": "PKCS12",
+        "env": "CONNECT_ADMIN_SSL_TRUSTSTORE_TYPE",
+        "note": ""
+      },
+      {
+        "key": "bootstrap.servers",
+        "value": "<BROKER1_HOST>:9094,<BROKER2_HOST>:9094,<BROKER3_HOST>:9094,<BROKER4_HOST>:9094",
+        "env": "CONNECT_BOOTSTRAP_SERVERS",
+        "note": ""
+      },
+      {
+        "key": "config.providers",
+        "value": "file",
+        "env": "CONNECT_CONFIG_PROVIDERS",
+        "note": "連接器設定裡的密碼用 ${file:路徑:鍵} 引用,不把密碼寫進設定(設定會存進 connect-configs topic、也會從 REST 讀得到)"
+      },
+      {
+        "key": "config.providers.file.class",
+        "value": "org.apache.kafka.common.config.provider.FileConfigProvider",
+        "env": "CONNECT_CONFIG_PROVIDERS_FILE_CLASS",
+        "note": ""
+      },
+      {
+        "key": "config.storage.replication.factor",
+        "value": "3",
+        "env": "CONNECT_CONFIG_STORAGE_REPLICATION_FACTOR",
+        "note": ""
+      },
+      {
+        "key": "config.storage.topic",
+        "value": "connect-configs",
+        "env": "CONNECT_CONFIG_STORAGE_TOPIC",
+        "note": ""
+      },
+      {
+        "key": "confluent.metadata.bootstrap.server.urls",
+        "value": "https://<BROKER1_HOST>:8091,https://<BROKER2_HOST>:8092,https://<BROKER3_HOST>:8093,https://<BROKER4_HOST>:8094",
+        "env": "CONNECT_CONFLUENT_METADATA_BOOTSTRAP_SERVER_URLS",
+        "note": ""
+      },
+      {
+        "key": "confluent.metadata.server.urls.max.age.ms",
+        "value": "60000",
+        "env": "CONNECT_CONFLUENT_METADATA_SERVER_URLS_MAX_AGE_MS",
+        "note": ""
+      },
+      {
+        "key": "confluent.metadata.ssl.keystore.location",
+        "value": "<SSL_DIR>/client-connect.keystore.p12",
+        "env": "CONNECT_CONFLUENT_METADATA_SSL_KEYSTORE_LOCATION",
+        "note": ""
+      },
+      {
+        "key": "confluent.metadata.ssl.keystore.password",
+        "value": "<由 CyberArk 提供>",
+        "env": "CONNECT_CONFLUENT_METADATA_SSL_KEYSTORE_PASSWORD",
+        "note": ""
+      },
+      {
+        "key": "confluent.metadata.ssl.keystore.type",
+        "value": "PKCS12",
+        "env": "CONNECT_CONFLUENT_METADATA_SSL_KEYSTORE_TYPE",
+        "note": ""
+      },
+      {
+        "key": "confluent.metadata.ssl.key.password",
+        "value": "<由 CyberArk 提供>",
+        "env": "CONNECT_CONFLUENT_METADATA_SSL_KEY_PASSWORD",
+        "note": ""
+      },
+      {
+        "key": "confluent.metadata.ssl.truststore.location",
+        "value": "<SSL_DIR>/truststore.p12",
+        "env": "CONNECT_CONFLUENT_METADATA_SSL_TRUSTSTORE_LOCATION",
+        "note": ""
+      },
+      {
+        "key": "confluent.metadata.ssl.truststore.password",
+        "value": "<由 CyberArk 提供>",
+        "env": "CONNECT_CONFLUENT_METADATA_SSL_TRUSTSTORE_PASSWORD",
+        "note": ""
+      },
+      {
+        "key": "confluent.metadata.ssl.truststore.type",
+        "value": "PKCS12",
+        "env": "CONNECT_CONFLUENT_METADATA_SSL_TRUSTSTORE_TYPE",
+        "note": ""
+      },
+      {
+        "key": "connector.client.config.override.policy",
+        "value": "All",
+        "env": "CONNECT_CONNECTOR_CLIENT_CONFIG_OVERRIDE_POLICY",
+        "note": "每個連接器可以用自己的身分連 Kafka(producer.override.* / consumer.override.* / admin.override.*),不必共用 worker 的身分"
+      },
+      {
+        "key": "consumer.sasl.jaas.config",
+        "value": "org.apache.kafka.common.security.oauthbearer.OAuthBearerLoginModule required metadataServerUrls=\"https://<BROKER1_HOST>:8091,https://<BROKER2_HOST>:8092,https://<BROKER3_HOST>:8093,https://<BROKER4_HOST>:8094\";",
+        "env": "CONNECT_CONSUMER_SASL_JAAS_CONFIG",
+        "note": ""
+      },
+      {
+        "key": "consumer.sasl.login.callback.handler.class",
+        "value": "io.confluent.kafka.clients.plugins.auth.token.TokenCertificateLoginCallbackHandler",
+        "env": "CONNECT_CONSUMER_SASL_LOGIN_CALLBACK_HANDLER_CLASS",
+        "note": ""
+      },
+      {
+        "key": "consumer.sasl.mechanism",
+        "value": "OAUTHBEARER",
+        "env": "CONNECT_CONSUMER_SASL_MECHANISM",
+        "note": ""
+      },
+      {
+        "key": "consumer.security.protocol",
+        "value": "SASL_SSL",
+        "env": "CONNECT_CONSUMER_SECURITY_PROTOCOL",
+        "note": ""
+      },
+      {
+        "key": "consumer.ssl.keystore.location",
+        "value": "<SSL_DIR>/client-connect.keystore.p12",
+        "env": "CONNECT_CONSUMER_SSL_KEYSTORE_LOCATION",
+        "note": ""
+      },
+      {
+        "key": "consumer.ssl.keystore.password",
+        "value": "<由 CyberArk 提供>",
+        "env": "CONNECT_CONSUMER_SSL_KEYSTORE_PASSWORD",
+        "note": ""
+      },
+      {
+        "key": "consumer.ssl.keystore.type",
+        "value": "PKCS12",
+        "env": "CONNECT_CONSUMER_SSL_KEYSTORE_TYPE",
+        "note": ""
+      },
+      {
+        "key": "consumer.ssl.key.password",
+        "value": "<由 CyberArk 提供>",
+        "env": "CONNECT_CONSUMER_SSL_KEY_PASSWORD",
+        "note": ""
+      },
+      {
+        "key": "consumer.ssl.truststore.location",
+        "value": "<SSL_DIR>/truststore.p12",
+        "env": "CONNECT_CONSUMER_SSL_TRUSTSTORE_LOCATION",
+        "note": ""
+      },
+      {
+        "key": "consumer.ssl.truststore.password",
+        "value": "<由 CyberArk 提供>",
+        "env": "CONNECT_CONSUMER_SSL_TRUSTSTORE_PASSWORD",
+        "note": ""
+      },
+      {
+        "key": "consumer.ssl.truststore.type",
+        "value": "PKCS12",
+        "env": "CONNECT_CONSUMER_SSL_TRUSTSTORE_TYPE",
+        "note": ""
+      },
+      {
+        "key": "group.id",
+        "value": "connect-cluster",
+        "env": "CONNECT_GROUP_ID",
+        "note": ""
+      },
+      {
+        "key": "key.converter",
+        "value": "org.apache.kafka.connect.storage.StringConverter",
+        "env": "CONNECT_KEY_CONVERTER",
+        "note": ""
+      },
+      {
+        "key": "listeners",
+        "value": "https://0.0.0.0:8083",
+        "env": "CONNECT_LISTENERS",
+        "note": ""
+      },
+      {
+        "key": "listeners.https.ssl.keystore.location",
+        "value": "<SSL_DIR>/server.keystore.p12",
+        "env": "CONNECT_LISTENERS_HTTPS_SSL_KEYSTORE_LOCATION",
+        "note": ""
+      },
+      {
+        "key": "listeners.https.ssl.keystore.password",
+        "value": "<由 CyberArk 提供>",
+        "env": "CONNECT_LISTENERS_HTTPS_SSL_KEYSTORE_PASSWORD",
+        "note": ""
+      },
+      {
+        "key": "listeners.https.ssl.keystore.type",
+        "value": "PKCS12",
+        "env": "CONNECT_LISTENERS_HTTPS_SSL_KEYSTORE_TYPE",
+        "note": ""
+      },
+      {
+        "key": "listeners.https.ssl.key.password",
+        "value": "<由 CyberArk 提供>",
+        "env": "CONNECT_LISTENERS_HTTPS_SSL_KEY_PASSWORD",
+        "note": ""
+      },
+      {
+        "key": "offset.storage.replication.factor",
+        "value": "3",
+        "env": "CONNECT_OFFSET_STORAGE_REPLICATION_FACTOR",
+        "note": ""
+      },
+      {
+        "key": "offset.storage.topic",
+        "value": "connect-offsets",
+        "env": "CONNECT_OFFSET_STORAGE_TOPIC",
+        "note": ""
+      },
+      {
+        "key": "plugin.path",
+        "value": "/plugins,/usr/share/confluent-hub-components",
+        "env": "CONNECT_PLUGIN_PATH",
+        "note": "只掃外掛目錄:掃 /usr/share/java 全部要數分鐘(實測),轉換器與 provider 本來就在 classpath"
+      },
+      {
+        "key": "producer.sasl.jaas.config",
+        "value": "org.apache.kafka.common.security.oauthbearer.OAuthBearerLoginModule required metadataServerUrls=\"https://<BROKER1_HOST>:8091,https://<BROKER2_HOST>:8092,https://<BROKER3_HOST>:8093,https://<BROKER4_HOST>:8094\";",
+        "env": "CONNECT_PRODUCER_SASL_JAAS_CONFIG",
+        "note": ""
+      },
+      {
+        "key": "producer.sasl.login.callback.handler.class",
+        "value": "io.confluent.kafka.clients.plugins.auth.token.TokenCertificateLoginCallbackHandler",
+        "env": "CONNECT_PRODUCER_SASL_LOGIN_CALLBACK_HANDLER_CLASS",
+        "note": ""
+      },
+      {
+        "key": "producer.sasl.mechanism",
+        "value": "OAUTHBEARER",
+        "env": "CONNECT_PRODUCER_SASL_MECHANISM",
+        "note": ""
+      },
+      {
+        "key": "producer.security.protocol",
+        "value": "SASL_SSL",
+        "env": "CONNECT_PRODUCER_SECURITY_PROTOCOL",
+        "note": ""
+      },
+      {
+        "key": "producer.ssl.keystore.location",
+        "value": "<SSL_DIR>/client-connect.keystore.p12",
+        "env": "CONNECT_PRODUCER_SSL_KEYSTORE_LOCATION",
+        "note": ""
+      },
+      {
+        "key": "producer.ssl.keystore.password",
+        "value": "<由 CyberArk 提供>",
+        "env": "CONNECT_PRODUCER_SSL_KEYSTORE_PASSWORD",
+        "note": ""
+      },
+      {
+        "key": "producer.ssl.keystore.type",
+        "value": "PKCS12",
+        "env": "CONNECT_PRODUCER_SSL_KEYSTORE_TYPE",
+        "note": ""
+      },
+      {
+        "key": "producer.ssl.key.password",
+        "value": "<由 CyberArk 提供>",
+        "env": "CONNECT_PRODUCER_SSL_KEY_PASSWORD",
+        "note": ""
+      },
+      {
+        "key": "producer.ssl.truststore.location",
+        "value": "<SSL_DIR>/truststore.p12",
+        "env": "CONNECT_PRODUCER_SSL_TRUSTSTORE_LOCATION",
+        "note": ""
+      },
+      {
+        "key": "producer.ssl.truststore.password",
+        "value": "<由 CyberArk 提供>",
+        "env": "CONNECT_PRODUCER_SSL_TRUSTSTORE_PASSWORD",
+        "note": ""
+      },
+      {
+        "key": "producer.ssl.truststore.type",
+        "value": "PKCS12",
+        "env": "CONNECT_PRODUCER_SSL_TRUSTSTORE_TYPE",
+        "note": ""
+      },
+      {
+        "key": "public.key.path",
+        "value": "<SSL_DIR>/public.pem",
+        "env": "CONNECT_PUBLIC_KEY_PATH",
+        "note": ""
+      },
+      {
+        "key": "rest.advertised.host.name",
+        "value": "<CONNECT1_HOST>",
+        "env": "CONNECT_REST_ADVERTISED_HOST_NAME",
+        "note": ""
+      },
+      {
+        "key": "rest.advertised.listener",
+        "value": "https",
+        "env": "CONNECT_REST_ADVERTISED_LISTENER",
+        "note": ""
+      },
+      {
+        "key": "rest.extension.classes",
+        "value": "io.confluent.connect.security.ConnectSecurityExtension",
+        "env": "CONNECT_REST_EXTENSION_CLASSES",
+        "note": "RBAC:使用者以 Basic(AD 帳密)進來,授權交給 MDS(scope 含 connect-cluster = group.id)"
+      },
+      {
+        "key": "rest.servlet.initializor.classes",
+        "value": "io.confluent.common.security.jetty.initializer.InstallBearerOrBasicSecurityHandler",
+        "env": "CONNECT_REST_SERVLET_INITIALIZOR_CLASSES",
+        "note": ""
+      },
+      {
+        "key": "sasl.jaas.config",
+        "value": "org.apache.kafka.common.security.oauthbearer.OAuthBearerLoginModule required metadataServerUrls=\"https://<BROKER1_HOST>:8091,https://<BROKER2_HOST>:8092,https://<BROKER3_HOST>:8093,https://<BROKER4_HOST>:8094\";",
+        "env": "CONNECT_SASL_JAAS_CONFIG",
+        "note": ""
+      },
+      {
+        "key": "sasl.login.callback.handler.class",
+        "value": "io.confluent.kafka.clients.plugins.auth.token.TokenCertificateLoginCallbackHandler",
+        "env": "CONNECT_SASL_LOGIN_CALLBACK_HANDLER_CLASS",
+        "note": ""
+      },
+      {
+        "key": "sasl.mechanism",
+        "value": "OAUTHBEARER",
+        "env": "CONNECT_SASL_MECHANISM",
+        "note": ""
+      },
+      {
+        "key": "security.protocol",
+        "value": "SASL_SSL",
+        "env": "CONNECT_SECURITY_PROTOCOL",
+        "note": "worker 自己的身分:client 憑證(CN=connect)向 MDS 換 token(與 Schema Registry、REST Proxy 同一種做法)"
+      },
+      {
+        "key": "ssl.keystore.location",
+        "value": "<SSL_DIR>/client-connect.keystore.p12",
+        "env": "CONNECT_SSL_KEYSTORE_LOCATION",
+        "note": ""
+      },
+      {
+        "key": "ssl.keystore.password",
+        "value": "<由 CyberArk 提供>",
+        "env": "CONNECT_SSL_KEYSTORE_PASSWORD",
+        "note": ""
+      },
+      {
+        "key": "ssl.keystore.type",
+        "value": "PKCS12",
+        "env": "CONNECT_SSL_KEYSTORE_TYPE",
+        "note": ""
+      },
+      {
+        "key": "ssl.key.password",
+        "value": "<由 CyberArk 提供>",
+        "env": "CONNECT_SSL_KEY_PASSWORD",
+        "note": ""
+      },
+      {
+        "key": "ssl.truststore.location",
+        "value": "<SSL_DIR>/truststore.p12",
+        "env": "CONNECT_SSL_TRUSTSTORE_LOCATION",
+        "note": ""
+      },
+      {
+        "key": "ssl.truststore.password",
+        "value": "<由 CyberArk 提供>",
+        "env": "CONNECT_SSL_TRUSTSTORE_PASSWORD",
+        "note": ""
+      },
+      {
+        "key": "ssl.truststore.type",
+        "value": "PKCS12",
+        "env": "CONNECT_SSL_TRUSTSTORE_TYPE",
+        "note": ""
+      },
+      {
+        "key": "status.storage.replication.factor",
+        "value": "3",
+        "env": "CONNECT_STATUS_STORAGE_REPLICATION_FACTOR",
+        "note": ""
+      },
+      {
+        "key": "status.storage.topic",
+        "value": "connect-status",
+        "env": "CONNECT_STATUS_STORAGE_TOPIC",
+        "note": ""
+      },
+      {
+        "key": "value.converter",
+        "value": "org.apache.kafka.connect.json.JsonConverter",
+        "env": "CONNECT_VALUE_CONVERTER",
+        "note": ""
+      },
+      {
+        "key": "value.converter.schemas.enable",
+        "value": "false",
+        "env": "CONNECT_VALUE_CONVERTER_SCHEMAS_ENABLE",
+        "note": ""
+      }
+    ]
+  },
+  "broker-tier": {
+    "file": "server.properties(第 32 章 Tiered Storage 增加的部分)",
+    "source": "broker1",
+    "props": [
+      {
+        "key": "confluent.tier.backend",
+        "value": "S3",
+        "env": "KAFKA_CONFLUENT_TIER_BACKEND",
+        "note": ""
+      },
+      {
+        "key": "confluent.tier.enable",
+        "value": "false",
+        "env": "KAFKA_CONFLUENT_TIER_ENABLE",
+        "note": ""
+      },
+      {
+        "key": "confluent.tier.feature",
+        "value": "true",
+        "env": "KAFKA_CONFLUENT_TIER_FEATURE",
+        "note": ""
+      },
+      {
+        "key": "confluent.tier.metadata.min.isr",
+        "value": "2",
+        "env": "KAFKA_CONFLUENT_TIER_METADATA_MIN_ISR",
+        "note": ""
+      },
+      {
+        "key": "confluent.tier.metadata.replication.factor",
+        "value": "3",
+        "env": "KAFKA_CONFLUENT_TIER_METADATA_REPLICATION_FACTOR",
+        "note": ""
+      },
+      {
+        "key": "confluent.tier.s3.aws.endpoint.override",
+        "value": "https://<MINIO_HOST>:9000",
+        "env": "KAFKA_CONFLUENT_TIER_S3_AWS_ENDPOINT_OVERRIDE",
+        "note": ""
+      },
+      {
+        "key": "confluent.tier.s3.bucket",
+        "value": "kafka-tier",
+        "env": "KAFKA_CONFLUENT_TIER_S3_BUCKET",
+        "note": ""
+      },
+      {
+        "key": "confluent.tier.s3.cred.file.path",
+        "value": "/etc/tier/credentials",
+        "env": "KAFKA_CONFLUENT_TIER_S3_CRED_FILE_PATH",
+        "note": ""
+      },
+      {
+        "key": "confluent.tier.s3.force.path.style.access",
+        "value": "true",
+        "env": "KAFKA_CONFLUENT_TIER_S3_FORCE_PATH_STYLE_ACCESS",
+        "note": ""
+      },
+      {
+        "key": "confluent.tier.s3.ipv6.enabled",
+        "value": "false",
+        "env": "KAFKA_CONFLUENT_TIER_S3_IPV6_ENABLED",
+        "note": ""
+      },
+      {
+        "key": "confluent.tier.s3.region",
+        "value": "us-east-1",
+        "env": "KAFKA_CONFLUENT_TIER_S3_REGION",
+        "note": ""
+      }
+    ]
+  },
+  "control-center": {
+    "file": "control-center.properties",
+    "source": "control-center",
+    "props": [
+      {
+        "key": "confluent.metadata.bootstrap.server.urls",
+        "value": "https://<BROKER1_HOST>:8091,https://<BROKER2_HOST>:8092,https://<BROKER3_HOST>:8093,https://<BROKER4_HOST>:8094",
+        "env": "CONFLUENT_METADATA_BOOTSTRAP_SERVER_URLS",
+        "note": ""
+      },
+      {
+        "key": "confluent.metadata.ssl.keystore.location",
+        "value": "<SSL_DIR>/client-c3.keystore.p12",
+        "env": "CONFLUENT_METADATA_SSL_KEYSTORE_LOCATION",
+        "note": ""
+      },
+      {
+        "key": "confluent.metadata.ssl.keystore.password",
+        "value": "<由 CyberArk 提供>",
+        "env": "CONFLUENT_METADATA_SSL_KEYSTORE_PASSWORD",
+        "note": ""
+      },
+      {
+        "key": "confluent.metadata.ssl.keystore.type",
+        "value": "PKCS12",
+        "env": "CONFLUENT_METADATA_SSL_KEYSTORE_TYPE",
+        "note": ""
+      },
+      {
+        "key": "confluent.metadata.ssl.key.password",
+        "value": "<由 CyberArk 提供>",
+        "env": "CONFLUENT_METADATA_SSL_KEY_PASSWORD",
+        "note": ""
+      },
+      {
+        "key": "confluent.metadata.ssl.truststore.location",
+        "value": "<SSL_DIR>/truststore.p12",
+        "env": "CONFLUENT_METADATA_SSL_TRUSTSTORE_LOCATION",
+        "note": ""
+      },
+      {
+        "key": "confluent.metadata.ssl.truststore.password",
+        "value": "<由 CyberArk 提供>",
+        "env": "CONFLUENT_METADATA_SSL_TRUSTSTORE_PASSWORD",
+        "note": ""
+      },
+      {
+        "key": "confluent.metadata.ssl.truststore.type",
+        "value": "PKCS12",
+        "env": "CONFLUENT_METADATA_SSL_TRUSTSTORE_TYPE",
+        "note": ""
+      },
+      {
+        "key": "confluent.metrics.topic.replication",
+        "value": "3",
+        "env": "CONFLUENT_METRICS_TOPIC_REPLICATION",
+        "note": ""
+      },
+      {
+        "key": "confluent.controlcenter.alertmanager.basic.auth.user.info",
+        "value": "<由 CyberArk 提供>",
+        "env": "CONTROL_CENTER_ALERTMANAGER_BASIC_AUTH_USER_INFO",
+        "note": ""
+      },
+      {
+        "key": "confluent.controlcenter.alertmanager.config.file",
+        "value": "<C3_CONFIG_DIR>/alertmanager-generated.yml",
+        "env": "CONTROL_CENTER_ALERTMANAGER_CONFIG_FILE",
+        "note": ""
+      },
+      {
+        "key": "confluent.controlcenter.alertmanager.ssl.truststore.location",
+        "value": "<SSL_DIR>/truststore.p12",
+        "env": "CONTROL_CENTER_ALERTMANAGER_SSL_TRUSTSTORE_LOCATION",
+        "note": ""
+      },
+      {
+        "key": "confluent.controlcenter.alertmanager.ssl.truststore.password",
+        "value": "<由 CyberArk 提供>",
+        "env": "CONTROL_CENTER_ALERTMANAGER_SSL_TRUSTSTORE_PASSWORD",
+        "note": ""
+      },
+      {
+        "key": "confluent.controlcenter.alertmanager.url",
+        "value": "https://<ALERTMANAGER_HOST>:9093",
+        "env": "CONTROL_CENTER_ALERTMANAGER_URL",
+        "note": ""
+      },
+      {
+        "key": "confluent.controlcenter.bootstrap.servers",
+        "value": "SASL_SSL://<BROKER1_HOST>:9094,SASL_SSL://<BROKER2_HOST>:9094,SASL_SSL://<BROKER3_HOST>:9094,SASL_SSL://<BROKER4_HOST>:9094",
+        "env": "CONTROL_CENTER_BOOTSTRAP_SERVERS",
+        "note": ""
+      },
+      {
+        "key": "confluent.controlcenter.connect.connect.cluster",
+        "value": "https://<CONNECT1_HOST>:8083,https://<CONNECT2_HOST>:8083",
+        "env": "CONTROL_CENTER_CONNECT_CONNECT_CLUSTER",
+        "note": "Connect 2 台:兩台都列出(官方:C3 用其中一台,失敗時改試另一台)。健康檢查打 /v1/metadata/id(不需認證),使用者的操作以自己的 token 轉送 confluent.controlcenter.connect.<名稱>.cluster;名稱取 connect"
+      },
+      {
+        "key": "confluent.controlcenter.connect.connect.ssl.truststore.location",
+        "value": "<SSL_DIR>/truststore.p12",
+        "env": "CONTROL_CENTER_CONNECT_CONNECT_SSL_TRUSTSTORE_LOCATION",
+        "note": ""
+      },
+      {
+        "key": "confluent.controlcenter.connect.connect.ssl.truststore.password",
+        "value": "<由 CyberArk 提供>",
+        "env": "CONTROL_CENTER_CONNECT_CONNECT_SSL_TRUSTSTORE_PASSWORD",
+        "note": ""
+      },
+      {
+        "key": "confluent.controlcenter.internal.topics.partitions",
+        "value": "1",
+        "env": "CONTROL_CENTER_INTERNAL_TOPICS_PARTITIONS",
+        "note": ""
+      },
+      {
+        "key": "confluent.controlcenter.metrics.topic.partitions",
+        "value": "1",
+        "env": "CONTROL_CENTER_METRICS_TOPIC_PARTITIONS",
+        "note": ""
+      },
+      {
+        "key": "confluent.controlcenter.monitoring.interceptor.topic.partitions",
+        "value": "1",
+        "env": "CONTROL_CENTER_MONITORING_INTERCEPTOR_TOPIC_PARTITIONS",
+        "note": ""
+      },
+      {
+        "key": "confluent.controlcenter.prometheus.basic.auth.user.info",
+        "value": "<由 CyberArk 提供>",
+        "env": "CONTROL_CENTER_PROMETHEUS_BASIC_AUTH_USER_INFO",
+        "note": ""
+      },
+      {
+        "key": "confluent.controlcenter.prometheus.enable",
+        "value": "true",
+        "env": "CONTROL_CENTER_PROMETHEUS_ENABLE",
+        "note": "Prometheus / Alertmanager"
+      },
+      {
+        "key": "confluent.controlcenter.prometheus.rules.file",
+        "value": "<C3_CONFIG_DIR>/trigger_rules-generated.yml",
+        "env": "CONTROL_CENTER_PROMETHEUS_RULES_FILE",
+        "note": ""
+      },
+      {
+        "key": "confluent.controlcenter.prometheus.ssl.truststore.location",
+        "value": "<SSL_DIR>/truststore.p12",
+        "env": "CONTROL_CENTER_PROMETHEUS_SSL_TRUSTSTORE_LOCATION",
+        "note": ""
+      },
+      {
+        "key": "confluent.controlcenter.prometheus.ssl.truststore.password",
+        "value": "<由 CyberArk 提供>",
+        "env": "CONTROL_CENTER_PROMETHEUS_SSL_TRUSTSTORE_PASSWORD",
+        "note": ""
+      },
+      {
+        "key": "confluent.controlcenter.prometheus.url",
+        "value": "https://<PROMETHEUS_HOST>:9090",
+        "env": "CONTROL_CENTER_PROMETHEUS_URL",
+        "note": ""
+      },
+      {
+        "key": "confluent.controlcenter.replication.factor",
+        "value": "3",
+        "env": "CONTROL_CENTER_REPLICATION_FACTOR",
+        "note": ""
+      },
+      {
+        "key": "confluent.controlcenter.rest.authentication.method",
+        "value": "BEARER",
+        "env": "CONTROL_CENTER_REST_AUTHENTICATION_METHOD",
+        "note": "RBAC:使用者以 AD 帳號(經 MDS)登入;C3 自身向 MDS 以 mTLS(CN=c3)認證"
+      },
+      {
+        "key": "confluent.controlcenter.rest.listeners",
+        "value": "http://0.0.0.0:9021,https://0.0.0.0:9022",
+        "env": "CONTROL_CENTER_REST_LISTENERS",
+        "note": "C3 UI(HTTPS):共用 server 憑證"
+      },
+      {
+        "key": "confluent.controlcenter.rest.ssl.keystore.location",
+        "value": "<SSL_DIR>/server.keystore.p12",
+        "env": "CONTROL_CENTER_REST_SSL_KEYSTORE_LOCATION",
+        "note": ""
+      },
+      {
+        "key": "confluent.controlcenter.rest.ssl.keystore.password",
+        "value": "<由 CyberArk 提供>",
+        "env": "CONTROL_CENTER_REST_SSL_KEYSTORE_PASSWORD",
+        "note": ""
+      },
+      {
+        "key": "confluent.controlcenter.rest.ssl.keystore.type",
+        "value": "PKCS12",
+        "env": "CONTROL_CENTER_REST_SSL_KEYSTORE_TYPE",
+        "note": ""
+      },
+      {
+        "key": "confluent.controlcenter.rest.ssl.key.password",
+        "value": "<由 CyberArk 提供>",
+        "env": "CONTROL_CENTER_REST_SSL_KEY_PASSWORD",
+        "note": ""
+      },
+      {
+        "key": "confluent.controlcenter.rest.ssl.truststore.location",
+        "value": "<SSL_DIR>/truststore.p12",
+        "env": "CONTROL_CENTER_REST_SSL_TRUSTSTORE_LOCATION",
+        "note": ""
+      },
+      {
+        "key": "confluent.controlcenter.rest.ssl.truststore.password",
+        "value": "<由 CyberArk 提供>",
+        "env": "CONTROL_CENTER_REST_SSL_TRUSTSTORE_PASSWORD",
+        "note": ""
+      },
+      {
+        "key": "confluent.controlcenter.rest.ssl.truststore.type",
+        "value": "PKCS12",
+        "env": "CONTROL_CENTER_REST_SSL_TRUSTSTORE_TYPE",
+        "note": ""
+      },
+      {
+        "key": "confluent.controlcenter.schema.registry.enable",
+        "value": "true",
+        "env": "CONTROL_CENTER_SCHEMA_REGISTRY_ENABLE",
+        "note": "Schema Registry 2 台:兩台都列出。使用者在 C3 的操作以自己的 token 轉送,授權由 MDS 判斷(實測 gary 5 / yujie 1 / ming 0 個 subject)。 C3 自己的背景健康檢查(固定打 SR 的 /,沒有使用者身分)以 C3 的 client 憑證通過:keystore 放 client-c3, alias.name 指定用 c3(官方設定;沒指定時 C3 會拿自己對外 HTTPS 的 server 憑證去連,實測)。SR 端見 InstallCompositeSecurityHandler。"
+      },
+      {
+        "key": "confluent.controlcenter.schema.registry.schema.registry.alias.name",
+        "value": "c3",
+        "env": "CONTROL_CENTER_SCHEMA_REGISTRY_SCHEMA_REGISTRY_ALIAS_NAME",
+        "note": ""
+      },
+      {
+        "key": "confluent.controlcenter.schema.registry.schema.registry.ssl.keystore.location",
+        "value": "<SSL_DIR>/client-c3.keystore.p12",
+        "env": "CONTROL_CENTER_SCHEMA_REGISTRY_SCHEMA_REGISTRY_SSL_KEYSTORE_LOCATION",
+        "note": ""
+      },
+      {
+        "key": "confluent.controlcenter.schema.registry.schema.registry.ssl.keystore.password",
+        "value": "<由 CyberArk 提供>",
+        "env": "CONTROL_CENTER_SCHEMA_REGISTRY_SCHEMA_REGISTRY_SSL_KEYSTORE_PASSWORD",
+        "note": ""
+      },
+      {
+        "key": "confluent.controlcenter.schema.registry.schema.registry.ssl.keystore.type",
+        "value": "PKCS12",
+        "env": "CONTROL_CENTER_SCHEMA_REGISTRY_SCHEMA_REGISTRY_SSL_KEYSTORE_TYPE",
+        "note": ""
+      },
+      {
+        "key": "confluent.controlcenter.schema.registry.schema.registry.ssl.key.password",
+        "value": "<由 CyberArk 提供>",
+        "env": "CONTROL_CENTER_SCHEMA_REGISTRY_SCHEMA_REGISTRY_SSL_KEY_PASSWORD",
+        "note": ""
+      },
+      {
+        "key": "confluent.controlcenter.schema.registry.schema.registry.ssl.truststore.location",
+        "value": "<SSL_DIR>/truststore.p12",
+        "env": "CONTROL_CENTER_SCHEMA_REGISTRY_SCHEMA_REGISTRY_SSL_TRUSTSTORE_LOCATION",
+        "note": ""
+      },
+      {
+        "key": "confluent.controlcenter.schema.registry.schema.registry.ssl.truststore.password",
+        "value": "<由 CyberArk 提供>",
+        "env": "CONTROL_CENTER_SCHEMA_REGISTRY_SCHEMA_REGISTRY_SSL_TRUSTSTORE_PASSWORD",
+        "note": ""
+      },
+      {
+        "key": "confluent.controlcenter.schema.registry.url",
+        "value": "https://<SR1_HOST>:8081,https://<SR2_HOST>:8081",
+        "env": "CONTROL_CENTER_SCHEMA_REGISTRY_URL",
+        "note": ""
+      },
+      {
+        "key": "confluent.controlcenter.streams.cprest.url",
+        "value": "https://<BROKER1_HOST>:8091,https://<BROKER2_HOST>:8092,https://<BROKER3_HOST>:8093,https://<BROKER4_HOST>:8094",
+        "env": "CONTROL_CENTER_STREAMS_CPREST_URL",
+        "note": ""
+      },
+      {
+        "key": "confluent.controlcenter.streams.num.stream.threads",
+        "value": "1",
+        "env": "CONTROL_CENTER_STREAMS_NUM_STREAM_THREADS",
+        "note": ""
+      },
+      {
+        "key": "confluent.controlcenter.streams.sasl.jaas.config",
+        "value": "org.apache.kafka.common.security.oauthbearer.OAuthBearerLoginModule required metadataServerUrls=\"https://<BROKER1_HOST>:8091,https://<BROKER2_HOST>:8092,https://<BROKER3_HOST>:8093,https://<BROKER4_HOST>:8094\";",
+        "env": "CONTROL_CENTER_STREAMS_SASL_JAAS_CONFIG",
+        "note": ""
+      },
+      {
+        "key": "confluent.controlcenter.streams.sasl.login.callback.handler.class",
+        "value": "io.confluent.kafka.clients.plugins.auth.token.TokenCertificateLoginCallbackHandler",
+        "env": "CONTROL_CENTER_STREAMS_SASL_LOGIN_CALLBACK_HANDLER_CLASS",
+        "note": ""
+      },
+      {
+        "key": "confluent.controlcenter.streams.sasl.mechanism",
+        "value": "OAUTHBEARER",
+        "env": "CONTROL_CENTER_STREAMS_SASL_MECHANISM",
+        "note": ""
+      },
+      {
+        "key": "confluent.controlcenter.streams.security.protocol",
+        "value": "SASL_SSL",
+        "env": "CONTROL_CENTER_STREAMS_SECURITY_PROTOCOL",
+        "note": "C3 自身連 Kafka(Streams):RBAC 下僅支援 OAUTHBEARER → 以 client 憑證(CN=c3)向 MDS 取 token,免 AD 帳號、免密碼"
+      },
+      {
+        "key": "confluent.controlcenter.streams.ssl.keystore.location",
+        "value": "<SSL_DIR>/client-c3.keystore.p12",
+        "env": "CONTROL_CENTER_STREAMS_SSL_KEYSTORE_LOCATION",
+        "note": ""
+      },
+      {
+        "key": "confluent.controlcenter.streams.ssl.keystore.password",
+        "value": "<由 CyberArk 提供>",
+        "env": "CONTROL_CENTER_STREAMS_SSL_KEYSTORE_PASSWORD",
+        "note": ""
+      },
+      {
+        "key": "confluent.controlcenter.streams.ssl.keystore.type",
+        "value": "PKCS12",
+        "env": "CONTROL_CENTER_STREAMS_SSL_KEYSTORE_TYPE",
+        "note": ""
+      },
+      {
+        "key": "confluent.controlcenter.streams.ssl.key.password",
+        "value": "<由 CyberArk 提供>",
+        "env": "CONTROL_CENTER_STREAMS_SSL_KEY_PASSWORD",
+        "note": ""
+      },
+      {
+        "key": "confluent.controlcenter.streams.ssl.truststore.location",
+        "value": "<SSL_DIR>/truststore.p12",
+        "env": "CONTROL_CENTER_STREAMS_SSL_TRUSTSTORE_LOCATION",
+        "note": ""
+      },
+      {
+        "key": "confluent.controlcenter.streams.ssl.truststore.password",
+        "value": "<由 CyberArk 提供>",
+        "env": "CONTROL_CENTER_STREAMS_SSL_TRUSTSTORE_PASSWORD",
+        "note": ""
+      },
+      {
+        "key": "confluent.controlcenter.streams.ssl.truststore.type",
+        "value": "PKCS12",
+        "env": "CONTROL_CENTER_STREAMS_SSL_TRUSTSTORE_TYPE",
+        "note": ""
+      },
+      {
+        "key": "public.key.path",
+        "value": "<SSL_DIR>/public.pem",
+        "env": "PUBLIC_KEY_PATH",
+        "note": ""
+      }
+    ]
+  }
+}

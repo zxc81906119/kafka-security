@@ -10,6 +10,7 @@ import {
 import { LABS as LABS0, SETUP, IDENTITIES } from './labs.mjs';
 import { LABS_EXTRA } from './labs-extra.mjs';
 import * as S from './story.mjs';
+import { NOTES, LAB_CONF, COMPONENT_LABEL } from './config-notes.mjs';
 const LABS = [...LABS0, ...LABS_EXTRA];
 const VERIFY_NOTE = process.env.VERIFY_NOTE || '(驗證說明待填)';
 
@@ -18,6 +19,8 @@ const EV = path.resolve(here, '..', 'evidence');
 const FONT = 'Microsoft JhengHei', MONO = 'Consolas';
 const INK = '12263A', TEAL = '1F7A8C', AMBER = 'B7791F', RED = 'B03A2E', GREEN = '1E7B3A', MUTE = '5B6B7A';
 const W = 9026; // A4、邊界 1 吋後的內容寬度(DXA)
+// 必要設定:值來自 tools/config-export.mjs 由實測 compose 產生的 config-ref.json(單一來源);說明來自 config-notes.mjs
+const CONF_REF = JSON.parse(fs.readFileSync(path.resolve(here, 'config-ref', 'config-ref.json'), 'utf8'));
 const missing = [];
 
 // ---------- 基本元件 ----------
@@ -280,6 +283,24 @@ add(H2('限制與如實說明'));
 
 // ---------- Labs(依故事的幕組織)----------
 const labOf = n => LABS.find(l => l.n === n);
+// confRows(comp, keys):[設定, 值] 依 config-ref 的順序;keys 省略 = 全部
+function confProps(comp, keys) {
+  const props = CONF_REF[comp]?.props || [];
+  return keys ? keys.map(k => props.find(p => p.key === k)).filter(Boolean) : props;
+}
+// 本章必要設定:可複製的 properties 區塊 + 說明表(用途 / 漏設會怎樣 / 依據)
+function confBlock(n) {
+  const list = LAB_CONF[n]; if (!list) return;
+  add(label('本章必要設定(正式環境要寫入的設定;值取自本環境實測,<…> 依環境填入,完整清單見附錄 F)', INK));
+  for (const { comp, keys } of list) {
+    const props = confProps(comp, keys); if (!props.length) continue;
+    add(P([run(COMPONENT_LABEL[comp] || comp, { bold: true, size: 19 })]));
+    add(...code(props.map(p => p.key + '=' + p.value).join('\n'), { bar: INK, cut: 130 }));
+    const rows = props.filter(p => NOTES[comp]?.[p.key]).map(p => { const nt = NOTES[comp][p.key]; return [p.key, nt.why, nt.miss || '—', nt.src]; });
+    if (rows.length && !BRIEF.has('notes')) add(...table([['設定', '用途', '漏設或設錯會怎樣', '依據'], ...rows], [2600, 2900, 2126, 1400], { size: 16 }));
+  }
+}
+
 function renderLab(lab) {
   add(H2pb(`Lab ${lab.n}  ${lab.title}`));
   add(...image(`../labguide/img/labmap-${String(lab.n).padStart(2, '0')}.png`, `Lab ${lab.n} 地圖:這堂要證明的事、動到的元件(打亮)、走的路與結果(✔ 允許 / ✘ 拒絕)`));
@@ -328,6 +349,7 @@ function renderLab(lab) {
     if (s.warn && !BRIEF.has('notes')) add(...callout('warn', s.warn));
     if (s.tip && !BRIEF.has('notes')) add(...callout('tip', s.tip));
   }
+  confBlock(lab.n);
   if (st && !BRIEF.has('story')) add(...storyBox('小結:Ming 學到了什麼', st.recap.map(t => '• ' + t), { fill: 'EEF6F1' }));
 }
 for (const act of S.ACTS) {
@@ -467,6 +489,25 @@ add(...table([
 add(H2('PAM 側(PSM、CPM、PVWA):本機無法驗證'));
 add(P('代登入與錄影、主機帳號自動輪替、依單借出私鑰,需在客戶環境 PoC。要先確認:跳板機與各主機是否加入 AD;人連主機是否一律經 PSM;主機 22 埠允許哪些來源;CPM 輪替 ssh key 時 OP menu 正在連線的作業怎麼處理。'));
 // ---------- 文件 ----------
+// 附錄 F:各元件必要設定總表(由實測環境自動產生)
+if (!BRIEF.has('appendix')) {
+  add(H1('附錄 F  各元件必要設定總表'));
+  add(P('以下是本環境(與客戶正式環境相同的 HA 拓樸)實測通過的設定,轉成 RHEL 手動安裝時要寫入的 properties 格式。由 tools/config-export.mjs 從 docker-compose 自動產生,手冊與實測環境不會脫節。'));
+  add(...table([['寫法', '意思'],
+    ['<BROKER1_HOST> 等', '依客戶主機名稱填入(第 2 台起只差主機名稱與 node.id / id)'],
+    ['<由 CyberArk 提供>', '密碼不寫明文:由 CyberArk 提供,設定檔以 Secret Protection 加密(Lab 18)'],
+    ['<SSL_DIR>', '憑證目錄(例如 /etc/kafka/ssl,權限 0640、擁有者 cp-kafka)'],
+    ['<AD_HOST>、<AD_BASE_DN>', '客戶 AD 的主機與 Base DN(群組 objectClass 在 AD 是 group,demo 的 OpenLDAP 是 groupOfNames)'],
+    ['# 開頭的說明', '有說明的設定附上用途、漏設會怎樣與依據;沒有說明的是元件連線的一般設定'],
+  ], [2600, 6426], { size: 17 }));
+  for (const comp of Object.keys(CONF_REF)) {
+    add(H2(COMPONENT_LABEL[comp] || comp));
+    const lines = [];
+    for (const p of confProps(comp)) { const nt = NOTES[comp]?.[p.key]; if (nt) lines.push('# ' + nt.why + (nt.miss ? '(漏設:' + nt.miss + ')' : '')); lines.push(p.key + '=' + p.value); }
+    add(...code(lines.join('\n'), { bar: INK, cut: 130 }));
+  }
+}
+
 const doc = new Document({
   creator: 'Claude', title: 'Confluent Platform 安全方案:Ming 的前三週(故事版 Lab 手冊)', description: 'AD 只放 user/group 的 Confluent 安全方案實作手冊,以新進維運工程師的故事串起所有 Lab',
   features: { updateFields: true },

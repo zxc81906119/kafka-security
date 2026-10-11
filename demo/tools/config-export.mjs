@@ -26,7 +26,8 @@ const COMPONENTS = [
   { svc: 'restproxy1', name: 'restproxy', file: 'kafka-rest.properties', prefix: 'KAFKA_REST_' },
   { svc: 'schema-registry1', name: 'schema-registry', file: 'schema-registry.properties', prefix: 'SCHEMA_REGISTRY_' },
   { svc: 'connect1', name: 'connect', file: 'connect-distributed.properties', prefix: 'CONNECT_' },
-  { svc: 'control-center', name: 'control-center', file: 'control-center.properties', prefix: 'CONTROL_CENTER_', to: 'confluent.controlcenter.' },
+  { svc: 'broker1', name: 'broker-tier', file: 'server.properties(第 32 章 Tiered Storage 增加的部分)', prefix: 'KAFKA_', extra: { CONFLUENT_: 'confluent.' }, files: ['docker-compose.yml', 'docker-compose.tier.yml'], diffFrom: 'broker' },
+  { svc: 'control-center', name: 'control-center', file: 'control-center.properties', prefix: 'CONTROL_CENTER_', to: 'confluent.controlcenter.', extra: { CONFLUENT_: 'confluent.', PUBLIC_KEY_PATH: 'public.key.path' } },
 ];
 
 // 只有容器才需要的環境變數(JVM 參數、映像啟動腳本用、demo 實驗開關),不屬於設定檔
@@ -72,26 +73,33 @@ function collectNotes(file) {
 }
 const NOTES = collectNotes(path.join(DEMO, 'docker-compose.yml'));
 
-const cfg = JSON.parse(execFileSync('docker', ['compose', '--profile', 'full', '--profile', 'connect', 'config', '--format', 'json'],
-  { cwd: DEMO, encoding: 'utf8', maxBuffer: 64 << 20 }));
+// 讀合併後的 compose 設定(files 不同就各讀一次,結果快取)
+const cfgCache = {};
+function composeConfig(files = ['docker-compose.yml']) {
+  const k = files.join(',');
+  if (!cfgCache[k]) cfgCache[k] = JSON.parse(execFileSync('docker', ['compose', ...files.flatMap(x => ['-f', x]), '--profile', 'full', '--profile', 'connect', '--profile', 'tier', 'config', '--format', 'json'],
+    { cwd: DEMO, encoding: 'utf8', maxBuffer: 64 << 20 }));
+  return cfgCache[k];
+}
 
 fs.mkdirSync(OUT, { recursive: true });
 const all = {};
 for (const c of COMPONENTS) {
-  const env = cfg.services[c.svc]?.environment || {};
+  const env = composeConfig(c.files).services[c.svc]?.environment || {};
   const props = [];
   for (let [k, v] of Object.entries(env).sort()) {
     if (DOCKER_ONLY.test(k) || v === '' || v == null) continue;
     let key = null;
-    const extra = Object.entries(c.extra || {}).find(([p]) => k.startsWith(p));
+    const extra = Object.entries(c.extra || {}).find(([p]) => p.endsWith('_') ? k.startsWith(p) : k === p);
     if (k.startsWith(c.prefix)) key = (c.to || '') + toKey(k.slice(c.prefix.length));
-    else if (extra) key = extra[1] + toKey(k.slice(extra[0].length));
+    else if (extra) key = extra[0].endsWith('_') ? extra[1] + toKey(k.slice(extra[0].length)) : extra[1];
     if (!key) continue;
     // cp 映像專用:*_FILENAME 是 /etc/kafka/secrets 下的檔名、*_CREDENTIALS 是放密碼的檔名;手動安裝要寫回標準的 location / password
     if (/\.(keystore|truststore)\.filename$/.test(key)) { key = key.replace(/\.filename$/, '.location'); v = `/etc/kafka/secrets/${v}`; }
     else if (/\.(keystore|key|truststore)\.credentials$/.test(key)) key = key.replace(/\.credentials$/, '.password');
     props.push({ key, value: placeholder(key, v), env: k, note: NOTES[k] || '' });
   }
+  if (c.diffFrom) { const base = new Map(all[c.diffFrom].props.map(p => [p.key, p.value])); props.splice(0, props.length, ...props.filter(p => base.get(p.key) !== p.value)); }
   all[c.name] = { file: c.file, source: c.svc, props };
   const body = [`# ${c.file} — 由 tools/config-export.mjs 從已驗證的 demo 設定(${c.svc})產生;<…> 為依環境填入的值`,
     ...props.flatMap(p => [...(p.note ? [`# ${p.note}`] : []), `${p.key}=${p.value}`])].join('\n') + '\n';
