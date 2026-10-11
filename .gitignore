@@ -60,3 +60,9 @@ demo/config/observability/secrets/
 demo/config/observability/otel-javaagent.jar*
 demo/config/connect/plugins/
 demo/config/connect/secrets/
+demo/config/mail/smtp-auth
+demo/config/mail/ui-auth
+demo/config/mail/smtp.pw
+demo/config/mail/ui.pw
+demo/config/c3/smtp.pw
+demo/config/c3/alertmanager-generated.yml.orig

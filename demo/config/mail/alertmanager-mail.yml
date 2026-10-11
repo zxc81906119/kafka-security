@@ -1,0 +1,47 @@
+# Alertmanager 的郵件通知設定(第 30 章)。scripts/mail-setup.sh on 會把它複製成 config/c3/alertmanager-generated.yml
+# (Control Center 讀的就是這個檔案;原檔先備份成 alertmanager-generated.yml.orig,off 時還原)。
+#
+# 設計重點(對照一般企業的做法):
+#   - 寄信走 SMTP + STARTTLS(強制)+ 帳密;帳密從檔案讀(smtp_auth_password_file),不寫在設定裡;
+#     用行內 CA 驗證郵件伺服器的憑證(不跳過驗證)
+#   - 依嚴重度分流:critical 寄給值班信箱,其餘寄給維運群組信箱
+#   - 同一個告警名稱與嚴重度的告警合併成一封(group_by),避免一次壞多台就收到幾十封
+#   - 告警解除也寄一封(send_resolved)
+# 數字是 demo 用的短時間;正式環境建議 group_wait 30s、group_interval 5m、repeat_interval 4h(依值班流程調整)。
+# 收件人與寄件人是範例網域,正式環境換成行內的信箱。
+global:
+  resolve_timeout: 1m
+  smtp_smarthost: 'mailpit:1025'
+  smtp_from: 'kafka-alerts@corp.demo'
+  smtp_auth_username: 'alertmanager'
+  smtp_auth_password_file: '/mnt/config/smtp.pw'
+  smtp_require_tls: true
+
+route:
+  receiver: ops-mail
+  group_by: ['alertname', 'severity']
+  group_wait: 10s
+  group_interval: 1m
+  repeat_interval: 4h
+  routes:
+    - receiver: oncall-critical
+      matchers:
+        - severity="critical"
+
+receivers:
+  - name: ops-mail
+    email_configs:
+      - to: 'kafka-ops@corp.demo'
+        send_resolved: true
+        tls_config:
+          ca_file: /etc/tls/ca.pem
+        headers:
+          Subject: '[Kafka][{{ .Status | toUpper }}] {{ .GroupLabels.alertname }}({{ .GroupLabels.severity }})'
+  - name: oncall-critical
+    email_configs:
+      - to: 'kafka-oncall@corp.demo'
+        send_resolved: true
+        tls_config:
+          ca_file: /etc/tls/ca.pem
+        headers:
+          Subject: '[Kafka][CRITICAL][{{ .Status | toUpper }}] {{ .GroupLabels.alertname }}'
