@@ -7,7 +7,7 @@
 # 用法:
 #   scripts/down.sh
 # 會改動什麼:`docker compose down -v`(所有 profile);刪除 Conjur 的 admin.key 與各 host 的 API key(資料卷清掉後就失效);
-#   移除 .env 裡實驗用的覆蓋設定(COMPOSE_FILE 疊 tier 檔、SBC_ENABLE)。
+#   移除 .env 裡實驗用的覆蓋設定(COMPOSE_FILE 疊 tier / rack 檔、SBC_ENABLE、RACK_B*)。
 # 怎麼判斷成功:最後印「[down] 已清除」;docker ps 看不到 demo 的容器。
 # ============================================================================
 set -uo pipefail
@@ -18,5 +18,5 @@ docker compose --profile full --profile c3 --profile restproxy --profile sr --pr
 # Conjur 的資料卷已清掉,舊的 admin.key / 各 host 的 API key 就失效了;不清的話第 18 章會『Unable to authenticate』(conjur.env 的 data key 保留)
 rm -f config/conjur/admin.key config/conjur/policy.out; rm -rf config/conjur/keys
 # 實驗用的覆蓋設定(第 31、32 章):回到乾淨基線
-[ -f .env ] && sed -i '/^COMPOSE_PATH_SEPARATOR=/d;/^COMPOSE_FILE=/d;/^SBC_ENABLE=/d' .env
+[ -f .env ] && sed -i '/^COMPOSE_PATH_SEPARATOR=/d;/^COMPOSE_FILE=/d;/^SBC_ENABLE=/d;/^RACK_B[1-9]=/d' .env
 echo "[down] 已清除(映像保留;重建:bash scripts/up.sh)"
