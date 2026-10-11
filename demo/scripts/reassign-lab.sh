@@ -31,7 +31,7 @@ need_ha_mode
 
 TOPIC=cap.skew
 PARTITIONS=6
-BROKER_IDS="${CERT_BROKER_IDS:-11 12 13}"          # broker 的 node id(測試環境 broker1/2/3 = 11/12/13)
+BROKER_IDS="${CERT_BROKER_IDS:-11 12 13 14}"       # broker 的 node id(broker1~4 = 11~14)
 ROLLBACK_FILE=/tmp/cap-rollback.json               # 搬家前的指派(回退用)
 PLAN_FILE=/tmp/cap-plan.json                       # 審過、要執行的均衡計畫
 THROTTLE="${THROTTLE:-4000000}"

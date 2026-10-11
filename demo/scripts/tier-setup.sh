@@ -8,7 +8,7 @@
 #   ② 啟動 MinIO(HTTPS)、建立 bucket 與專用帳號
 #   ③ 把 docker-compose.tier.yml 加進 .env 的 COMPOSE_FILE,依序重建 broker(一次一台)
 #   MinIO 只是測試用的 S3 相容儲存;正式環境換成客戶行內的物件儲存(官方有認證清單),設定的形狀相同。
-# 前置條件:HA 模式(scripts/ha.sh on --with-c3);若已跑過 Lab 31,先 scripts/sbc-setup.sh status 看狀態(兩者可並存)
+# 前置條件:叢集已啟動(scripts/ha.sh on)
 # 用法:
 #   scripts/tier-setup.sh on       備妥並啟用(可重複執行)
 #   scripts/tier-setup.sh off      還原 broker 設定(依序重建),停掉 MinIO(資料卷保留)
@@ -79,8 +79,8 @@ tier_in_env() { grep -q '^COMPOSE_FILE=.*docker-compose.tier.yml' .env; }
 
 # 依序重建 broker(一次一台,等 healthy)。若第 4 台 broker 在跑也一併處理。
 roll_brokers() {
-  local n list="broker1 broker2 broker3"
-  docker ps --format '{{.Names}}' | grep -qx broker4 && list="$list broker4"
+  local n list="broker1 broker2 broker3 broker4"
+  docker ps --format '{{.Names}}' | grep -qx broker5 && list="$list broker5"
   for n in $list; do
     say "重建 $n"
     docker compose --profile tier --profile sbc up -d --no-deps --force-recreate "$n" >/dev/null 2>&1
@@ -99,14 +99,15 @@ case "${1:-status}" in
     say "建立 bucket $BUCKET 與專用帳號 $KAFKA_USER(權限只限這個 bucket)"
     create_bucket_and_user
     if ! tier_in_env; then
-      sed -i 's|^COMPOSE_FILE=\(.*\)$|COMPOSE_FILE=\1,docker-compose.tier.yml|' .env
+      sed -i '/^COMPOSE_PATH_SEPARATOR=/d;/^COMPOSE_FILE=/d' .env
+      printf 'COMPOSE_PATH_SEPARATOR=,\nCOMPOSE_FILE=docker-compose.yml,docker-compose.tier.yml\n' >> .env
     fi
     say "broker 依序重建,讀入 Tiered Storage 設定"
     roll_brokers
     note "[tier] 完成:bucket=$BUCKET,endpoint=https://minio:9000,控制台 https://localhost:9001(未對外開放埠;需要時 docker exec)" ;;
   off)
     say "還原 .env,broker 依序重建(不再載入 Tiered Storage 設定),停掉 MinIO"
-    sed -i 's|,docker-compose.tier.yml||' .env
+    sed -i '/^COMPOSE_PATH_SEPARATOR=/d;/^COMPOSE_FILE=/d' .env
     roll_brokers
     docker compose --profile tier stop minio >/dev/null 2>&1; docker compose --profile tier rm -f minio >/dev/null 2>&1
     note "[tier] 已關閉(MinIO 資料卷 minio-data 保留;ha.sh 重建時會一併清除)" ;;

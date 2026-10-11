@@ -36,7 +36,7 @@ need_ha_mode
 OPENSSL_IMAGE=alpine/openssl:latest
 DOCKER_NET=cpsec_default
 HOST_DIR="$(pwd -W 2>/dev/null || pwd)"          # 給 docker -v 用的主機路徑(Windows 要 C:/… 格式)
-BROKER_IDS="${CERT_BROKER_IDS:-11 12 13}"        # broker 的 node id(測試環境 broker1/2/3 = 11/12/13)
+BROKER_IDS="${CERT_BROKER_IDS:-11 12 13 14}"     # broker 的 node id(broker1~4 = 11~14)
 CERT_ALERTS='^Kafka(Tls|Mtls)'                   # 憑證相關的告警名稱
 
 # ---------- 憑證小工具(在容器裡用 openssl,不必在本機裝) ----------

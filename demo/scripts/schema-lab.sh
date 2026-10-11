@@ -23,13 +23,14 @@ source "$(dirname "${BASH_SOURCE[0]}")/lib/common.sh"
 source "$(dirname "${BASH_SOURCE[0]}")/lib/kafka.sh"
 [ "${1:-}" = "--help" ] && { usage_from_header "$0"; exit 0; }
 cd "$DEMO_DIR" || exit 1
-need_container schema-registry "先執行:scripts/sr-setup.sh"
+need_container schema-registry1 "先執行:scripts/sr-setup.sh"
+need_container schema-registry2 "先執行:scripts/sr-setup.sh"
 
 SR=https://schema-registry:8081
 JSON_TYPE='Content-Type: application/vnd.schemaregistry.v1+json'
 SR_HOST_DIR="$(pwd -W 2>/dev/null || pwd)"
-# topic 的副本數:HA 模式 3,基礎環境(2 台 broker)2
-REPLICATION=$(grep -q "^COMPOSE_FILE=.*docker-compose.ha.yml" .env 2>/dev/null && echo 3 || echo 2)
+# topic 的副本數:叢集是 4 台 broker,預設副本 3
+REPLICATION=3
 
 # ---------- 小工具(這支腳本專用) ----------
 

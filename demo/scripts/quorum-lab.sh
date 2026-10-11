@@ -2,19 +2,17 @@
 # ============================================================================
 # quorum-lab.sh — 第 33 章:動態 quorum(KRaft controller 名單存在叢集裡,可以不停機增減與汰換 controller)
 # ----------------------------------------------------------------------------
-# 白話:靜態 quorum 的 controller 名單寫在每台的設定檔(controller.quorum.voters)。換一台壞掉的 controller 要改全部節點的設定
-#   並全部重啟。動態 quorum 把名單存進叢集 metadata,換 controller 只要「新的加進來、舊的移出去」兩個指令,不用重啟別台。
-#   官方建議正式環境用動態 quorum。這支腳本從 demo 的靜態 quorum 出發:升級 → 汰換一台壞掉的 controller。
-# 前置條件:HA 模式(scripts/ha.sh on),叢集健康;若曾經啟動第 4 台 broker(第 31 章),先 scripts/sbc-setup.sh off
+# 白話:這個叢集一開始就是動態 quorum(官方建議的正式環境做法):controller 名單存在叢集 metadata,不寫在每台設定檔。
+#   換一台壞掉的 controller 只要「新的加進來、舊的移出去」兩個指令,不用改別台的設定、也不用重啟。
+#   這支腳本模擬一台 controller 主機損壞,實際做一次汰換,並在汰換後再壞一台,驗證新名單仍能服務。
+#   (從靜態 quorum 升級成動態的做法見 DESIGN-BASIS「動態 quorum」:kafka-features upgrade --feature kraft.version=1,再換設定並依序重啟。)
+# 前置條件:全新環境(scripts/ha.sh on),叢集健康
 # 用法:
-#   scripts/quorum-lab.sh status     目前是靜態還是動態(kraft.version)、voter 名單與 directory id、誰是 leader
-#   scripts/quorum-lab.sh upgrade    靜態 → 動態:kafka-features upgrade kraft.version=1、改設定(移除 voters、設 bootstrap.servers)、
-#                                    controller 一台一台重啟再重啟 broker;期間背景持續寫入
+#   scripts/quorum-lab.sh status     kraft.version、voter 名單與 directory id、誰是 leader
 #   scripts/quorum-lab.sh replace    汰換:停 controller3(模擬主機損壞)→ 啟動全新的 controller4 → add-controller → remove-controller 3;
 #                                    之後再停 controller1,驗證新的 quorum {1,2,4} 仍能服務
 #   scripts/quorum-lab.sh reset      清掉 controller4(controller3 啟動回來不會重新加入,要用 scripts/ha.sh on 重建環境)
-# 會改動什麼:upgrade 會改 .env 的 COMPOSE_FILE(多 docker-compose.dynq.yml)並依序重建 controller 與 broker;
-#   replace 會永久改變 voter 名單(3 換成 4)並啟動 controller4(profile quorum)。實驗後建議 scripts/ha.sh on 重建。
+# 會改動什麼:replace 會永久改變 voter 名單(3 換成 4)並啟動 controller4(profile quorum)。實驗後建議 scripts/ha.sh on 重建。
 # 怎麼判斷成功:每個子命令最後一行印「判定:…」。
 # 常見失敗:add-controller 被拒 → 新節點尚未追上(describe --replication 看 lag)或沒用 --no-initial-controllers 格式化;
 #   remove-controller 要同時給 controller id 與 directory id,從 describe --status 取;等不到 leader → docker logs controller1。
@@ -90,49 +88,10 @@ all_healthy() {
 # ---------- 各個實驗 ----------
 
 lab_status() {
-  say "kraft.version 與 voter 名單(靜態 quorum 沒有 directory id)"
+  say "kraft.version 與 voter 名單(動態 quorum 的每個 voter 有 directory id,移除 controller 時要用)"
   echo "kraft.version = $(kraft_version)(0 = 靜態、1 = 動態)"
   quorum_md "$(live_controller)" describe --status | grep -E '^(ClusterId|LeaderId|LeaderEpoch|CurrentVoters|CurrentObservers)' | cut -c1-230 | sed 's/^/  /'
-  verdict "目前是 $([ "$(kraft_version)" = 1 ] && echo 動態 || echo 靜態) quorum,voter $(voters | wc -l) 個"
-}
-
-lab_upgrade() {
-  # 已經完整升級(功能版本是 1、設定已改、所有節點已用新設定重啟)就不重做;做到一半(例如重啟失敗)可以重跑接續。
-  if [ "$(kraft_version)" = 1 ] && grep -q 'docker-compose.dynq.yml' .env \
-     && [ -z "$(docker exec controller1 printenv KAFKA_CONTROLLER_QUORUM_VOTERS 2>/dev/null)" ] \
-     && [ -z "$(docker exec broker3 printenv KAFKA_CONTROLLER_QUORUM_VOTERS 2>/dev/null)" ]; then
-    verdict "已經是動態 quorum(kraft.version=1、設定已切換),不需要再升級"; return 0
-  fi
-  say "背景持續寫入(升級期間不應該中斷或遺失)"
-  kafka_topics --delete --if-exists --topic "$TOPIC" >/dev/null; sleep 2
-  kafka_topics --create --topic "$TOPIC" --partitions 3 --replication-factor 3 --config min.insync.replicas=2 | tail -1
-  start_writes 1500 5
-  say "① 升級功能版本:kafka-features upgrade --feature kraft.version=1(靜態 voters 在這一步被寫進叢集 metadata)"
-  if [ "$(kraft_version)" = 1 ]; then note "kraft.version 已經是 1(前一次已升級),略過"; else
-    quorum_tool kafka-features --bootstrap-controller "$(live_controller)" --command-config "$TOOL_CFG" upgrade --feature kraft.version=1 | tail -2
-  fi
-  echo "kraft.version = $(kraft_version)"
-  say "② 設定檔:移除 controller.quorum.voters、改設 controller.quorum.bootstrap.servers(docker-compose.dynq.yml 疊進 COMPOSE_FILE)"
-  grep -q 'docker-compose.dynq.yml' .env || sed -i 's|^COMPOSE_FILE=\(.*\)$|COMPOSE_FILE=\1,docker-compose.dynq.yml|' .env
-  say "③ controller 一台一台重啟(等回 healthy 且 quorum 完整),再重啟 broker"
-  local n
-  for n in controller1 controller2 controller3; do
-    docker compose up -d --no-deps --force-recreate "$n" >/dev/null 2>&1
-    wait_healthy "$n" >/dev/null || die "$n 重啟後沒有 healthy:docker logs $n"
-    wait_until "$n 重啟後 quorum 有 leader 且 3 個 voter" 90 voter_count_is 3 || true
-    note "$n 已重啟"
-  done
-  for n in broker1 broker2 broker3; do
-    docker compose up -d --no-deps --force-recreate "$n" >/dev/null 2>&1
-    wait_healthy "$n" >/dev/null || die "$n 重啟後沒有 healthy:docker logs $n"
-    note "$n 已重啟"
-  done
-  wait "$BG_PID"
-  local sent; sent=$(cat /tmp/quorum-lab-sent 2>/dev/null)
-  echo "升級期間背景寫入:送出 ${sent:-0} 筆;topic 實際 $(topic_message_count "$TOPIC") 筆"
-  echo "voter 名單(含 directory id):"; voters | sed 's/^/  /'
-  [ "$(kraft_version)" = 1 ] && [ "$(voters | wc -l)" = 3 ] && [ "$(voters | awk 'NF==2' | wc -l)" = 3 ] \
-    && verdict "靜態 → 動態完成:kraft.version=1、3 個 voter 都有 directory id;升級期間寫入送出 ${sent:-0} 筆"
+  verdict "目前是 $([ "$(kraft_version)" = 1 ] && echo 動態 || echo 靜態) quorum,voter $(voters | wc -l) 個,每個 voter 都有 directory id"
 }
 
 lab_replace() {
@@ -176,7 +135,6 @@ create_topic() { kafka_topics --create "$@" | grep -E "Created|rror" || echo "�
 
 case "${1:-}" in
   status)  lab_status ;;
-  upgrade) lab_upgrade ;;
   replace) lab_replace ;;
   reset)   lab_reset ;;
   *)       usage_from_header "$0"; exit 1 ;;

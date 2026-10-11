@@ -26,7 +26,7 @@ OUT=$(mktemp)
 ./scripts/k.sh kafka-topics $ADMIN --create --topic $T --partitions 3 --replication-factor 2 2>&1 | grep -E "Created|rror"
 echo "① 背景 producer:$N 筆、每秒 5 筆、acks=all、冪等;同時輪替資料金鑰並滾動重啟 broker1 → broker2"
 ./scripts/k.sh kafka-producer-perf-test --topic $T --num-records "$N" --throughput 5 --record-size 100 --producer.config /clients/token-bootstrap.properties \
-  --producer-props bootstrap.servers=broker1:9094,broker2:9094 acks=all enable.idempotence=true > "$OUT" 2>&1 &
+  --producer-props bootstrap.servers=broker1:9094,broker2:9094,broker3:9094,broker4:9094 acks=all enable.idempotence=true > "$OUT" 2>&1 &
 PP=$!
 sleep 15
 bash scripts/secret-protection.sh rotate-data 2>&1 | grep -E "重啟|登入|變動行數|判定" | sed 's/^/   /'

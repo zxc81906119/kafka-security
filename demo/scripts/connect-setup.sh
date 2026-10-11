@@ -111,10 +111,10 @@ turn_on() {
   bash scripts/make-certs.sh >/dev/null           # 補 connect 的 client 憑證(已有的略過)
   fetch_plugin; prepare_ad_account; prepare_secret_file; prepare_topics; prepare_roles
   say "啟動 Connect worker"
-  docker compose --profile connect up -d connect >/dev/null 2>&1
-  wait_healthy connect >/dev/null || die "Connect 沒有 healthy:docker logs connect"
+  docker compose --profile connect up -d connect1 connect2 >/dev/null 2>&1
+  wait_healthy connect1 connect2 >/dev/null || die "Connect 沒有 healthy:docker logs connect1 / connect2"
   say "等 REST 與授權就緒(gary 可以列出連接器)"
-  wait_until "gary 能列出連接器" 180 connect_rest_ready || die "REST 授權沒有就緒:docker logs connect"
+  wait_until "gary 能列出連接器" 180 connect_rest_ready || die "REST 授權沒有就緒:docker logs connect1"
   note "[connect] 就緒:https://localhost:8083(AD 帳密,Basic)"
 }
 
@@ -124,14 +124,14 @@ connect_rest_ready() {
 
 turn_off() {
   say "停掉 Connect(Kafka 裡的內部 topic、角色與 AD 帳號保留)"
-  docker compose --profile connect stop connect >/dev/null 2>&1 || true
-  docker compose --profile connect rm -f connect >/dev/null 2>&1 || true
+  docker compose --profile connect stop connect1 connect2 >/dev/null 2>&1 || true
+  docker compose --profile connect rm -f connect1 connect2 >/dev/null 2>&1 || true
   note "[connect] 已關閉"
 }
 
 case "${1:-status}" in
   on)     turn_on ;;
   off)    turn_off ;;
-  status) docker ps -a --format '{{.Names}} {{.Status}}' | grep -E '^connect ' || echo "Connect 沒有在跑" ;;
+  status) docker ps -a --format '{{.Names}} {{.Status}}' | grep -E '^connect[12] ' || echo "Connect 沒有在跑" ;;
   *)      usage_from_header "$0"; exit 1 ;;
 esac

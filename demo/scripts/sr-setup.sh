@@ -18,8 +18,8 @@
 # 會改動什麼:補產 SR 需要的憑證(scripts/make-certs.sh,已有的略過);新增上述 role binding;
 #   啟動 schema-registry 容器(compose profile sr)。不會還原。
 # 怎麼判斷成功:最後印「[sr] 就緒(gary 可列 KEK)」,結束碼 0。
-# 常見失敗:印「[sr] 授權尚未生效(最後狀態碼 …);稍後再試」(結束碼 1)→ SR 對 MDS 的授權快取還沒更新,
-#   或 SR 沒起來 → 稍等後重跑,並看 docker logs schema-registry。
+# 常見失敗:印「[sr] 授權尚未生效(最後狀態碼 …);稍後再試」(結束碼 1)→ SR 對 MDS 的授權快取還沒更新(兩台 schema-registry1 / 2),
+#   或 SR 沒起來 → 稍等後重跑,並看 docker logs schema-registry1。
 # ============================================================================
 set -euo pipefail
 cd "$(dirname "$0")/.."
@@ -57,7 +57,7 @@ srbind Group:orders-write DeveloperWrite Subject orders. PREFIXED
 srbind Group:orders-write DeveloperRead Kek orders-kek LITERAL
 
 echo "[sr] 啟動 Schema Registry"
-docker compose --profile sr up -d --wait --wait-timeout 240 schema-registry 2>&1 | grep -E "schema-registry (Healthy|Error)" | tail -1 || true
+docker compose --profile sr up -d --wait --wait-timeout 240 schema-registry1 schema-registry2 2>&1 | grep -E "schema-registry[12] (Healthy|Error)" | tail -2 || true
 echo "[sr] 等待授權生效(SR 對 MDS 的授權快取)…"
 for i in $(seq 1 24); do
   code=$(docker run --rm --network cpsec_default -v "$D/certs:/certs:ro" --entrypoint curl curlimages/curl:latest -s -o /dev/null -w '%{http_code}' --cacert /certs/ca.pem -u gary:gary-pw https://schema-registry:8081/dek-registry/v1/keks || true)

@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
 # ============================================================================
-# up.sh — 一鍵啟動核心環境(LDAP + KRaft controller + 2 brokers + MDS RBAC),並完成初始化
+# up.sh — 一鍵啟動核心環境(LDAP + 3 台 KRaft controller + 4 台 broker + MDS RBAC),並完成初始化
 # ----------------------------------------------------------------------------
 # 白話:把整個 demo 從零啟動:產生憑證、起 LDAP(模擬 AD)與密碼政策、起 controller 與 broker、等 MDS 就緒、
 #   建第一批 role binding、建立服務帳號與 topic。可重複執行。
 # 前置條件:Docker 已啟動;映像可下載或已在本機。
 # 用法:
-#   scripts/up.sh [--with-restproxy] [--with-c3]    選用元件:REST Proxy、Control Center
-#   HA 模式(scripts/ha.sh on)時自動改為 3 台 controller、3 台 broker、topic 副本 3;否則 1 controller、2 broker、副本 2。
+#   scripts/up.sh [--with-restproxy] [--with-sr] [--with-connect] [--with-c3]    選用元件(記憶體吃緊,用到才開)
+#   拓樸固定:3 controller(動態 quorum)+ 4 broker、副本 3、min.insync.replicas 2;REST Proxy、Schema Registry、Connect 各 2 台,Control Center 1 台。
 #   主機埠可在 .env 以 HOST_PORT_* 覆蓋(Windows 保留埠範圍時用)。
 # 會改動什麼:啟動容器(openldap、ldapadmin、controller、broker,加選用元件);必要時補產 certs/;
 #   對 LDAP 套用 ACL 與密碼政策(ppolicy,鎖定預設關閉,第 19 章才打開);執行 bootstrap-rbac.sh 建 role binding;
@@ -37,21 +37,24 @@ ldap_admin_search() {
 PROFILES=""
 for a in "$@"; do
   case "$a" in
-    --with-restproxy) PROFILES="$PROFILES --profile restproxy" ;;
-    --with-c3)        PROFILES="$PROFILES --profile c3" ;;
+    --with-restproxy) PROFILES="$PROFILES --profile restproxy" ;;   # REST Proxy 2 台 + L4 負載平衡器
+    --with-sr)        PROFILES="$PROFILES --profile sr" ;;           # Schema Registry 2 台
+    --with-connect)   PROFILES="$PROFILES --profile connect" ;;      # Connect 2 個 worker
+    --with-c3)        PROFILES="$PROFILES --profile c3" ;;           # Control Center 1 台(+ Prometheus、Alertmanager)
   esac
 done
 
-# HA 模式(scripts/ha.sh on)時:3 台 controller、3 台 broker、topic 副本 3;否則 1 台 controller、2 台 broker、副本 2
-if grep -q "^COMPOSE_FILE=.*docker-compose.ha.yml" .env 2>/dev/null; then
-  CTRLS="controller1 controller2 controller3"; BROKERS="broker1 broker2 broker3"; RF=3
-else
-  CTRLS="controller1"; BROKERS="broker1 broker2"; RF=2
-fi
+# 拓樸固定(對照客戶環境):3 台 controller(動態 quorum)、4 台 broker、topic 副本 3
+CTRLS="controller1 controller2 controller3"
+BROKERS="broker1 broker2 broker3 broker4"
+RF=3
 
 # ---------- 啟動與初始化 ----------
 
 bash scripts/make-certs.sh
+bash scripts/jmx-setup.sh                       # JMX exporter agent 與設定(第 22 章;controller 與 broker 都載入,沒準備好容器起不來)
+cp config/c3/jmx-scrape.tpl config/c3/jmx_scrape.yml
+rm -f config/c3/grafana_scrape.yml              # 抓取設定要等 scripts/grafana.sh on 才產生(否則會有 up==0 的目標與告警)
 
 echo "[up] 啟動 LDAP(模擬 AD)與 controller ..."
 docker compose up -d --wait --wait-timeout 180 openldap ldapadmin $CTRLS   # --wait:等 healthcheck 通過

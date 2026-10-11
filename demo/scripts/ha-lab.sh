@@ -5,7 +5,7 @@
 # 白話:銀行要的是「壞掉一兩台,服務照常」。這支腳本實際把 broker、controller 一台一台停掉,
 #   觀察寫入、讀取、建 topic 哪些還能做、哪些會卡住,最後再練習不中斷服務的滾動重啟。
 #   每個實驗結束都會把停掉的容器啟動回來。
-# 前置條件:HA 模式(scripts/ha.sh on:3 controller + 3 broker,副本 3、min.insync.replicas 2)
+# 前置條件:叢集已啟動(scripts/ha.sh on:3 controller + 4 broker,副本 3、min.insync.replicas 2)
 # 用法:
 #   scripts/ha-lab.sh quorum         KRaft quorum 狀態:3 個 voter、1 個 leader
 #   scripts/ha-lab.sh topic          建 RF=3、min.isr=2 的 topic,寫入 300 筆並比對
@@ -59,7 +59,7 @@ create_topic() {
 # UNKNOWN_TOPIC_OR_PARTITION 重試,而且是在已經停掉 controller 之後才發現,等於卡死。
 ensure_test_topic() {
   kafka_topics --describe --topic ha.test | grep -q "Partition:" && return 0
-  create_topic --topic ha.test --partitions 3 --replication-factor 3 --config min.insync.replicas=2 >/dev/null
+  create_topic --topic ha.test --replica-assignment 11:12:13,12:13:11,13:11:12 --config min.insync.replicas=2 >/dev/null
   sleep 3
 }
 
@@ -93,10 +93,10 @@ lab_quorum() {
 }
 
 lab_topic() {
-  say "建立 3 分區、副本 3、min.insync.replicas=2 的 topic,用 acks=all 寫 300 筆再數筆數"
+  say "建立 3 分區、副本 3、min.insync.replicas=2 的 topic(副本固定放 broker1~3;第 4 台不放,這樣停 2 台時才有『一個分區同時失去 2 個副本』的情境可看),用 acks=all 寫 300 筆再數筆數"
   local sent
   reset_topics ha.test
-  create_topic --topic ha.test --partitions 3 --replication-factor 3 --config min.insync.replicas=2
+  create_topic --topic ha.test --replica-assignment 11:12:13,12:13:11,13:11:12 --config min.insync.replicas=2
   show_partitions ha.test
   sent=$(produce_test ha.test 300 all)
   echo "寫入(acks=all):送出 ${sent:-0} 筆;topic 實際 $(topic_message_count ha.test) 筆"
@@ -189,16 +189,16 @@ lab_rolling() {
   say "背景用冪等 producer(acks=all)持續寫入,同時依序重啟所有節點;最後比對『送出幾筆』與『topic 實際幾筆』"
   reset_topics ha.roll
   create_topic --topic ha.roll --partitions 6 --replication-factor 3 --config min.insync.replicas=2
-  echo "背景 producer:$total_records 筆、每秒 6 筆、acks=all、冪等;同時依序重啟 broker1 → broker2 → broker3 → 非 active controller → active controller"
+  echo "背景 producer:$total_records 筆、每秒 6 筆、acks=all、冪等;同時依序重啟 broker1 → broker2 → broker3 → broker4 → 非 active controller → active controller"
   "$DEMO_DIR/scripts/k.sh" kafka-producer-perf-test --topic ha.roll --num-records "$total_records" --throughput 6 --record-size 100 \
       --command-config "$KAFKA_ADMIN_CONFIG" \
       --producer-props bootstrap.servers="$KAFKA_BOOTSTRAP" acks=all enable.idempotence=true delivery.timeout.ms=120000 request.timeout.ms=30000 \
       > "$PERF_OUT" 2>&1 &
   pp=$!; sleep 20
 
-  say "重啟順序:先 3 台 broker,再 controller;active controller(leader)放最後,避免 leader 來回切換"
+  say "重啟順序:先 4 台 broker,再 controller;active controller(leader)放最後,避免 leader 來回切換"
   leader=$(kafka_quorum describe --status | awk '/LeaderId/ {print $2}'); active="controller$leader"
-  order="broker1 broker2 broker3"
+  order="broker1 broker2 broker3 broker4"
   for c in controller1 controller2 controller3; do [ "$c" != "$active" ] && order="$order $c"; done
   order="$order $active"
   echo "active controller = $active(最後重啟)"
@@ -215,7 +215,7 @@ lab_rolling() {
   fails=$(grep -acE "ERROR|Expiring|expired|Failed to send" "$PERF_OUT" || true)
   echo "producer 回報送出 ${sent:-?} 筆;topic 實際 $have 筆;送出失敗 $fails 筆"
   if [ "${sent:-}" = "$total_records" ] && [ "$have" = "$total_records" ] && [ "$fails" = 0 ]; then
-    verdict "滾動重啟 3 台 broker 與 3 台 controller 期間,producer 零失敗、零遺失($total_records = $have)"
+    verdict "滾動重啟 4 台 broker 與 3 台 controller 期間,producer 零失敗、零遺失($total_records = $have)"
   else
     verdict "不符合(送出 ${sent:-?}、topic $have、失敗 $fails)"
   fi

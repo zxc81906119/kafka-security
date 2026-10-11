@@ -7,9 +7,9 @@
 #   一般路徑:CLIENT 埠(9094),用 bootstrap 的 OAuth token——日常使用
 #   帶外路徑:INTERNAL 埠(9092),用內部 mTLS 憑證——CLIENT 埠的憑證壞了時的緊急通道,權限是 super user,只在回退時用
 # ============================================================================
-KAFKA_BOOTSTRAP="${KAFKA_BOOTSTRAP:-broker1:9094,broker2:9094,broker3:9094}"
+KAFKA_BOOTSTRAP="${KAFKA_BOOTSTRAP:-broker1:9094,broker2:9094,broker3:9094,broker4:9094,broker3:9094,broker4:9094}"
 KAFKA_ADMIN_CONFIG=/clients/token-bootstrap.properties
-KAFKA_OOB_BOOTSTRAP="broker1:9092,broker2:9092,broker3:9092"
+KAFKA_OOB_BOOTSTRAP="broker1:9092,broker2:9092,broker3:9092,broker4:9092,broker3:9092,broker4:9092"
 
 # 內部用:把 Kafka 工具輸出裡沒意義的警告行濾掉。
 _kafka_quiet() { grep -v -E '^WARNING|SLF4J'; }
