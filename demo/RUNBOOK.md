@@ -297,7 +297,7 @@ gary 在 C3 指派 `orders-read` → DeveloperRead;LDAP 介面把 ming 從 devel
 |---|---|
 | 造不均 | `--replica-assignment` 把 6 分區副本全放 broker1、2,寫入約 200 MB;`kafka-log-dirs` 顯示 broker3、broker4 為 0 MB |
 | 計畫 | `--generate` 第一段輸出存成回退檔;建議的新指派起點隨機、不刻意少搬,只當草稿;執行的是審過的均衡計畫 |
-| 限速搬家 | `--execute --throttle 4000000`:broker 層 `leader/follower.replication.throttled.rate`、topic 層 `*.replication.throttled.replicas`;背景寫入 600 筆(acks=all、冪等)零失敗;約 40 秒完成;`--verify` 完成時自動移除限速;搬完三台各約 132 MB(審過的計畫輪流放在 broker1 到 broker3)<!-- TODO-REVERIFY: 132 MB 是 3 台 broker 時量到的 --> |
+| 限速搬家 | `--execute --throttle 4000000`:broker 層 `leader/follower.replication.throttled.rate`、topic 層 `*.replication.throttled.replicas`;背景寫入 600 筆(acks=all、冪等)零失敗;約 40 秒完成;`--verify` 完成時自動移除限速;搬完 4 台各約 131 / 164 / 166 / 133 MB(審過的計畫:3 份副本輪流放在 broker1 到 broker4;18 份副本無法均分 4 台,每台 4 到 5 份) |
 | 取消 | `--cancel`:搬到一半的分區回到搬家前的副本集合(順序可能不同),並自動清除限速 |
 | 忘了收尾 | 搬完不跑 `--verify`:broker 層與 topic 層的限速設定殘留(各 2 筆);再跑 `--verify` 才清掉 |
 
