@@ -41,3 +41,4 @@
 | D3 | 動態 quorum:正式環境建議 3 還是 5 台 controller?`controller.quorum.auto.join.enable` 的預設與建議 | 官方文件說 8.2 起新叢集預設啟用,實測沒設時不會自動加入 | Lab 33 | |
 | D4 | 稽核日誌(audit log)的保存與匯出:是否有官方建議的 SIEM 整合方式與事件過濾做法 | 銀行稽核要求 | Lab 10 | |
 | D5 | CSFLE 在地端 KMS 的支援清單(AWS / Azure / GCP / Vault 之外,是否支援 HSM 或 CyberArk) | 客戶有 CyberArk,沒有雲端 KMS | 官方文件無 Conjur 型態 | |
+| D6 | Cluster Linking 在 RBAC 下,來源端 link 帳號的最小權限:官方 RBAC 表只寫 `DeveloperRead`(Topic、Group),但建鏡像時被拒 `Denied Operation = DescribeConfigs`(Topic)。本案補一條 ACL(Topic DescribeConfigs,PREFIXED),沒用 DeveloperManage。這是官方建議做法嗎?另 link 對 `Cluster:kafka-cluster` 的 Describe 也被拒(不影響鏡像與 offset 同步),是否需要給? | DR 設計要最小權限,且 RBAC 與 ACL 並用會增加管理項目 | Lab 36(CP 8.3.2):只有 DeveloperRead 時 `kafka-mirrors --create` 回 `TopicAuthorizationException: While fetching configuration for topic`;補 ACL 後鏡像 300 = 300、offset 同步 200 = 200 | |

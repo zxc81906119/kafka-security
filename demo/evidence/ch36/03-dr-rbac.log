@@ -6,4 +6,5 @@ yujie(AD 帳密)在 DR 站讀 dr.orders:TopicAuthorizationException
   bind Group:orders-write DeveloperRead Topic:dr.(PREFIXED) ->  [HTTP 204] 
   bind Group:orders-write DeveloperWrite Topic:dr.(PREFIXED) ->  [HTTP 204] 
   bind Group:orders-write DeveloperRead Group:dr-(PREFIXED) ->  [HTTP 204] 
-補建綁定後,yujie 在 DR 站讀 dr.orders:讀到 0 筆
+補建綁定後,yujie 在 DR 站讀 dr.orders:讀到 1 筆
+判定:DR 站的授權要另外建立(RBAC 不隨 Cluster Linking 同步);補建前被拒、補建後可讀

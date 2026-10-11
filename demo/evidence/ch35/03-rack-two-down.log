@@ -2,9 +2,9 @@
 $ docker stop broker3 broker4;acks=all 寫 600 筆;docker start broker3 broker4
 ▶ 機架 rack-b 整個斷電:停 broker3 broker4 
 低於 min.insync.replicas 的分區(acks=all 會被擋):
-  Partition: 0	Leader: 11	Replicas: 14,11,13	Isr: 11
-  Partition: 2	Leader: 11	Replicas: 14,11,13	Isr: 11
-  Partition: 5	Leader: 12	Replicas: 13,12,14	Isr: 12
+  Partition: 1	Leader: 11	Replicas: 14,11,13	Isr: 11
+  Partition: 3	Leader: 11	Replicas: 14,11,13	Isr: 11
+  Partition: 4	Leader: 11	Replicas: 14,11,13	Isr: 11
   共 3 個分區(總共 6 個)
-acks=all 寫 600 筆(平均分到 6 個分區):topic 實際多了 600 筆
-判定:不符合(低於 min.isr 的分區 3、寫入 600 / 600)
+acks=all 寫 600 筆(輪流寫到 6 個分區,每個分區約 100 筆):topic 實際多了 300 筆
+判定:機架 rack-b 斷電後,3 個分區低於 min.insync.replicas,只寫進 300 / 600 筆(撐不過整個機架故障)

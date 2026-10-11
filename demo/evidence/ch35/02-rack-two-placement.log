@@ -8,10 +8,10 @@ $ kafka-topics --create --topic rack2.t --partitions 6 --replication-factor 3;ka
   node 14 rack-b
 Created topic rack2.t.
 分區 副本 機架 機架數:
-  0 14,11,13 rack-b,rack-a,rack-b 2
-  1 12,13,11 rack-a,rack-b,rack-a 2
-  2 14,11,13 rack-b,rack-a,rack-b 2
-  3 12,13,11 rack-a,rack-b,rack-a 2
-  4 11,14,12 rack-a,rack-b,rack-a 2
-  5 13,12,14 rack-b,rack-a,rack-b 2
+  0 12,13,11 rack-a,rack-b,rack-a 2
+  1 14,11,13 rack-b,rack-a,rack-b 2
+  2 12,13,11 rack-a,rack-b,rack-a 2
+  3 14,11,13 rack-b,rack-a,rack-b 2
+  4 14,11,13 rack-b,rack-a,rack-b 2
+  5 12,13,11 rack-a,rack-b,rack-a 2
 判定:共 2 個機架:每個分區都橫跨 2 個機架(= min(機架數, 副本數))

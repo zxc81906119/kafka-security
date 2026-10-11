@@ -1,14 +1,14 @@
 # 【演練紀錄】把量測值與演練清單寫成紀錄;刪除 DR 站、恢復 Connect 與 C3
 $ scripts/dr-lab.sh report;scripts/dr-setup.sh down
-# DR 演練紀錄 2026-10-12 05:11
+# DR 演練紀錄 2026-10-12 06:09
 | 項目 | 結果 |
 |---|---|
 | 演練範圍 | 主站整站斷電(broker 4 台、controller 3 台)→ DR 站 failover → 應用程式改連 → 主站恢復後切回 |
-| 主站斷電時間 | 05:02:00 |
-| RTO(斷電到 DR 站恢復寫入) | 213 秒(demo 為腳本自動執行;正式演練含判斷與核准時間) |
-| RPO(遺失筆數) | 611 筆(主站斷電前 612 筆、DR 站 failover 時 1 筆) |
-| consumer 接續 | DR 站起始 offset 合計 0,接續讀到 0 筆(含 offset 同步週期內的重讀) |
-| 切回 | 未完成或未執行 |
+| 主站斷電時間 | 06:03:14 |
+| RTO(斷電到 DR 站恢復寫入) | 107 秒(demo 為腳本自動執行;正式演練含判斷與核准時間) |
+| RPO(遺失筆數) | 0 筆(主站斷電當下 581 筆,主站恢復後確認;DR 站 failover 時 581 筆) |
+| consumer 接續 | DR 站起始 offset 合計 200,接續讀到 382 筆(含 offset 同步週期內的重讀) |
+| 切回 | 完成:主站與 DR 站一致後 promote,零落後 |
 ## 演練清單(每次演練逐項確認)
 - [x] DR 站的業務授權(RBAC)已事先建立:不會隨 Cluster Linking 同步
 - [x] DR 站的服務帳號(SCRAM)已事先建立:密碼與主站相同或由 CyberArk 同步
@@ -16,5 +16,5 @@ $ scripts/dr-lab.sh report;scripts/dr-setup.sh down
 - [x] consumer 能從同步過來的 offset 接續,並能容忍重讀(冪等處理)
 - [x] 鏡像落後(lag)有監控與告警:RPO 等於斷電當下的落後量
 - [x] 切回步驟:主站重建為鏡像 → 零落後 → promote;斷電前未鏡像的資料確定遺失,需由應用程式對帳
-判定:演練紀錄已產生:evidence/dr-drills/drill-20261012-0511.md
+判定:演練紀錄已產生:evidence/dr-drills/drill-20261012-0609.md
    [dr] 已移除 DR 站

@@ -30,6 +30,8 @@ DR_ADMIN=/clients/token-bootstrap-dr.properties
 MAIN_NODES="broker1 broker2 broker3 broker4 controller1 controller2 controller3"
 STATE=/tmp/dr-drill.env
 SEC=config/dr/secrets
+# 反向 link 同步 offset 的 consumer group 範圍(與 dr-setup.sh 相同;CLI 要求以 JSON 檔傳入)
+GF_JSON='{"groupFilters":[{"name":"dr-","patternType":"PREFIXED","filterType":"INCLUDE"}]}'
 
 dr_kafka()   { local t="$1"; shift; "$DEMO_DIR/scripts/k.sh" "$t" --bootstrap-server "$DR_BOOT" --command-config "$DR_ADMIN" "$@"; }
 main_kafka() { local t="$1"; shift; "$DEMO_DIR/scripts/k.sh" "$t" --bootstrap-server "$KAFKA_BOOTSTRAP" --command-config "$KAFKA_ADMIN_CONFIG" "$@"; }
@@ -46,9 +48,10 @@ group_offset() {
   $f kafka-consumer-groups --describe --group "$G" 2>/dev/null | awk -v t="$T" '$2==t && $4 ~ /^[0-9]+$/ {s+=$4} END{print s+0}'
 }
 # consume_n <main|dr> <筆數>:以 consumer group dr-app 讀 N 筆並提交(bootstrap 身分)
+#   --from-beginning 只在 group 還沒有提交過 offset 時生效(新 group 預設從最新開始,會讀到 0 筆);DR 站有同步過來的 offset 時從那裡接續
 consume_n() {
   local f; [ "$1" = dr ] && f=dr_kafka || f=main_kafka
-  $f kafka-console-consumer --topic "$T" --group "$G" --max-messages "$2" --timeout-ms 20000 2>/dev/null | grep -c .
+  $f kafka-console-consumer --topic "$T" --group "$G" --from-beginning --max-messages "$2" --timeout-ms 20000 2>/dev/null | grep -c .
 }
 save() { sed -i "/^$1=/d" "$STATE" 2>/dev/null; echo "$1=$2" >> "$STATE"; }
 load() { [ -f "$STATE" ] && . "$STATE"; }
@@ -78,7 +81,7 @@ case "${1:-}" in
     for r in DeveloperRead DeveloperWrite; do KAFKA_CLUSTER_ID=$DR_ID MDS_URL=https://dr-broker1:8091 rbac_bind cert bootstrap Group:orders-write $r Topic dr. PREFIXED; done
     KAFKA_CLUSTER_ID=$DR_ID MDS_URL=https://dr-broker1:8091 rbac_bind cert bootstrap Group:orders-write DeveloperRead Group dr- PREFIXED
     sleep 10
-    after=$("$DEMO_DIR/scripts/k.sh" kafka-console-consumer --bootstrap-server "$DR_BOOT" --command-config /clients/plain-yujie.properties --topic "$T" --from-beginning --max-messages 1 --timeout-ms 15000 2>/dev/null | grep -c .)
+    after=$("$DEMO_DIR/scripts/k.sh" kafka-console-consumer --bootstrap-server "$DR_BOOT" --command-config /clients/plain-yujie.properties --topic "$T" --group dr-yujie --from-beginning --max-messages 1 --timeout-ms 15000 2>/dev/null | grep -c .)
     echo "補建綁定後,yujie 在 DR 站讀 $T:讀到 $after 筆"
     [ "$after" -ge 1 ] && verdict "DR 站的授權要另外建立(RBAC 不隨 Cluster Linking 同步);補建前被拒、補建後可讀" ;;
   failover)
@@ -87,16 +90,16 @@ case "${1:-}" in
     m0=$(count_on main "$T"); d0=$(count_on dr "$T")
     ( PRODUCE_TIMEOUT=150 DELIVERY_MS=10000 produce_test "$T" 900 all 10 >/dev/null 2>&1 ) &
     pp=$!; sleep 30
-    m_fail=$(count_on main "$T")                       # 斷電前一刻主站已確認寫入的筆數
-    t_fail=$(date +%s); save T_FAIL "$t_fail"; save M_FAIL "$m_fail"
-    docker stop $MAIN_NODES >/dev/null; echo "主站斷電($(date +%T));斷電前主站已寫入 $((m_fail - m0)) 筆(累計 $m_fail)"
+    # 斷電用 docker kill(立即終止,等同拔電):docker stop 是優雅關機,7 個節點逐步下線的幾十秒內 producer 仍寫得進去、鏡像也追得上,
+    #   量不到真正的斷電;主站在斷電那一刻有多少筆無法當場查(主站已死),等主站恢復後在 failback 確認 → RPO
+    t_fail=$(date +%s); save T_FAIL "$t_fail"
+    docker kill $MAIN_NODES >/dev/null; echo "主站斷電($(date +%T),7 個節點立即終止);演練前主站已有 $m0 筆"
     wait "$pp" 2>/dev/null
     say "DR 站:確認主站失聯後執行 failover(不論鏡像落後多少,直接把鏡像轉成可寫的一般 topic)"
     dr_kafka kafka-mirrors --failover --topics "$T" 2>&1 | quiet | tail -2
     wait_until "DR 站的 $T 變成可寫" 120 bash -c "'$DEMO_DIR/scripts/k.sh' kafka-mirrors --bootstrap-server $DR_BOOT --command-config $DR_ADMIN --describe --topics $T 2>/dev/null | grep -qE 'STOPPED'" >/dev/null || true
     d_fail=$(count_on dr "$T"); save D_FAIL "$d_fail"
-    rpo=$(( m_fail - d_fail )); save RPO "$rpo"
-    echo "DR 站在 failover 時已有 $d_fail 筆;主站斷電前有 $m_fail 筆 → 遺失 $rpo 筆(RPO = 斷電當下的鏡像落後)"
+    echo "DR 站在 failover 時有 $d_fail 筆(演練期間新增 $((d_fail - d0)) 筆);主站斷電當下有幾筆要等主站恢復才能確認,差額就是 RPO(見切回步驟)"
     say "DR 站:應用程式改連 DR 站(bootstrap 換成 DR 站;服務帳號 svc-orders 要事先在 DR 站建好)"
     # 主站的 SCRAM 帳號不會跟著鏡像:DR 站要另外建(演練清單;正式環境應在演練前就建好,這裡示範步驟)
     "$DEMO_DIR/scripts/k.sh" kafka-configs --bootstrap-server "$DR_BOOT" --command-config "$DR_ADMIN" --alter --add-config 'SCRAM-SHA-512=[password=orders-secret-v1]' --entity-type users --entity-name svc-orders 2>&1 | quiet | tail -1
@@ -111,19 +114,24 @@ case "${1:-}" in
     gd=$(group_offset dr); save G_DR "$gd"
     got=$(consume_n dr 2000); save G_READ "$got"
     echo "DR 站的 $G 起始 offset 合計 $gd;接續讀到 $got 筆(offset 同步有 5 秒週期,最後一次同步之後讀過的會重讀一次)"
-    [ -n "$ok" ] && verdict "主站斷電後 $rto 秒 DR 站恢復寫入(RTO,含 failover 與 client 改連);遺失 $rpo 筆(RPO = 鏡像落後);consumer 從同步的 offset 接續" ;;
+    [ -n "$ok" ] && verdict "主站斷電後 $rto 秒 DR 站恢復寫入(RTO,含 failover 與 client 改連);consumer 從同步的 offset 接續" ;;
   failback)
     load
-    say "主站恢復:先啟動主站(此時主站的 $T 停在斷電前的 $M_FAIL 筆,DR 站已有之後的新資料——兩邊分歧)"
+    say "主站恢復:先啟動主站(主站的 $T 停在斷電當下,DR 站已有之後的新資料——兩邊分歧)"
     docker start $MAIN_NODES >/dev/null; wait_healthy broker1 broker2 broker3 broker4 >/dev/null
+    sleep 10; m_fail=$(count_on main "$T"); save M_FAIL "$m_fail"
+    rpo=$(( m_fail - ${D_FAIL:-0} )); [ "$rpo" -lt 0 ] && rpo=0; save RPO "$rpo"
+    echo "主站斷電當下有 $m_fail 筆(acks=all 已確認的資料在重啟後都在);DR 站 failover 時有 ${D_FAIL:-?} 筆 → 沒鏡像到 DR 的 $rpo 筆(RPO)"
     say "DR 站建立主站用的 link 帳號 svc-main-link(只讀);主站建立反向 link dr-to-main"
     mkdir -p "$SEC"; [ -s "$SEC/main-link-password" ] || head -c 18 /dev/urandom | base64 | tr -d '\n=+/' > "$SEC/main-link-password"
     dr_kafka kafka-configs --alter --add-config "SCRAM-SHA-512=[password=$(cat "$SEC/main-link-password")]" --entity-type users --entity-name svc-main-link 2>&1 | quiet | tail -1
     KAFKA_CLUSTER_ID=$DR_ID MDS_URL=https://dr-broker1:8091 rbac_bind cert bootstrap User:svc-main-link DeveloperRead Topic dr. PREFIXED >/dev/null
     KAFKA_CLUSTER_ID=$DR_ID MDS_URL=https://dr-broker1:8091 rbac_bind cert bootstrap User:svc-main-link DeveloperRead Group dr- PREFIXED >/dev/null
+    # 同 dr-setup.sh:建鏡像要讀來源 topic 設定,DeveloperRead 不含 DescribeConfigs,只補這一項 ACL
+    dr_kafka kafka-acls --add --allow-principal User:svc-main-link --operation DescribeConfigs --topic dr. --resource-pattern-type prefixed 2>&1 | quiet | grep -E "Adding" | head -1
     sed -e "s#^bootstrap.servers=.*#bootstrap.servers=$DR_BOOT#" -e "s#username=\"svc-dr-link\" password=\"[^\"]*\"#username=\"svc-main-link\" password=\"$(cat "$SEC/main-link-password")\"#" "$SEC/link.properties" > "$SEC/reverse-link.properties"
-    "$DEMO_DIR/scripts/k.sh" bash -c "cat > /tmp/l.properties; kafka-cluster-links --bootstrap-server $KAFKA_BOOTSTRAP --command-config $KAFKA_ADMIN_CONFIG --create --link dr-to-main --config-file /tmp/l.properties; rm -f /tmp/l.properties" < "$SEC/reverse-link.properties" 2>&1 | quiet | tail -1
-    say "主站:把分歧的 $T 刪掉,重建成 DR 站的鏡像(斷電前沒來得及鏡像到 DR 的 ${RPO:-?} 筆就此確定遺失)"
+    "$DEMO_DIR/scripts/k.sh" bash -c "cat > /tmp/l.properties; printf %s '$GF_JSON' > /tmp/gf.json; kafka-cluster-links --bootstrap-server $KAFKA_BOOTSTRAP --command-config $KAFKA_ADMIN_CONFIG --create --link dr-to-main --config-file /tmp/l.properties --consumer-group-filters-json-file /tmp/gf.json; rm -f /tmp/l.properties /tmp/gf.json" < "$SEC/reverse-link.properties" 2>&1 | quiet | tail -1
+    say "主站:把分歧的 $T 刪掉,重建成 DR 站的鏡像(斷電前沒來得及鏡像到 DR 的 $rpo 筆就此確定遺失)"
     main_kafka kafka-topics --delete --topic "$T" 2>&1 | quiet | tail -1; sleep 10
     main_kafka kafka-mirrors --create --mirror-topic "$T" --link dr-to-main 2>&1 | quiet | tail -1
     d_now=$(count_on dr "$T")
@@ -139,7 +147,7 @@ case "${1:-}" in
     dr_kafka kafka-mirrors --create --mirror-topic "$T" --link main-to-dr 2>&1 | quiet | tail -1
     main_kafka kafka-cluster-links --delete --link dr-to-main 2>&1 | quiet | tail -1
     save FAILBACK_OK "$([ -n "$ok" ] && [ "$m_now" = "$d_now" ] && echo yes || echo no)"
-    [ -n "$ok" ] && [ "$m_now" = "$d_now" ] && verdict "切回完成:主站資料與 DR 站一致($m_now 筆)後 promote,零落後、不再遺失;DR 站恢復為主站的鏡像" ;;
+    [ -n "$ok" ] && [ "$m_now" = "$d_now" ] && verdict "切回完成:RPO $rpo 筆(斷電當下沒鏡像到 DR 的資料);主站與 DR 站一致($m_now 筆)後 promote,零落後、不再遺失;DR 站恢復為主站的鏡像" ;;
   report)
     load; mkdir -p evidence/dr-drills; f="evidence/dr-drills/drill-$(date +%Y%m%d-%H%M).md"
     {
@@ -148,7 +156,7 @@ case "${1:-}" in
       echo "| 演練範圍 | 主站整站斷電(broker 4 台、controller 3 台)→ DR 站 failover → 應用程式改連 → 主站恢復後切回 |"
       echo "| 主站斷電時間 | $(date -d @"${T_FAIL:-0}" '+%H:%M:%S' 2>/dev/null) |"
       echo "| RTO(斷電到 DR 站恢復寫入) | ${RTO:-?} 秒(demo 為腳本自動執行;正式演練含判斷與核准時間) |"
-      echo "| RPO(遺失筆數) | ${RPO:-?} 筆(主站斷電前 ${M_FAIL:-?} 筆、DR 站 failover 時 ${D_FAIL:-?} 筆) |"
+      echo "| RPO(遺失筆數) | ${RPO:-?} 筆(主站斷電當下 ${M_FAIL:-?} 筆,主站恢復後確認;DR 站 failover 時 ${D_FAIL:-?} 筆) |"
       echo "| consumer 接續 | DR 站起始 offset 合計 ${G_DR:-?},接續讀到 ${G_READ:-?} 筆(含 offset 同步週期內的重讀) |"
       echo "| 切回 | $([ "${FAILBACK_OK:-}" = yes ] && echo '完成:主站與 DR 站一致後 promote,零落後' || echo '未完成或未執行') |"
       echo; echo "## 演練清單(每次演練逐項確認)"

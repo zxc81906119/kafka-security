@@ -434,6 +434,50 @@ gary 在 C3 指派 `orders-read` → DeveloperRead;LDAP 介面把 ming 從 devel
 
 **踩坑**:`ensure-controller.sh` 要「已格式化就略過」;add-controller 要在新節點執行且 `-e KAFKA_OPTS=`;新 controller 的憑證 SAN(server 與 internal 都要)要先備好;`grep -q` 在 pipefail 下的 SIGPIPE。
 
+## 第 34 章(進階)看門狗:監控自己掛了誰知道(`./demo.sh 34`,需 Prometheus;約 20 分鐘)
+
+**準備**:叢集已啟動 → `scripts/watchdog-setup.sh on`(Prometheus 加 `config/c3/watchdog_rules.yml`、Alertmanager 加獨立路由、啟動 profile watchdog 的外部看門狗 `config/watchdog/deadman.py`;密碼在 `config/watchdog/secrets/`,不進版本庫)。`scripts/watchdog-lab.sh` 子命令:baseline、stop-am、stop-prom、misconfig。還原:`scripts/watchdog-setup.sh off`。
+
+| 項目 | 實測結果 |
+|---|---|
+| 機制 | 規則 `Watchdog`(`expr: vector(1)`,永遠觸發)→ Alertmanager 獨立路由、`group_interval` 與 `repeat_interval` 都 1 分鐘 → webhook(HTTPS + Basic)每 60 秒一次心跳 → 看門狗 180 秒沒收到就判定「監控鏈路失效」(容許漏 2 次) |
+| 停 Alertmanager | 167 秒後判定失效;恢復後 112 秒回到 OK |
+| 停 Prometheus | 297 秒後才判定(Alertmanager 手上的 Watchdog 要等過期約 4 分鐘才停止重送);恢復後 57 秒回到 OK |
+| 設定錯(密碼錯) | Prometheus、Alertmanager 都 healthy(HA 不會切換),178 秒後判定失效;改回後 56 秒回到 OK |
+
+**正式環境**:不部署看門狗容器;Alertmanager 的心跳直接送行內 24 小時有人值班的企業監控平台(待客戶確認,見銀行導入手冊 8.1),不需要「看門狗的看門狗」。
+
+**踩坑**:`repeat_interval` 要是 `group_interval` 的倍數,否則心跳間隔被拉長;停 Prometheus 的偵測比停 Alertmanager 慢,值班 SOP 要寫明。
+
+## 第 35 章(進階)多機架:整個機架斷電(`./demo.sh 35`;約 25 分鐘)
+
+**準備**:叢集已啟動。`scripts/rack-setup.sh two|three|off`(`docker-compose.rack.yml` 疊進 `COMPOSE_FILE`、`.env` 設 `RACK_B1~4`,broker 依序重建)。`scripts/rack-lab.sh` 子命令:placement、rack-down。
+
+| 項目 | 實測結果(2026-10-12) |
+|---|---|
+| 2 個機架(11、12 = rack-a;13、14 = rack-b) | 新 topic 6 分區都橫跨 2 個機架;停 broker3、4:6 個分區中 3 個低於 min.isr,acks=all 600 筆只寫進 300 筆 |
+| 3 個機架(11、12 = rack-a;13 = rack-b;14 = rack-c) | 6 分區都橫跨 3 個機架;停 broker1、2:0 個分區低於 min.isr,600 筆全部寫入 |
+| 還原 | `rack-setup.sh off`;既有 topic 副本位置不會自動重排 |
+
+**踩坑**:預設的自適應分區(無 key)會繞過低於 min.isr 的分區,2 個機架時也 600 筆全進,掩蓋有 key 訊息會失敗的事實 → 測試用 `partitioner.class=org.apache.kafka.clients.producer.RoundRobinPartitioner`。
+
+## 第 36 章(進階)DR 與演練:Cluster Linking(`./demo.sh 36`;約 20 分鐘)
+
+**準備**:叢集已啟動 → `scripts/dr-setup.sh up`(暫停 Connect×2 與 C3 騰記憶體;啟動 `docker-compose.dr.yml` 的 dr-controller1、dr-broker1~3;DR 站 RBAC 基本綁定;主站建 svc-dr-link 與授權;DR 站建 link main-to-dr)。`scripts/dr-lab.sh` 子命令:mirror、rbac、failover、failback、report。還原:`scripts/dr-setup.sh down`。密碼與 link 設定在 `config/dr/secrets/`(不進版本庫)。
+
+| 項目 | 實測結果(2026-10-12,CP 8.3.2) |
+|---|---|
+| link | DR 站主動連主站;`kafka-cluster-links --create --config-file <link.properties> --consumer-group-filters-json-file <filters.json>`;status:`main-to-dr 主站可連:true 狀態:ACTIVE` |
+| 來源端權限 | svc-dr-link:DeveloperRead(Topic dr. / orders.、Group dr-)+ ACL Topic DescribeConfigs(PREFIXED);只有 DeveloperRead 時 `kafka-mirrors --create` 回 `TopicAuthorizationException: While fetching configuration for topic` |
+| 鏡像與 offset | 主站 300 筆 → DR 鏡像 300 筆;dr-app offset 主站 200 = DR 200;DR 鏡像寫入被拒(InvalidRequest) |
+| 授權不同步 | yujie 在 DR 站被拒(TopicAuthorization);DR 站補建 Group:orders-write 綁定後可讀 |
+| failover | 主站 7 個節點 `docker kill`(拔電)→ DR `kafka-mirrors --failover` → DR 補建 svc-orders → 寫入成功:**RTO 107 秒** |
+| RPO | 主站恢復後確認斷電當下 581 筆、DR failover 時 581 筆 → **0 筆**(同一台主機、無網路延遲) |
+| 切回 | 主站建反向 link dr-to-main(DR 站的 svc-main-link 同樣要補 DescribeConfigs ACL)→ 主站 dr.orders 重建為鏡像 → 追上 → promote → 主站 1 筆寫入成功 → DR 站重建為主站的鏡像 |
+| 紀錄 | `evidence/dr-drills/drill-<日期時間>.md` |
+
+**踩坑**:① 開 `consumer.offset.sync.enable` 時把 `consumer.offset.group.filters` 寫在 link 設定檔,CLI 拒絕並要求 `--consumer-group-filters-json-file`;② 用 `docker stop` 模擬斷電是優雅關機,幾十秒內寫入仍成功、鏡像追上,RPO 量成負數 → 改 `docker kill`,RPO 在主站恢復後計算;③ `kafka-console-consumer` 不給 `--group` 時用隨機的 `console-consumer-*` 群組,不在 `dr-` 綁定範圍內,讀到 0 筆;新 group 預設從最新開始,要 `--from-beginning`;④ `kafka-cluster-links --list` 的名稱帶單引號(`Link name: 'main-to-dr'`)。
+
 ## 對應到客戶 RHEL 9 VM 的位置與步驟(手動部署)
 | demo | RHEL 9 VM |
 |---|---|

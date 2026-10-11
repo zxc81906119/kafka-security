@@ -1,15 +1,19 @@
 # 【切回】主站重建為 DR 站的鏡像 → 零落後 → promote → 應用程式改回主站 → DR 站恢復為主站的鏡像
 $ kafka-cluster-links --create --link dr-to-main(在主站);kafka-mirrors --promote
-▶ 主站恢復:先啟動主站(此時主站的 dr.orders 停在斷電前的 612 筆,DR 站已有之後的新資料——兩邊分歧)
+▶ 主站恢復:先啟動主站(主站的 dr.orders 停在斷電當下,DR 站已有之後的新資料——兩邊分歧)
+主站斷電當下有 581 筆(acks=all 已確認的資料在重啟後都在);DR 站 failover 時有 581 筆 → 沒鏡像到 DR 的 0 筆(RPO)
 ▶ DR 站建立主站用的 link 帳號 svc-main-link(只讀);主站建立反向 link dr-to-main
 Completed updating config for user svc-main-link.
---version                               Display Kafka version.                 
-▶ 主站:把分歧的 dr.orders 刪掉,重建成 DR 站的鏡像(斷電前沒來得及鏡像到 DR 的 611 筆就此確定遺失)
- (kafka.admin.MirrorCommand$)
+Adding ACLs for resource `ResourcePattern(resourceType=TOPIC, name=dr., patternType=PREFIXED)`: 
+Cluster link 'dr-to-main' creation successfully completed.
+▶ 主站:把分歧的 dr.orders 刪掉,重建成 DR 站的鏡像(斷電前沒來得及鏡像到 DR 的 ? 筆就此確定遺失)
+Created topic dr.orders.
 ▶ 停止寫 DR 站後,主站 promote(要求鏡像零落後,與 failover 不同:不會掉資料)
 Finished calculating max offset lag and max lag ms for mirror topics: [dr.orders]
-主站 dr.orders:0 筆;DR 站:2 筆
+Request for stopping topic dr.orders's mirror was successfully scheduled. Please use the describe command with the --pending-stopped-only option to monitor progress.
+主站 dr.orders:582 筆;DR 站:582 筆
 應用程式改回主站寫入:成功
 ▶ DR 站:把 dr.orders 重建成主站的鏡像,回到演練前的狀態
- (kafka.admin.MirrorCommand$)
- (kafka.admin.ClusterLinkCommand$)
+Created topic dr.orders.
+Cluster link 'dr-to-main' deletion successfully completed.
+判定:切回完成:RPO 0 筆(斷電當下沒鏡像到 DR 的資料);主站與 DR 站一致(582 筆)後 promote,零落後、不再遺失;DR 站恢復為主站的鏡像

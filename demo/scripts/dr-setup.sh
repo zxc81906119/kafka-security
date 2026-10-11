@@ -28,13 +28,18 @@ DR_BOOT=dr-broker1:9094,dr-broker2:9094,dr-broker3:9094
 DR_ADMIN=/clients/token-bootstrap-dr.properties
 SEC=config/dr/secrets
 LINK=main-to-dr
+# 同步 offset 的 consumer group 範圍:開啟 offset 同步時,CLI 要求用 --consumer-group-filters-json-file 傳入(寫在 link 設定檔裡會被拒絕)
+GF_JSON='{"groupFilters":[{"name":"dr-","patternType":"PREFIXED","filterType":"INCLUDE"}]}'
 DC=(docker compose -f docker-compose.yml -f docker-compose.dr.yml --profile dr)
 
 # dr_kafka <工具> <參數…>:以 DR 站的 bootstrap 身分執行 Kafka CLI
 dr_kafka() { local t="$1"; shift; "$DEMO_DIR/scripts/k.sh" "$t" --bootstrap-server "$DR_BOOT" --command-config "$DR_ADMIN" "$@"; }
 
-# link_status:link 的狀態行
-link_status() { dr_kafka kafka-cluster-links --list 2>/dev/null | grep -E "Link name: $LINK" ; }
+# link_status:link 的狀態(只取名稱、主站是否連得到、狀態,例如「main-to-dr 主站可連:true 狀態:ACTIVE」)
+link_status() {
+  dr_kafka kafka-cluster-links --list 2>/dev/null | grep -E "Link name: '$LINK'" \
+    | sed -E "s/.*Link name: '([^']*)'.*remote cluster available: '([^']*)'.*link state: '([^']*)'.*/\1 主站可連:\2 狀態:\3/"
+}
 
 case "${1:-status}" in
   up)
@@ -53,6 +58,9 @@ case "${1:-status}" in
     bash scripts/create-service-account.sh svc-dr-link "$(cat "$SEC/link-password")" | tail -1
     for t in dr. orders.; do rbac_bind cert bootstrap User:svc-dr-link DeveloperRead Topic "$t" PREFIXED; done
     rbac_bind cert bootstrap User:svc-dr-link DeveloperRead Group dr- PREFIXED
+    # 建鏡像時 link 要讀來源 topic 的設定(DescribeConfigs);DeveloperRead 只含 Read、Describe(實測被拒:Denied Operation = DescribeConfigs)。
+    #   只補這一項用 ACL(本叢集 access.rule.providers 含 KRAFT_ACL),不用 DeveloperManage(會多出建立、刪除、改設定)
+    for t in dr. orders.; do kafka_acls --add --allow-principal User:svc-dr-link --operation DescribeConfigs --topic "$t" --resource-pattern-type prefixed 2>&1 | grep -E "Adding" | head -1; done
     say "DR 站:建立 link $LINK(DR 主動連主站;同步 dr- 開頭 consumer group 的 offset)"
     cat > "$SEC/link.properties" <<EOF
 bootstrap.servers=broker1:9094,broker2:9094,broker3:9094,broker4:9094
@@ -64,11 +72,10 @@ ssl.truststore.type=PKCS12
 ssl.truststore.password=changeit
 consumer.offset.sync.enable=true
 consumer.offset.sync.ms=5000
-consumer.offset.group.filters={"groupFilters":[{"name":"dr-","patternType":"PREFIXED","filterType":"INCLUDE"}]}
 EOF
     chmod 600 "$SEC/link.properties"
-    "$DEMO_DIR/scripts/k.sh" bash -c "cat > /tmp/link.properties; kafka-cluster-links --bootstrap-server $DR_BOOT --command-config $DR_ADMIN --create --link $LINK --config-file /tmp/link.properties; rm -f /tmp/link.properties" < "$SEC/link.properties" 2>&1 | grep -vE "^WARN|SLF4J" | tail -2
-    sleep 5; echo "link:"; link_status
+    "$DEMO_DIR/scripts/k.sh" bash -c "cat > /tmp/link.properties; printf %s '$GF_JSON' > /tmp/gf.json; kafka-cluster-links --bootstrap-server $DR_BOOT --command-config $DR_ADMIN --create --link $LINK --config-file /tmp/link.properties --consumer-group-filters-json-file /tmp/gf.json; rm -f /tmp/link.properties /tmp/gf.json" < "$SEC/link.properties" 2>&1 | grep -vE "^WARN|SLF4J|^\s*--|^\s{20,}" | tail -3
+    sleep 5; echo "link:"; link_status || die "link $LINK 沒有建立成功"
     note "[dr] 完成" ;;
   down)
     say "刪除 DR 站(容器與資料);停用主站的 link 帳號;恢復 Connect 與 Control Center"
@@ -76,6 +83,7 @@ EOF
     bash scripts/scram-disable.sh svc-dr-link >/dev/null 2>&1 || true
     for t in dr. orders.; do rbac_unbind cert bootstrap User:svc-dr-link DeveloperRead Topic "$t" PREFIXED >/dev/null; done
     rbac_unbind cert bootstrap User:svc-dr-link DeveloperRead Group dr- PREFIXED >/dev/null
+    for t in dr. orders.; do kafka_acls --remove --force --allow-principal User:svc-dr-link --operation DescribeConfigs --topic "$t" --resource-pattern-type prefixed >/dev/null 2>&1; done
     docker start connect1 connect2 control-center >/dev/null 2>&1 || true
     note "[dr] 已移除 DR 站" ;;
   status)

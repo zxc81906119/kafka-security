@@ -3,5 +3,5 @@ $ docker stop broker1 broker2;acks=all 寫 600 筆;docker start broker1 broker2
 ▶ 機架 rack-a 整個斷電:停 broker1 broker2 
 低於 min.insync.replicas 的分區(acks=all 會被擋):
   共 0 個分區(總共 6 個)
-acks=all 寫 600 筆(平均分到 6 個分區):topic 實際多了 600 筆
+acks=all 寫 600 筆(輪流寫到 6 個分區,每個分區約 100 筆):topic 實際多了 600 筆
 判定:機架 rack-a 斷電後,所有分區仍有 2 份以上同步副本,600 筆全部寫入(撐得過整個機架故障)
