@@ -43,4 +43,8 @@ step grafana-login "【AD 登入】GARY(cluster-admin 群組)是 Admin,YUJIE、M
   "curl -u gary:… https://grafana:3000/api/org/users" \
   'bash "$GL" login 2>&1' '判定:AD 帳號登入 Grafana'
 
+step grafana-diskrule "【磁碟告警規則單元測試】合成時間序列:70% 不告警、85% 持續 5 分鐘後告警、降到 60% 解除、tmpfs 不算" \
+  "promtool test rules config/c3/ops_rules_host.test.yml" \
+  'bash "$GL" diskrule 2>&1' '判定:磁碟規則單元測試通過'
+
 ch_end

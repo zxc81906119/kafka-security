@@ -44,7 +44,9 @@ rest_as() { # rest_as <host> <變數> <mode: value|probe>
     if [ "$auth" != 200 ]; then [ "$MODE" = probe ] && echo "authenticate → [HTTP $auth]"; [ "$MODE" = value ] && echo "[HTTP $auth]"; exit 1; fi
     tok=$(base64 -w0 /tmp/t)
     code=$(curl -s --cacert /ca.pem -o /tmp/v -w "%{http_code}" -H "Authorization: Token token=\"$tok\"" "https://conjur/secrets/$ACC/variable/kafka%2F$(echo "$V" | sed "s#/#%2F#g")")
-    if [ "$MODE" = probe ]; then echo "authenticate → [HTTP $auth];取 $V → [HTTP $code]"; [ "$code" = 200 ] && echo "(取得秘密,長度 $(wc -c < /tmp/v) 字元;內容不顯示)"; exit 0; fi
+    if [ "$MODE" = probe ]; then
+      echo "authenticate → [HTTP $auth];取 $V → [HTTP $code]"; [ "$code" = 200 ] && echo "(取得秘密,長度 $(wc -c < /tmp/v) 字元;內容不顯示)"; exit 0
+    fi
     if [ "$code" = 200 ]; then cat /tmp/v; else echo "[HTTP $code]"; exit 1; fi'
 }
 

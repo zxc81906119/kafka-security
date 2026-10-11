@@ -33,7 +33,7 @@ x-ha-ctrl: &ha-ctrl
 
 # 第 22 章:controller 也把指標送到 Prometheus(KRaft 下 ActiveControllerCount、OfflinePartitionsCount 只有 controller 有)
 x-ha-ctrl-telemetry: &ha-ctrl-telemetry
-  KAFKA_METRIC_REPORTERS: io.confluent.telemetry.reporter.TelemetryReporter
+  KAFKA_METRIC_REPORTERS: org.apache.kafka.common.metrics.JmxReporter,io.confluent.telemetry.reporter.TelemetryReporter   # Kafka 4.x:設了 metric.reporters 就不再自動帶 JmxReporter,要明確列出,否則 raft、socket-server 等指標不會出現在 JMX exporter
   KAFKA_CONFLUENT_TELEMETRY_EXPORTER_C3PLUSPLUS_TYPE: "http"
   KAFKA_CONFLUENT_TELEMETRY_EXPORTER_C3PLUSPLUS_ENABLED: "true"
   KAFKA_CONFLUENT_TELEMETRY_EXPORTER_C3PLUSPLUS_CLIENT_BASE_URL: "https://prometheus:9090/api/v1/otlp"
@@ -87,6 +87,28 @@ services:
       <<: [*ha-ctrl, *ha-ctrl-telemetry, *ha-jmx-controller]
       KAFKA_NODE_ID: 3
       KAFKA_LISTENERS: CONTROLLER://controller3:9093
+
+  # 第 33 章:動態 quorum 的「汰換 controller」實驗用的第 4 台 controller(只在 --profile quorum 啟動)。
+  # 新節點用 --no-initial-controllers 格式化,靠 controller.quorum.bootstrap.servers 找到既有 quorum;
+  # 不設 controller.quorum.voters(動態 quorum 官方要求),也不帶 --add-scram(SCRAM 憑證在既有 metadata 裡)。
+  controller4:
+    extends: { file: docker-compose.yml, service: controller1 }
+    container_name: controller4
+    hostname: controller4
+    profiles: ["quorum"]
+    healthcheck:
+      test: ["CMD-SHELL", "timeout 3 bash -c 'exec 3<>/dev/tcp/controller4/9093'"]
+    volumes:
+      - ./config/jmx:/opt/jmx:ro
+    environment:
+      <<: [*ha-ctrl, *ha-ctrl-telemetry, *ha-jmx-controller]
+      KAFKA_NODE_ID: 4
+      KAFKA_LISTENERS: CONTROLLER://controller4:9093
+      KAFKA_CONTROLLER_QUORUM_VOTERS: ""
+      KAFKA_CONTROLLER_QUORUM_BOOTSTRAP_SERVERS: controller1:9093,controller2:9093,controller3:9093
+      QUORUM_FORMAT_FLAG: --no-initial-controllers
+      SCRAM_BOOTSTRAP_1: ""
+      SCRAM_BOOTSTRAP_2: ""
 
   broker1:
     volumes:

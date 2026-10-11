@@ -9,9 +9,12 @@ echo "===> Check if $KAFKA_DATA_DIRS is writable ..."
 ub path "$KAFKA_DATA_DIRS" writable
 
 ARGS=()
-for v in $(env | grep '^SCRAM_BOOTSTRAP_' | cut -d= -f1 | sort); do ARGS+=(--add-scram "${!v}"); done
+for v in $(env | grep "^SCRAM_BOOTSTRAP_" | cut -d= -f1 | sort); do [ -n "${!v}" ] && ARGS+=(--add-scram "${!v}"); done
 echo "===> Using provided cluster id $CLUSTER_ID (with ${#ARGS[@]} x --add-scram args) ..."
-result=$(kafka-storage format --cluster-id=$CLUSTER_ID -c /etc/kafka/kafka.properties "${ARGS[@]}" 2>&1) || \
+# 動態 quorum(第 33 章):新加入的 controller 用 QUORUM_FORMAT_FLAG=--no-initial-controllers 格式化(不自己當初始成員,
+# 由既有 quorum 的 leader 加入);沒設就維持原本做法(靜態 quorum 或 --add-scram 初始化)。
+FMT=(); [ -n "${QUORUM_FORMAT_FLAG:-}" ] && FMT=("$QUORUM_FORMAT_FLAG")
+result=$(kafka-storage format --cluster-id=$CLUSTER_ID -c /etc/kafka/kafka.properties "${FMT[@]}" "${ARGS[@]}" 2>&1) || \
     echo $result | grep -i "already formatted" || \
     { echo $result && (exit 1) }
 echo "$result" | grep -i -E "scram|Formatting|already" | cut -c1-120

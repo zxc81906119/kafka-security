@@ -104,7 +104,11 @@ quarantine)
   ;;
 check)
   old="$2"; mins="${3:-5}"
-  if [ -s "$Q/quarantine-$old.since" ]; then since=$(cat "$Q/quarantine-$old.since"); label="隔離( UTC)之後"; else since=$(date -u -d "-$mins minutes" +%H:%M:%S); label="最近 $mins 分鐘"; fi
+  if [ -s "$Q/quarantine-$old.since" ]; then
+    since=$(cat "$Q/quarantine-$old.since"); label="隔離( UTC)之後"
+  else
+    since=$(date -u -d "-$mins minutes" +%H:%M:%S); label="最近 $mins 分鐘"
+  fi
   rows=$(K kafka-console-consumer --bootstrap-server broker1:9094 --command-config $CFG --topic confluent-audit-log-events --from-beginning --timeout-ms 12000 2>/dev/null \
       | node scripts/audit-fmt.mjs --last 600 | awk -v p="User:$old" -v since="$since" '$2==p && $1>=since')
   a=$(printf '%s\n' "$rows" | grep -c ALLOWED || true); d=$(printf '%s\n' "$rows" | grep -c DENIED || true)

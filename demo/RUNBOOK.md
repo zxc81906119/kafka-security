@@ -247,7 +247,7 @@ gary 在 C3 指派 `orders-read` → DeveloperRead;LDAP 介面把 ming 從 devel
 | 停 1 台 broker | acks=all 寫入不中斷;URP 大於 0(要告警);恢復後補齊 | `broker-down` |
 | 停 2 台 broker(剩 1) | ISR 1 < min.isr 2:acks=all 被擋(逾時 0 筆成功);**acks=1 producer 回報成功但 consumer 讀不到**(高水位不前進,恢復後才出現);consumer group 加入不了(__consumer_offsets 的 min.isr 也不足) | `brokers-down` |
 | 停 1 台 controller | 建 topic、寫入正常 | `ctrl-down` |
-| 停 2 台 controller(失去多數) | 建 topic 與 describe 沒回應;既有 topic 讀寫仍可(實測 2 分鐘內;更長時間未測) | `ctrls-down` |
+| 停 2 台 controller(失去多數) | 建 topic 沒回應;describe 有時由 broker 的 metadata 快取回答(3 個分區)、有時逾時(兩種都出現過);既有 topic 讀寫仍可(實測 2 分鐘內,連續 15 次寫入全成功;更長時間未測) | `ctrls-down` |
 | 滾動重啟 | 背景寫入 2400 筆(acks=all、冪等),依序重啟 3 broker(每台等 URP=0)再 3 controller(active 最後):2400 = 2400,零失敗 | `rolling` |
 
 **踩坑**:perf 的 sticky partitioner 會把一批資料放在同一分區,檢查「讀得到」要加總全部分區,不能只看分區 0;`kafka-producer-perf-test --producer.config` 已棄用,改 `--command-config`。
@@ -325,7 +325,7 @@ gary 在 C3 指派 `orders-read` → DeveloperRead;LDAP 介面把 ming 從 devel
 | Grafana | 只收 HTTPS(明文回 400);`GF_AUTH_LDAP` 走 LDAPS,bind 帳號 `svc-grafana-ldap`(與 broker 的 `svc-kafka-ldap` 分開);群組對映 cluster-admin→Admin、ops→Editor、其餘 Viewer(`config/grafana/ldap.toml`,用 `group_search_filter` 依成員查群組,因 OpenLDAP 沒有 memberOf);本機 admin 只留 break-glass;`/metrics` 要 Basic |
 | 資料來源 | Prometheus,帳號 `grafana`(`web-config-prom.yml` 新增,只做查詢),密碼用 `$__file`,用行內 CA 驗證 |
 | 官方儀表板 | jmx-monitoring-stacks 固定 commit `f376263`,5 個 KRaft 儀表板(cluster、topics、kraft、platform overview、rbac)校驗 SHA-256 後原樣載入。為對得上標籤,`jmx-scrape.ha.tpl` 的 job 改成 `kafka-broker` / `kafka-controller` 並加 `env: demo`(`ops_rules_jmx.yml`、monitor-lab 同步) |
-| 儀表板有資料嗎 | `scripts/lib/dash-coverage.mjs` 逐個查詢經 Grafana 跑:150 個約 108 個有資料(topics 14/14、cluster 69/85、platform 8/23、rbac 7/10、kraft 10/18)。沒資料:Tiered Storage、SR、Connect(沒部署);offline partitions 在 controller;`jvm_memory_bytes_max`(exporter 1.x 改名);raft-metrics、socket-server-metrics、confluent-auth-store-metrics 官方設定沒有輸出(原因未查) |
+| 儀表板有資料嗎 | `scripts/lib/dash-coverage.mjs` 逐個查詢經 Grafana 跑:150 個中 126 個有資料(topics 14/14、cluster 77/85、platform 8/23、rbac 10/10、kraft 17/18);補上 JmxReporter 前為 108 個。沒資料:Tiered Storage、SR、Connect(沒部署);offline partitions 在 controller;`jvm_memory_bytes_max`(exporter 1.x 改名);raft-metrics、socket-server-metrics、confluent-auth-store-metrics 官方設定沒有輸出(原因未查) |
 | node_exporter | `prom/node-exporter`,HTTPS + mTLS(`config/grafana/node-web-config.yml`);容器看到的是 Docker VM 的磁碟(`/mnt/docker-desktop-disk` 等 ext4);Windows Docker Desktop 掛 `/:/host:ro` 不能加 `rslave` |
 | kafka_exporter | `danielqsj/kafka-exporter` 1.10.0(社群專案);`--sasl.mechanism=scram-sha512`(寫 sha512 會啟動失敗);自己的網頁 mTLS(`--server.tls.mutual-auth-enabled`);Kafka 帳號 `kafka-exporter` 的 SCRAM 憑證 + ACL Describe / DescribeConfigs(topic *、group *、cluster),讀訊息被拒 |
 | lag 告警 | g-lag 落後 4000 筆:約 178 秒觸發 `KafkaConsumerLagHigh`(門檻 1000、for 2m、範例值),追上後約 77 秒解除 |

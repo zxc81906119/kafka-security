@@ -315,7 +315,7 @@ add({ title: '高可用:壞幾台還撐得住', sub: '3 台 controller、3 台�
     ['停 1 台 broker', '寫入(acks=all)不中斷;副本不足的分區數(URP)大於 0 是要告警的訊號;恢復後補齊', '測試環境已驗證'],
     ['停 2 台 broker', 'acks=all 被擋;acks=1 的 producer 回報成功,consumer 卻讀不到(高水位不前進),恢復後才出現', '測試環境已驗證'],
     ['停 1 台 controller', '叢集照常:建 topic、寫入都正常', '測試環境已驗證'],
-    ['停 2 台 controller', '失去多數:建 topic、describe 沒回應;既有 topic 的讀寫暫時還可用,不是可依賴的容錯', '測試環境已驗證'],
+    ['停 2 台 controller', '失去多數:建 topic 沒回應(describe 有時逾時);既有 topic 的讀寫暫時還可用,不是可依賴的容錯', '測試環境已驗證'],
     ['滾動重啟', 'broker 一台一台(等 URP 回 0),controller 非 active 先、active 最後;背景寫入零失敗零遺失', '測試環境已驗證'],
     ['動態 quorum', '測試用靜態 quorum;正式環境建議動態 quorum 並在 VM 上演練', '未驗證'],
   ], { rowH: 0.66, hdrH: 0.44, sz: 12, col: MDS }), rowCols: [SVC, RISK, SVC, RISK, SVC, PLT] },

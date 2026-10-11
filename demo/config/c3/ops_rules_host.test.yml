@@ -1,0 +1,36 @@
+# 規則單元測試(promtool test rules):用合成的時間序列驗證「磁碟用量 > 80% 持續 5 分鐘才告警、降下來就解除」。
+# 為什麼要有:docker 環境的磁碟用量遠低於門檻,規則從沒真的觸發過;單元測試證明運算式與 for 時間寫對了(真實磁碟寫滿未測)。
+# 執行:scripts/monitor-lab.sh rules-test(或 docker run --entrypoint promtool … test rules)
+rule_files:
+  - ops_rules_host.yml
+evaluation_interval: 30s
+tests:
+  - interval: 30s
+    input_series:
+      # 容量 100 GB;前 5 分鐘(10 個樣本)剩 30 GB(用量 70%),之後剩 15 GB(85%),第 12 分鐘起(24 個樣本後)剩 40 GB(60%)
+      - series: 'node_filesystem_size_bytes{instance="vm1:9100",device="/dev/sda1",fstype="ext4"}'
+        values: '100000000000x60'
+      - series: 'node_filesystem_avail_bytes{instance="vm1:9100",device="/dev/sda1",fstype="ext4"}'
+        values: '30000000000x10 15000000000x14 40000000000x40'
+      # tmpfs 與 overlay 不該觸發(只看 ext4 與 xfs):用量 95% 也不告警
+      - series: 'node_filesystem_size_bytes{instance="vm1:9100",device="tmpfs",fstype="tmpfs"}'
+        values: '1000000000x60'
+      - series: 'node_filesystem_avail_bytes{instance="vm1:9100",device="tmpfs",fstype="tmpfs"}'
+        values: '50000000x60'
+    alert_rule_test:
+      - eval_time: 4m          # 用量 70%:沒有告警
+        alertname: NodeDiskUsageHigh
+        exp_alerts: []
+      - eval_time: 8m          # 用量 85% 才 3 分鐘:還在等 for 5m,不算 firing
+        alertname: NodeDiskUsageHigh
+        exp_alerts: []
+      - eval_time: 11m         # 超過 80% 已 6 分鐘:告警觸發
+        alertname: NodeDiskUsageHigh
+        exp_alerts:
+          - exp_labels: { severity: warning, kind: host, instance: "vm1:9100", device: /dev/sda1 }
+            exp_annotations:
+              summary: "vm1:9100 的磁碟 /dev/sda1 用量 85%(門檻 80%)"
+              description: "broker 的資料目錄寫滿會讓 broker 當掉。先查是哪個 topic 長最快(kafka_log_log_size),再決定擴容、縮保留期或搬分區(第 24 章)。"
+      - eval_time: 14m         # 清出空間後用量 60%:告警解除
+        alertname: NodeDiskUsageHigh
+        exp_alerts: []

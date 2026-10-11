@@ -36,9 +36,17 @@ echo "起點:啟動長連線 producer(svc-orders,每 2 秒一筆,共 $N 筆,標�
     ( for i in $(seq 1 $N); do echo "$RID-$i"; sleep 2; done ) | kafka-console-producer --bootstrap-server broker1:9094 --producer.config /dev/shm/c --topic orders.events 2>&1' > "$LOG" 2>&1 ) &
 BG=$!
 sleep 9
-if [ "$MODE" = both ]; then echo "約第 4 筆:隔離(解除角色)"; bash scripts/rotate-with-conjur.sh quarantine svc-orders >/dev/null 2>&1; else echo "約第 4 筆:(scram-only:角色保留,不隔離)"; fi
+if [ "$MODE" = both ]; then
+  echo "約第 4 筆:隔離(解除角色)"; bash scripts/rotate-with-conjur.sh quarantine svc-orders >/dev/null 2>&1
+else
+  echo "約第 4 筆:(scram-only:角色保留,不隔離)"
+fi
 sleep 9; echo "約第 8 筆:停用(SCRAM 憑證覆寫成隨機密碼,不刪除)"
-if [ "$MODE" = both ]; then bash scripts/rotate-with-conjur.sh finish svc-orders >/dev/null 2>&1; else bash scripts/scram-disable.sh svc-orders >/dev/null 2>&1; fi
+if [ "$MODE" = both ]; then
+  bash scripts/rotate-with-conjur.sh finish svc-orders >/dev/null 2>&1
+else
+  bash scripts/scram-disable.sh svc-orders >/dev/null 2>&1
+fi
 wait "$BG" || true
 echo "讀回 topic,看每個階段寫進去幾筆(標記 $RID):"
 got=$(./scripts/k.sh kafka-console-consumer --bootstrap-server broker1:9094 --command-config /clients/token-bootstrap.properties --topic orders.events --group "ocread-$RID" --from-beginning --timeout-ms 15000 2>/dev/null | grep -a -o "$RID-[0-9]*" | sed "s/$RID-//" | sort -n | uniq)
@@ -48,7 +56,11 @@ echo "  共送出 $N 筆;topic 裡讀到 ${cnt:-0} 筆,最大編號 ${max:-無}"
 echo "  producer 日誌:授權失敗 $az 次、認證失敗 $auth 次"
 echo "  隔離約在第 4–5 筆之後、停用約在第 8–9 筆之後"
 if [ "$MODE" = both ]; then
-  if [ "${cnt:-0}" -lt "$N" ] && [ "$az" -gt 0 ]; then echo "判定:解除角色就切斷舊連線(連線還在,但之後每個請求都被授權擋下;停用憑證前這一步就已生效)"; else echo "判定:非預期(角色解除後舊連線仍在寫入或沒有授權失敗紀錄)"; fi
+  if [ "${cnt:-0}" -lt "$N" ] && [ "$az" -gt 0 ]; then
+    echo "判定:解除角色就切斷舊連線(連線還在,但之後每個請求都被授權擋下;停用憑證前這一步就已生效)"
+  else
+    echo "判定:非預期(角色解除後舊連線仍在寫入或沒有授權失敗紀錄)"
+  fi
 else
   if [ "${cnt:-0}" -eq "$N" ]; then echo "判定:只停用 SCRAM 憑證擋不住已建立的連線(它繼續寫完全部 $N 筆);要切斷舊連線必須解除角色"; else echo "判定:非預期(只停用憑證後舊連線也被切斷)"; fi
 fi

@@ -55,6 +55,14 @@ create_topic() {
   kafka_topics --create "$@" | grep -E "Created|rror" || echo "失敗"
 }
 
+# 確保實驗用的 ha.test 存在(不存在就建立)。為什麼:子命令可能單獨執行,topic 還沒建;沒有這個 topic,producer 會一直收到
+# UNKNOWN_TOPIC_OR_PARTITION 重試,而且是在已經停掉 controller 之後才發現,等於卡死。
+ensure_test_topic() {
+  kafka_topics --describe --topic ha.test | grep -q "Partition:" && return 0
+  create_topic --topic ha.test --partitions 3 --replication-factor 3 --config min.insync.replicas=2 >/dev/null
+  sleep 3
+}
+
 # 目前有幾個分區處於「副本不足」。
 count_urp() { kafka_topics --describe --under-replicated-partitions | grep -c Partition: ; }
 
@@ -213,6 +221,8 @@ lab_rolling() {
   fi
   kafka_quorum describe --status | grep -E "LeaderId"
 }
+
+case "${1:-}" in broker-down|brokers-down|ctrl-down|ctrls-down|rolling) ensure_test_topic ;; esac
 
 case "${1:-}" in
   quorum)        lab_quorum ;;

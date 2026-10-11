@@ -1,12 +1,12 @@
 # 【稽核】誰在什麼時候做了授權變更、誰被拒:mds.Authorize 與 infra.* 的事件
 $ kafka-console-consumer --topic confluent-audit-log-events | 整理
-16:26:59  User:YUJIE         kafka.CreateTopics  DENIED   infra.ops-demo
-16:27:00  User:YUJIE         mds.Authorize       DENIED   infra.
-16:27:58  User:YUJIE         kafka.CreateTopics  ALLOWED  infra.ops-demo
-16:27:58  User:YUJIE         kafka.CreateTopics  ALLOWED  infra.ops-demo
-16:28:25  User:YUJIE         mds.Authorize       ALLOWED  infra.
-16:28:26  User:bootstrap     mds.Authorize       ALLOWED  infra.
-16:29:22  User:MING          mds.Authorize       ALLOWED  infra.
-16:29:25  User:MING          kafka.CreateTopics  DENIED   infra.ming-test
-16:30:25  User:YUJIE         kafka.CreateTopics  DENIED   infra.ops-demo2
-16:30:27  User:MING          mds.Authorize       DENIED   infra.
+09:35:03  User:YUJIE         kafka.CreateTopics  DENIED   infra.ops-demo
+09:35:04  User:YUJIE         mds.Authorize       DENIED   infra.
+09:36:01  User:YUJIE         kafka.CreateTopics  ALLOWED  infra.ops-demo
+09:36:01  User:YUJIE         kafka.CreateTopics  ALLOWED  infra.ops-demo
+09:36:28  User:YUJIE         mds.Authorize       ALLOWED  infra.
+09:36:29  User:bootstrap     mds.Authorize       ALLOWED  infra.
+09:37:28  User:MING          mds.Authorize       ALLOWED  infra.
+09:37:31  User:MING          kafka.CreateTopics  DENIED   infra.ming-test
+09:38:33  User:YUJIE         kafka.CreateTopics  DENIED   infra.ops-demo2
+09:38:35  User:MING          mds.Authorize       DENIED   infra.

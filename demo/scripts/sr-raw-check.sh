@@ -34,4 +34,8 @@ printf 'yujie-pw\n' | docker run --rm -i --network cpsec_default -v "$D/certs:/e
 echo "② 用一般 console consumer(bootstrap 身分)讀 orders.events 的原始位元組,找這一筆:"
 raw=$(./scripts/k.sh kafka-console-consumer --bootstrap-server broker1:9094 --command-config /clients/token-bootstrap.properties --topic orders.events --group "raw-$RANDOM" --from-beginning --timeout-ms 10000 2>/dev/null | grep -a "$ID" | head -1 | tr -d "\0")
 printf '%s' "$raw" | od -c | head -3 | sed 's/^/   /'
-if printf '%s' "$raw" | grep -aq "$CARD"; then echo "判定:topic 裡的卡號是明文(欄位沒有被加密)—— 這個環境沒有 CSFLE 授權,規則不存在;正式環境若看到明文,代表加密規則沒生效"; else echo "判定:topic 裡找不到明文卡號(欄位已加密或這筆沒寫入)"; fi
+if printf '%s' "$raw" | grep -aq "$CARD"; then
+  echo "判定:topic 裡的卡號是明文(欄位沒有被加密)—— 這個環境沒有 CSFLE 授權,規則不存在;正式環境若看到明文,代表加密規則沒生效"
+else
+  echo "判定:topic 裡找不到明文卡號(欄位已加密或這筆沒寫入)"
+fi

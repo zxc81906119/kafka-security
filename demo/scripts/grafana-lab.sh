@@ -12,6 +12,7 @@
 #   scripts/grafana-lab.sh host         node_exporter:mTLS 保護、磁碟指標、磁碟告警規則已載入
 #   scripts/grafana-lab.sh lag          kafka_exporter:最小權限、讓 consumer 落後 → 告警觸發 → 追上後解除
 #   scripts/grafana-lab.sh login        用 AD 帳號登入 Grafana:群組對映角色、錯密碼與匿名被擋
+#   scripts/grafana-lab.sh diskrule     磁碟告警規則的單元測試(promtool):合成時間序列驗證門檻、持續時間與解除(不需要把磁碟塞滿)
 # 會改動什麼:lag 會建立並刪除 topic mon.lag、用一個每次不同的 consumer group(g-lag-<時間>)讀資料;其餘只讀。
 # 怎麼判斷成功:最後一行印「判定:…」。
 # 常見失敗:「Grafana 沒有在跑」→ scripts/grafana.sh on;lag 的告警遲遲不來 → kafka_exporter 每 30 秒抓一次,告警要連續 2 分鐘,約 3 到 4 分鐘
@@ -124,6 +125,15 @@ lag_over_1000() {
   [ "$v" != "無" ] && [ "$v" != "?" ]
 }
 
+lab_diskrule() {
+  say "磁碟告警在容器環境沒辦法真的塞滿磁碟,改用 promtool 的規則單元測試:合成時間序列,驗證『超過 80% 持續 5 分鐘才告警、降下來就解除、tmpfs 不算』"
+  local out
+  out=$(docker run --rm --entrypoint promtool -v "$(pwd -W 2>/dev/null || pwd)/config/c3:/t:ro" prom/prometheus:latest test rules /t/ops_rules_host.test.yml 2>&1)
+  echo "$out" | tail -6 | sed 's/^/  /'
+  echo "$out" | grep -q 'SUCCESS' \
+    && verdict "磁碟規則單元測試通過:70% 不告警、85% 持續 5 分鐘後告警(含摘要文字)、降到 60% 解除、tmpfs 不算;真實磁碟寫滿未測"
+}
+
 lab_login() {
   say "用 AD 帳號登入 Grafana:群組對映角色(cluster-admin → Admin,其他 → Viewer);錯密碼、匿名、沒帶帳密的 /metrics 都被擋"
   local g y m bad anon metrics_no metrics_ok mpw
@@ -151,5 +161,6 @@ case "${1:-}" in
   host)       lab_host ;;
   lag)        lab_lag ;;
   login)      lab_login ;;
+  diskrule)   lab_diskrule ;;
   *)          usage_from_header "$0"; exit 1 ;;
 esac
