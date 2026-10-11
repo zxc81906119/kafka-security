@@ -2,9 +2,9 @@
 $ mc ls --recursive local/kafka-tier(MinIO 管理帳號)
 ▶ 每 5 MB 寫滿一個 segment 就可以上傳;等物件儲存裡出現物件(用 MinIO 管理帳號看,不是 Kafka 的專用帳號)
    1 秒後:bucket 出現物件(最多 5 分鐘)
-物件數:90;總大小:90MiB
-  [2026-10-11 06:28:57 UTC]     8B STANDARD 0/36GlNsoaRpqg4cGMsKabcQ/BhY_c0FBQc-JJf8mw8CB_g/2/00000000000000020220_0_v0.epoch-state
-  [2026-10-11 06:28:57 UTC] 2.6KiB STANDARD 0/36GlNsoaRpqg4cGMsKabcQ/BhY_c0FBQc-JJf8mw8CB_g/2/00000000000000020220_0_v0.offset-index
-  [2026-10-11 06:28:57 UTC]    56B STANDARD 0/36GlNsoaRpqg4cGMsKabcQ/BhY_c0FBQc-JJf8mw8CB_g/2/00000000000000020220_0_v0.producer-state
-  [2026-10-11 06:28:57 UTC] 5.0MiB STANDARD 0/36GlNsoaRpqg4cGMsKabcQ/BhY_c0FBQc-JJf8mw8CB_g/2/00000000000000020220_0_v0.segment
-判定:舊 segment 已上傳到物件儲存(90 個物件、90MiB)
+物件數:95;總大小:95MiB
+  [2026-10-11 18:39:14 UTC]     8B STANDARD 0/0ZQxP-jnSKyN7mNgaaBvhg/jbjyNvfETNmJTcynWOEbFA/1/00000000000000000000_0_v0.epoch-state
+  [2026-10-11 18:39:14 UTC] 2.6KiB STANDARD 0/0ZQxP-jnSKyN7mNgaaBvhg/jbjyNvfETNmJTcynWOEbFA/1/00000000000000000000_0_v0.offset-index
+  [2026-10-11 18:39:14 UTC]    56B STANDARD 0/0ZQxP-jnSKyN7mNgaaBvhg/jbjyNvfETNmJTcynWOEbFA/1/00000000000000000000_0_v0.producer-state
+  [2026-10-11 18:39:14 UTC] 5.0MiB STANDARD 0/0ZQxP-jnSKyN7mNgaaBvhg/jbjyNvfETNmJTcynWOEbFA/1/00000000000000000000_0_v0.segment
+判定:舊 segment 已上傳到物件儲存(95 個物件、95MiB)

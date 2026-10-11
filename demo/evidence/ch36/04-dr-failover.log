@@ -1,0 +1,13 @@
+# 【演練】主站一邊寫入一邊整站斷電 → DR 站 failover → 應用程式改連;量測 RPO 與 RTO
+$ docker stop broker1~4 controller1~3;kafka-mirrors --failover --topics dr.orders;client 改連 DR 站
+▶ 演練開始:主站持續寫入(acks=all、每秒 10 筆、共 900 筆),30 秒後主站整站斷電
+主站斷電(05:03:04);斷電前主站已寫入 312 筆(累計 612)
+▶ DR 站:確認主站失聯後執行 failover(不論鏡像落後多少,直接把鏡像轉成可寫的一般 topic)
+Error encountered while stopping topic dr.orders's mirror: java.util.concurrent.ExecutionException: org.apache.kafka.common.errors.InvalidRequestException: This most likely occurs because of a request
+DR 站在 failover 時已有 1 筆;主站斷電前有 612 筆 → 遺失 611 筆(RPO = 斷電當下的鏡像落後)
+▶ DR 站:應用程式改連 DR 站(bootstrap 換成 DR 站;服務帳號 svc-orders 要事先在 DR 站建好)
+Completed updating config for user svc-orders.
+svc-orders 寫入 DR 站:成功(主站斷電後 213 秒)
+▶ consumer group dr-app 在 DR 站接續:從同步過來的 offset 開始讀
+DR 站的 dr-app 起始 offset 合計 0;接續讀到 0 筆(offset 同步有 5 秒週期,最後一次同步之後讀過的會重讀一次)
+判定:主站斷電後 213 秒 DR 站恢復寫入(RTO,含 failover 與 client 改連);遺失 611 筆(RPO = 鏡像落後);consumer 從同步的 offset 接續

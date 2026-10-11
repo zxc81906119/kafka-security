@@ -1,5 +1,5 @@
 # 【啟用】SBC_ENABLE=true,controller 與 broker 依序重建(controller 也要設 balancer.enable 與 inter.broker.listener.name)
 $ scripts/sbc-setup.sh on
-   broker3 已 healthy
-   4 秒後:balancer 啟動(狀態不是 DISABLED)
+   broker4 已 healthy
+   6 秒後:balancer 啟動(狀態不是 DISABLED)
    [sbc] 完成:Balancer status: ENABLED

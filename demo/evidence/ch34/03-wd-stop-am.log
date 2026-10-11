@@ -1,0 +1,10 @@
+# 【Alertmanager 停了】告警算得出來但送不出去:心跳停止,看門狗判定監控鏈路失效
+$ docker stop alertmanager;等看門狗判定失效;docker start alertmanager
+▶ 停 Alertmanager:告警算得出來,但送不出去
+已停止 alertmanager(02:47:29)
+停 Alertmanager 後 167 秒,看門狗判定失效:
+   2026-10-11T18:46:38 deadman 啟動:port 9443,逾時 180 秒
+   2026-10-11T18:47:12 RECOVERED 監控鏈路恢復:收到 Watchdog 心跳
+   2026-10-11T18:50:13 ALERT 監控鏈路失效:超過 180 秒沒有收到 Watchdog 心跳
+恢復 Alertmanager 後 112 秒,心跳恢復
+判定:停 Alertmanager 後 167 秒看門狗判定監控鏈路失效;恢復後 112 秒回到 OK

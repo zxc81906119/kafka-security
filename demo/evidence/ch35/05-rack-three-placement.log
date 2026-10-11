@@ -1,0 +1,17 @@
+# 【副本分布】新建 topic:每個分區的 3 份副本各在一個機架
+$ kafka-topics --create --topic rack3.t --partitions 6 --replication-factor 3;kafka-topics --describe
+▶ 建立 rack3.t(6 分區、副本 3),看每個分區的副本分散到哪些機架
+目前的機架:
+  node 11 rack-a
+  node 12 rack-a
+  node 13 rack-b
+  node 14 rack-c
+Created topic rack3.t.
+分區 副本 機架 機架數:
+  0 11,13,14 rack-a,rack-b,rack-c 3
+  1 13,14,12 rack-b,rack-c,rack-a 3
+  2 14,11,13 rack-c,rack-a,rack-b 3
+  3 12,13,14 rack-a,rack-b,rack-c 3
+  4 11,14,13 rack-a,rack-c,rack-b 3
+  5 14,13,12 rack-c,rack-b,rack-a 3
+判定:共 3 個機架:每個分區都橫跨 3 個機架(= min(機架數, 副本數))

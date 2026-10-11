@@ -9,7 +9,7 @@ broker 11 的限速設定 2 筆、topic cap.skew 的限速設定 2 筆
     follower.replication.throttled.rate=20000000
     leader.replication.throttled.rate=20000000
 ▶ 收尾:跑一次 --verify,它在搬家完成後會清掉 broker 與 topic 的限速設定
-Clearing broker-level throttles on brokers 11,12,13
+Clearing broker-level throttles on brokers 11,12,13,14
 Clearing topic-level throttles on topic cap.skew
 --verify 之後:broker 11 的限速設定 0 筆、topic cap.skew 的限速設定 0 筆
 ▶ 把 topic 搬回均衡指派,留下乾淨的環境

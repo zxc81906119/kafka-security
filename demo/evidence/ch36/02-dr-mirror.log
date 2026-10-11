@@ -1,0 +1,10 @@
+# 【鏡像】DR 站的 dr.orders 是主站的鏡像(唯讀);consumer group 的 offset 也同步過來
+$ kafka-mirrors --create --mirror-topic dr.orders --link main-to-dr
+▶ 主站建立 dr.orders(3 分區、副本 3);DR 站建立同名鏡像(mirror topic,唯讀)
+Created topic dr.orders.
+ (kafka.admin.MirrorCommand$)
+▶ 主站寫 300 筆;consumer group dr-app 在主站讀 200 筆並提交 offset
+主站讀到:0 筆
+主站 dr.orders:300 筆;DR 站鏡像:0 筆
+consumer group dr-app 已提交的 offset:主站 300、DR 站(同步過來的)0
+DR 站的鏡像是唯讀的(寫入應被拒):

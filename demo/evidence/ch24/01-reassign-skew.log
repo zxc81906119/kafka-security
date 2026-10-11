@@ -1,10 +1,11 @@
-# 【造出不均】6 分區的 topic,所有副本只放在 broker1、broker2,寫入約 200 MB;broker3 是空的(新增 broker 之後就是這種狀態)
+# 【造出不均】6 分區、副本 3 的 topic,所有副本只放在 broker1~3,寫入約 200 MB;broker4 是空的(新增 broker 之後就是這種狀態)
 $ kafka-topics --create --replica-assignment …;kafka-producer-perf-test;kafka-log-dirs --describe
-▶ 建立一個 6 分區的 topic,故意把所有副本都放在 broker1 與 broker2,寫入約 200 MB;broker3 完全沒有資料
+▶ 建立一個 6 分區、副本 3 的 topic,故意把所有副本都放在 broker1~3,寫入約 200 MB;broker4 完全沒有資料(就像剛加入的新 broker)
 Created topic cap.skew.
 寫入 200000 筆(每筆約 1 KB)
 每台 broker 上 cap.skew 的資料量:
   broker 11   198 MB  分區: 0,1,2,3,4,5
   broker 12   198 MB  分區: 0,1,2,3,4,5
-  broker 13     0 MB  分區: (無)
-判定:資料全擠在 broker1、broker2,broker3 是空的(負載不均;新增 broker 後也是這種狀態)
+  broker 13   198 MB  分區: 0,1,2,3,4,5
+  broker 14     0 MB  分區: (無)
+判定:資料全擠在 broker1~3,broker4 是空的(負載不均;新增 broker 後就是這種狀態)

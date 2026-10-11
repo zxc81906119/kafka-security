@@ -1,0 +1,10 @@
+# 【官方儀表板用得起來嗎】把每個儀表板的每個 PromQL 查詢都跑一次,數有幾個有資料
+$ node scripts/lib/dash-coverage.mjs(經 Grafana 的資料來源代理查詢)
+▶ 把每個儀表板的每個 PromQL 查詢都透過 Grafana 跑一次,數有幾個回傳資料——匯入成功不等於用得起來
+confluent-platform-kraft.json 查詢 23 個,有資料 8 個,沒資料 15 個(其中查詢出錯 0 個)
+confluent-rbac.json          查詢 10 個,有資料 10 個,沒資料 0 個(其中查詢出錯 0 個)
+kafka-cluster-kraft.json     查詢 85 個,有資料 76 個,沒資料 9 個(其中查詢出錯 0 個)
+kafka-topics-kraft.json      查詢 14 個,有資料 14 個,沒資料 0 個(其中查詢出錯 0 個)
+kraft.json                   查詢 18 個,有資料 17 個,沒資料 1 個(其中查詢出錯 0 個)
+合計:查詢 150 個,有資料 125 個
+判定:官方儀表板不改一個字就能用:150 個查詢中 125 個有資料;沒資料的是環境沒有的功能(Tiered Storage、Schema Registry、Connect)與少數指標名稱不符,見手冊

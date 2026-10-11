@@ -1,0 +1,12 @@
+# 【設定錯了】Prometheus、Alertmanager 都健康(HA 不會切換),但送心跳的密碼設錯:只有看門狗發現得到
+$ 把 config/c3/watchdog-am.pw 改成錯的密碼;等看門狗判定失效;改回
+▶ Prometheus 與 Alertmanager 都健康,但送心跳的密碼設錯(模擬設定改壞、密碼或憑證過期、防火牆)
+Prometheus:healthy;Alertmanager:healthy(兩者都健康,HA 不會切換)
+密碼設錯後 178 秒,看門狗判定失效:
+   2026-10-11T18:57:13 ALERT 監控鏈路失效:超過 180 秒沒有收到 Watchdog 心跳
+   2026-10-11T18:58:12 RECOVERED 監控鏈路恢復:收到 Watchdog 心跳
+   2026-10-11T19:01:13 ALERT 監控鏈路失效:超過 180 秒沒有收到 Watchdog 心跳
+Alertmanager 日誌(送 webhook 失敗):
+   time=2026-10-11T19:01:12.095Z level=ERROR source=dispatch.go:589 msg="Notify for alerts failed" component=dispatcher aggrGroup="{}/{alertname=\"Watchdog\"}:{}" num_alerts=1 err="wa
+改回正確密碼後 56 秒,心跳恢復
+判定:元件都健康、只是設定錯時,看門狗 178 秒後判定監控鏈路失效(HA 察覺不到這類問題);改回後 56 秒回到 OK

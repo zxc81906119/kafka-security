@@ -1,1 +1,1 @@
-動態 quorum:靜態 → 動態、汰換壞掉的 controller
+動態 quorum:汰換壞掉的 controller

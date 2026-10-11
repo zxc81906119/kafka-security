@@ -1,0 +1,9 @@
+# 【授權不會跟著過去】RBAC 綁定存在各自的 MDS:DR 站要另外建,而且要在災難前就做好
+$ yujie 在 DR 站讀 → 被拒;DR 站補建綁定 → 可讀
+▶ DR 站有自己的 MDS:主站的業務授權不會跟著 Cluster Linking 過去(只同步 ACL;本案用 RBAC)
+yujie(AD 帳密)在 DR 站讀 dr.orders:TopicAuthorizationException
+▶ 演練清單:在 DR 站補建與主站相同的業務授權(Group:orders-write 對 dr. 的讀寫、Group:orders-read 的讀)
+  bind Group:orders-write DeveloperRead Topic:dr.(PREFIXED) ->  [HTTP 204] 
+  bind Group:orders-write DeveloperWrite Topic:dr.(PREFIXED) ->  [HTTP 204] 
+  bind Group:orders-write DeveloperRead Group:dr-(PREFIXED) ->  [HTTP 204] 
+補建綁定後,yujie 在 DR 站讀 dr.orders:讀到 0 筆

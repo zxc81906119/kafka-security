@@ -1,10 +1,10 @@
-# 【現況】靜態 quorum:kraft.version=0,voter 名單來自設定檔,沒有 directory id
+# 【現況】動態 quorum:kraft.version=1,3 個 voter 各有 directory id(controller 名單存在叢集 metadata)
 $ kafka-features describe;kafka-metadata-quorum describe --status
-▶ kraft.version 與 voter 名單(靜態 quorum 沒有 directory id)
-kraft.version = 0(0 = 靜態、1 = 動態)
+▶ kraft.version 與 voter 名單(動態 quorum 的每個 voter 有 directory id,移除 controller 時要用)
+kraft.version = 1(0 = 靜態、1 = 動態)
   ClusterId:              XyZBQ3-GTvKH2qNfP7X33A
   LeaderId:               1
-  LeaderEpoch:            1
-  CurrentVoters:          [{"id": 1, "endpoints": ["CONTROLLER://controller1:9093"]}, {"id": 2, "endpoints": ["CONTROLLER://controller2:9093"]}, {"id": 3, "endpoints": ["CONTROLLER://controller3:9093"
-  CurrentObservers:       [{"id": 13, "directoryId": "0nMHeCp22Q5j5hbbyL979w"}, {"id": 12, "directoryId": "PYXLHhciOxW-pa79C1Z6fQ"}, {"id": 11, "directoryId": "vE_Swmq8AQC2a-2bUZqwnw"}]
-判定:目前是 靜態 quorum,voter 3 個
+  LeaderEpoch:            4
+  CurrentVoters:          [{"id": 1, "directoryId": "hakFaGfNbL7uvJSEFoyrsw", "endpoints": ["CONTROLLER://controller1:9093"]}, {"id": 2, "directoryId": "NEbDIbDQIiecrTGu-P5MUQ", "endpoints": ["CONTROL
+  CurrentObservers:       [{"id": 11, "directoryId": "ssqT5111h2i8kKoOITbERg"}, {"id": 14, "directoryId": "TL6hIMv3Jnt7v7Icin1Qiw"}, {"id": 13, "directoryId": "kePGn1oldocvsy7vQyQmhw"}, {"id": 12, "di
+判定:目前是 動態 quorum,voter 3 個,每個 voter 都有 directory id

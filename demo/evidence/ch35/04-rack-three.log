@@ -1,0 +1,8 @@
+# 【3 個機架】broker1、2 在 rack-a,broker3 在 rack-b,broker4 在 rack-c(官方建議各機架台數相同;這裡只為實證機架數的影響)
+$ scripts/rack-setup.sh three
+   broker4 已 healthy(機架 rack-c)
+   [rack] 完成:
+id: 11 rack: rack-a isFenced: false
+id: 12 rack: rack-a isFenced: false
+id: 13 rack: rack-b isFenced: false
+id: 14 rack: rack-c isFenced: false

@@ -1,0 +1,10 @@
+# 【建立 DR 站】縮小版(1 controller + 3 broker);DR 站主動連主站建立 Cluster Linking,link 身分是主站上只有讀取權限的 SCRAM 帳號
+$ scripts/dr-setup.sh up;scripts/dr-setup.sh status
+                                          but not apply it.                    
+--version                               Display Kafka version.                 
+link:
+   [dr] 完成
+dr-broker2 Up About a minute (healthy)
+dr-broker3 Up About a minute (healthy)
+dr-broker1 Up About a minute (healthy)
+dr-controller1 Up About a minute (healthy)

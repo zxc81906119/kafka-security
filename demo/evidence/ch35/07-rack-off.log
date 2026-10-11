@@ -1,0 +1,6 @@
+# 【還原】移除機架設定(客戶機架配置確定後再設);既有 topic 的副本位置不會自動重排,要用重新指派或 Self-Balancing
+$ scripts/rack-setup.sh off
+id: 12 rack: null isFenced: false
+id: 13 rack: null isFenced: false
+id: 14 rack: null isFenced: false
+已刪除 rack2.t、rack3.t

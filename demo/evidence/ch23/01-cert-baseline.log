@@ -2,14 +2,15 @@
 $ openssl s_client -connect <端點>;openssl x509 -noout -serial -enddate;opmenu.sh --run 17
 ▶ 看各端點『實際送出』的憑證序號,和磁碟上 certs/server.pem 比對——監控要看實際送出的,不是只看檔案
 各端點「實際送出」的憑證(TLS 握手收到的):
-  broker1:9094 → 4474B9BA75C8AEC73D198B55BD22276108461BBF 到期 Jan 13 10:10:43 2029 GMT 
-  broker2:9094 → 4474B9BA75C8AEC73D198B55BD22276108461BBF 到期 Jan 13 10:10:43 2029 GMT 
-  broker3:9094 → 4474B9BA75C8AEC73D198B55BD22276108461BBF 到期 Jan 13 10:10:43 2029 GMT 
-  broker1:8091 → 4474B9BA75C8AEC73D198B55BD22276108461BBF 到期 Jan 13 10:10:43 2029 GMT 
-磁碟上的檔案 certs/server.pem:4474B9BA75C8AEC73D198B55BD22276108461BBF 到期 Jan 13 10:10:43 2029 GMT 
+  broker1:9094 → 4474B9BA75C8AEC73D198B55BD22276108461BC4 到期 Jan 13 12:25:53 2029 GMT 
+  broker2:9094 → 4474B9BA75C8AEC73D198B55BD22276108461BC4 到期 Jan 13 12:25:53 2029 GMT 
+  broker3:9094 → 4474B9BA75C8AEC73D198B55BD22276108461BC4 到期 Jan 13 12:25:53 2029 GMT 
+  broker4:9094 → 4474B9BA75C8AEC73D198B55BD22276108461BC4 到期 Jan 13 12:25:53 2029 GMT 
+  broker1:8091 → 4474B9BA75C8AEC73D198B55BD22276108461BC4 到期 Jan 13 12:25:53 2029 GMT 
+磁碟上的檔案 certs/server.pem:4474B9BA75C8AEC73D198B55BD22276108461BC4 到期 Jan 13 12:25:53 2029 GMT 
 OP menu 第 17 項(檔案巡檢)的前幾列:
   ca.pem                           Oct  5 09:48:10 2036 GMT   90 天以上
   client-bootstrap.pem             Jan 10 09:48:11 2029 GMT   90 天以上
-  client-c3.pem                    Jan 10 09:48:11 2029 GMT   90 天以上
+  client-c3.pem                    Jan 13 15:24:27 2029 GMT   90 天以上
   client-connect.pem               Jan 12 14:46:24 2029 GMT   90 天以上
 判定:現況各端點送出的憑證與磁碟檔案是同一張(序號相同),OP menu 的檔案巡檢能看到剩餘時間分級

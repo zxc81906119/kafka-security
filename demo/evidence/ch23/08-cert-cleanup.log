@@ -1,9 +1,10 @@
 # 【清理】移除動態設定,回到靜態檔的憑證
 $ kafka-configs --alter --delete-config listener.name.client.ssl.keystore.*(逐台,走帶外路徑)
-▶ 移除動態設定(走帶外路徑),讓三台 broker 回到靜態檔 certs/server.pem 的憑證
+▶ 移除動態設定(走帶外路徑),讓4 台 broker 回到靜態檔 certs/server.pem 的憑證
 Completed updating config for broker 11.
 Completed updating config for broker 12.
 Completed updating config for broker 13.
-序號:4474B9BA75C8AEC73D198B55BD22276108461BBF 4474B9BA75C8AEC73D198B55BD22276108461BBF 4474B9BA75C8AEC73D198B55BD22276108461BBF 
-靜態檔 server.pem:4474B9BA75C8AEC73D198B55BD22276108461BBF
-判定:已回到靜態檔的憑證(三台 broker 送出的序號都與 certs/server.pem 相同)
+Completed updating config for broker 14.
+序號:4474B9BA75C8AEC73D198B55BD22276108461BC4 4474B9BA75C8AEC73D198B55BD22276108461BC4 4474B9BA75C8AEC73D198B55BD22276108461BC4 4474B9BA75C8AEC73D198B55BD22276108461BC4 
+靜態檔 server.pem:4474B9BA75C8AEC73D198B55BD22276108461BC4
+判定:已回到靜態檔的憑證(4 台 broker 送出的序號都與 certs/server.pem 相同)

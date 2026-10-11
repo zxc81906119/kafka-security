@@ -3,7 +3,7 @@ $ curl(匿名)、mc(專用帳號)、docker logs / env
 ▶ 物件儲存的保護:① 匿名讀取被拒 ② 專用帳號不能建立別的 bucket、不能列出 bucket 清單 ③ 不接受明文 HTTP ④ 憑證檔權限與日誌
 匿名 GET bucket:HTTP 403
 專用帳號建立別的 bucket:mc: <ERROR> Unable to make bucket `local/other-bucket`. Access Denied.
-專用帳號列出 bucket 清單(只看得到被授權的):[2026-10-11 06:26:42 UTC]     0B kafka-tier/
+專用帳號列出 bucket 清單(只看得到被授權的):[2026-10-11 18:35:34 UTC]     0B kafka-tier/
 明文 HTTP 連 9000:HTTP 400(MinIO 在同一個埠用 TLS,明文請求會被拒或斷線)
 broker1 日誌出現 Kafka 專用帳號密碼的次數:0
 broker1 環境變數出現密碼的次數:0(密碼在唯讀掛載的檔案裡,以 confluent.tier.s3.cred.file.path 讀取)

@@ -1,0 +1,6 @@
+# 【啟用】Prometheus 加一條永遠在觸發的 Watchdog;Alertmanager 每 60 秒把它送到外部看門狗(HTTPS + Basic);看門狗 180 秒沒收到就判定失效
+$ scripts/watchdog-setup.sh on
+▶ 備妥看門狗的帳密(Alertmanager 用來送心跳;隨機產生,不進版本庫)
+▶ Prometheus 載入 Watchdog 規則;Alertmanager 加入心跳路由
+   [watchdog] 完成:第一次心跳約 1 分鐘內送到;scripts/watchdog-setup.sh status 看狀態
+{"state": "OK", "timeout_sec": 180, "seconds_since_heartbeat": 10, "events": ["2026-10-11T18:46:38 deadman 啟動:port 9443,逾時 180 秒", "2026-10-11T18:47:12 RECOVERED 監控鏈路恢復:收到 Wa

@@ -1,0 +1,5 @@
+# 【正常】心跳正常,看門狗狀態 OK
+$ scripts/watchdog-lab.sh baseline
+▶ 正常狀態:Alertmanager 每 60 秒送一次 Watchdog 心跳,看門狗狀態 OK
+{"state": "OK", "timeout_sec": 180, "seconds_since_heartbeat": 13, "events": ["2026-10-11T18:46:38 deadman 啟動:port 9443,逾時 180 秒", "2026-10-11T18:47:12 RECOVERED 監控鏈路恢復:收到 Wa
+判定:看門狗狀態 OK(心跳正常)
