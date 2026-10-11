@@ -307,7 +307,114 @@ add({ title: '設定檔密碼加密:輪替與重啟', sub: 'Confluent Secret Pro
 ] });
 
 // ───────────────── 6. 收尾
-sec('六、待確認、限制與導入順序', '');
+sec('六、平台韌性、可觀測性與應用開發', '高可用、監控告警、憑證、容量、日誌與追蹤、應用端可靠性、資料契約、Connect');
+
+add({ title: '高可用:壞幾台還撐得住', sub: '3 台 controller、3 台以上 broker、副本 3、min.insync.replicas 2;順序與數字都用停機實測確認', items: [
+  { ...table(0.6, 1.5, [3.0, 6.43, 2.7], [
+    ['情境', '結果', '狀態'],
+    ['停 1 台 broker', '寫入(acks=all)不中斷;副本不足的分區數(URP)大於 0 是要告警的訊號;恢復後補齊', '測試環境已驗證'],
+    ['停 2 台 broker', 'acks=all 被擋;acks=1 的 producer 回報成功,consumer 卻讀不到(高水位不前進),恢復後才出現', '測試環境已驗證'],
+    ['停 1 台 controller', '叢集照常:建 topic、寫入都正常', '測試環境已驗證'],
+    ['停 2 台 controller', '失去多數:建 topic、describe 沒回應;既有 topic 的讀寫暫時還可用,不是可依賴的容錯', '測試環境已驗證'],
+    ['滾動重啟', 'broker 一台一台(等 URP 回 0),controller 非 active 先、active 最後;背景寫入零失敗零遺失', '測試環境已驗證'],
+    ['動態 quorum', '測試用靜態 quorum;正式環境建議動態 quorum 並在 VM 上演練', '未驗證'],
+  ], { rowH: 0.66, hdrH: 0.44, sz: 12, col: MDS }), rowCols: [SVC, RISK, SVC, RISK, SVC, PLT] },
+] });
+
+add({ title: '監控與告警:兩條指標路徑', sub: '告警要「真的會響」;銀行自有監控走 JMX exporter,不依賴 Control Center', items: [
+  { ...table(0.6, 1.5, [2.8, 4.7, 4.63], [
+    ['項目', 'telemetry → Prometheus', 'JMX exporter → Prometheus'],
+    ['用途', 'Control Center 的資料來源,保留', '銀行自有監控與告警的建議路徑'],
+    ['偵測時間(停 1 台 broker)', '約 150 到 250 秒(指標 60 秒送一次)', '約 35 秒(每 15 秒抓一次)'],
+    ['依賴', '與 C3 綁在一起', '獨立於 C3;既有 Prometheus、Grafana 可直接用'],
+    ['必設告警', 'URP、under-min-isr、離線分區、active controller 不是 1、controller 掉線、broker fenced、unclean election', '同一組,另加「抓不到 exporter」的監控的監控'],
+  ], { rowH: 0.72, hdrH: 0.44, sz: 12.5, col: MDS }) },
+  note('監控端點也要保護:exporter 用 HTTPS + 帳密(JMX exporter 不支援 mTLS)、blackbox 用 mTLS;Prometheus 與 Alertmanager 依用途分開帳號', 5.0, RISK),
+  note('磁碟用量要另外用 node_exporter;consumer lag 用 kafka_exporter(社群專案,上線前評估維護狀況)', 5.6, PLT),
+] });
+
+add({ title: '告警送到人:寄成信', sub: '值班的人不會盯著畫面;通知的設計比通道重要', items: [
+  { ...table(0.6, 1.5, [2.8, 6.63, 2.7], [
+    ['項目', '做法', '狀態'],
+    ['通道', 'Alertmanager 以 SMTP 寄到行內自架的郵件伺服器', '以測試用郵件伺服器驗證'],
+    ['依嚴重度分流', 'critical 寄值班信箱、warning 寄維運群組信箱;主旨寫明狀態、告警名稱、嚴重度', '測試環境已驗證'],
+    ['同類合併', '同名同嚴重度的告警合併成一封(group_by),一次壞多台不洗版', '測試環境已驗證'],
+    ['發生與解除', '停 1 台 broker 約 30 秒收到 FIRING,恢復後約 40 秒收到 RESOLVED', '測試環境已驗證'],
+    ['郵件伺服器保護', '強制 STARTTLS 並要帳密;Alertmanager 的密碼從檔案讀,用行內 CA 驗證伺服器憑證', '測試環境已驗證'],
+    ['其他通道、靜音與抑制、高可用', '簡訊、通訊軟體、工單 webhook;靜音與抑制規則;Alertmanager 多實例', '未驗證'],
+  ], { rowH: 0.66, hdrH: 0.44, sz: 12, col: MDS }), rowCols: [PLT, SVC, SVC, SVC, SVC, RISK] },
+] });
+
+add({ title: '憑證:到期監控與不停機換憑證', sub: '憑證過期是常見的停機原因;換憑證要有預檢、金絲雀與不依賴被換掉的那條路的回退', items: [
+  { ...table(0.6, 1.5, [2.8, 6.63, 2.7], [
+    ['項目', '做法', '狀態'],
+    ['到期監控', 'blackbox 對各端點做 TLS 探測,看「實際送出」的憑證(不是看檔案);< 30 天告警;client 憑證與 CA 用檔案巡檢補', '測試環境已驗證'],
+    ['不停機換憑證', '動態 keystore 重載(listener 層級),逐台設定:預檢 → 先換一台當金絲雀並用 client 角度驗證 → 其餘;寫入零失敗、不重啟', '測試環境已驗證'],
+    ['SAN 不同', '新憑證的 DN、SAN 與現有不同,broker 拒絕更新', '測試環境已驗證'],
+    ['別的 CA 簽的憑證', 'broker 會接受,client 全部驗證失敗;影響限於金絲雀;回退必須走不經對外埠的帶外路徑', '測試環境已驗證'],
+    ['範圍', '只涵蓋 Kafka 的 listener;MDS 等 Jetty 入口要重啟;動態設定存在叢集 metadata,靜態設定要同步', '測試環境已驗證'],
+  ], { rowH: 0.72, hdrH: 0.44, sz: 12, col: MDS }), rowCols: [SVC, SVC, SVC, RISK, PLT] },
+] });
+
+add({ title: '容量:分區搬家', sub: '新增 broker 不會自動搬舊資料;搬家要有回退檔、限速與收尾', items: [
+  ...step(1, 0.6, 1.6, 2.3, 2.5, '存回退檔', '搬家前先把目前的指派存起來;--generate 的建議只是草稿', PLT),
+  ...step(2, 3.1, 1.6, 2.3, 2.5, '審過的計畫', '人審:搬哪些、搬多少資料、是否違反機架規劃', HUM),
+  ...step(3, 5.6, 1.6, 2.3, 2.5, '限速執行', '--execute --throttle;背景寫入實測零失敗', MDS),
+  ...step(4, 8.1, 1.6, 2.3, 2.5, '用 --verify 收尾', '完成時自動移除限速;不收尾,限速設定會殘留在 broker 與 topic', RISK),
+  ...step(5, 10.6, 1.6, 2.13, 2.5, '必要時取消', '--cancel 回到搬家前並清除限速', SVC),
+  arrow(2.9, 2.85, 3.1, 2.85, 'text1'), arrow(5.4, 2.85, 5.6, 2.85, 'text1'), arrow(7.9, 2.85, 8.1, 2.85, 'text1'), arrow(10.4, 2.85, 10.6, 2.85, 'text1'),
+  note('搬家期間不要同時做滾動重啟或換憑證;限速值依服務延遲逐步調,不要憑感覺', 4.6, PLT),
+  note('Self-Balancing 與 Tiered Storage 尚未驗證(授權與版本資格要向 Confluent 確認)', 5.2, RISK),
+] });
+
+add({ title: 'Grafana 全元件監控,以及日誌與追蹤', sub: 'Control Center 只看得到 broker 與 controller;Grafana 把 Kafka、主機、consumer、日誌、追蹤放在一起', items: [
+  { ...table(0.6, 1.5, [2.8, 6.63, 2.7], [
+    ['項目', '做法', '狀態'],
+    ['官方儀表板', 'Confluent 的 KRaft 儀表板原樣匯入(固定版本、校驗雜湊);匯入成功不等於有資料,要逐個查詢確認,不改官方內容', '測試環境已驗證'],
+    ['主機與 consumer lag', 'node_exporter(磁碟等)、kafka_exporter(lag;帳號只有 Describe);兩者都 mTLS', '測試環境已驗證'],
+    ['Grafana 本身', 'HTTPS、AD 登入、群組對映角色;本機 admin 只留緊急用', '測試環境已驗證'],
+    ['日誌與追蹤', 'Loki、Tempo、Alloy;資料先寫進 Kafka 再送下游:下游停機資料不掉;trace 跨過 Kafka 串起 producer 與 consumer(程式碼不改)', '測試環境已驗證'],
+    ['稽核事件', 'audit topic 一併進 Loki,在 Grafana 查「誰對什麼被拒」', '測試環境已驗證'],
+    ['高可用、取樣、脫敏、Loki 存取控制', 'Loki 本身沒有 RBAC;取樣與脫敏要在上線前決定', '未驗證'],
+  ], { rowH: 0.66, hdrH: 0.44, sz: 12, col: MDS }), rowCols: [SVC, SVC, SVC, SVC, SVC, RISK] },
+] });
+
+add({ title: '應用開發:可靠性要靠寫法', sub: '叢集再穩,應用寫法不對一樣會重複或掉資料;預設行為要先讓開發者看過', items: [
+  { ...table(0.6, 1.5, [3.0, 6.43, 2.7], [
+    ['主題', '實測結果與建議', '狀態'],
+    ['冪等 producer', 'broker 凍結造成逾時重送:關閉冪等會多寫重複(1500 → 1505),開啟為 0;預設就是開,不要手動關', '測試環境已驗證'],
+    ['手動提交 offset', '處理後、提交前當機,重啟後同一批被再處理(at-least-once);消費端處理要能容許重複', '測試環境已驗證'],
+    ['rebalance', 'eager 收回全部分區、cooperative 只收回要換人的;長駐服務偏好 cooperative', '測試環境已驗證'],
+    ['靜態成員', '滾動部署時動態成員每個實例都觸發 rebalance,靜態成員(group.instance.id)不會;代價是故障轉移要等 session timeout', '測試環境已驗證'],
+    ['交易', 'abort 的訊息仍在 log;消費端要設 read_committed,否則看得到', '測試環境已驗證'],
+    ['新 consumer protocol、exactly-once 完整流程', 'KIP-848、consume-transform-produce、Streams', '未驗證'],
+  ], { rowH: 0.66, hdrH: 0.44, sz: 12, col: MDS }), rowCols: [SVC, SVC, SVC, SVC, SVC, RISK] },
+] });
+
+add({ title: 'Schema 演進與資料契約', sub: 'schema 怎麼改才不會讓另一端壞掉:把「約定」變成機器擋得住的規則', items: [
+  { ...table(0.6, 1.5, [3.0, 6.43, 2.7], [
+    ['主題', '實測結果與建議', '狀態'],
+    ['相容性模式', 'BACKWARD 先升級 consumer、FORWARD 先升級 producer、FULL 不拘;選哪個取決於兩端誰先上線', '測試環境已驗證'],
+    ['TRANSITIVE', '只比最新版會漏掉更早的版本;topic 會被重播就用 TRANSITIVE;檢查要對照全部版本', '測試環境已驗證'],
+    ['註冊前先檢查', '用相容性檢查 API 放進 CI,不要等上線才被拒', '測試環境已驗證'],
+    ['兩道關卡', '授權擋是 403、不相容擋是 409,兩道獨立', '測試環境已驗證'],
+    ['命名策略', 'RecordNameStrategy 讓 subject 脫離 topic,依 topic 前綴的授權就失效;選它是架構決定', '測試環境已驗證'],
+    ['資料契約規則', 'CEL 條件規則在寫入端擋下壞資料;只在 client 端序列化器執行,不能取代 broker 端授權;正式授權範圍要向 Confluent 確認', '測試環境已驗證(授權待確認)'],
+  ], { rowH: 0.66, hdrH: 0.44, sz: 12, col: MDS }), rowCols: [SVC, SVC, SVC, SVC, RISK, PLT] },
+] });
+
+add({ title: 'Kafka Connect:授權、身分、壞資料與密碼', sub: '連接器長期在背景跑、手上常握著別的系統的帳密', items: [
+  { ...table(0.6, 1.5, [3.0, 6.43, 2.7], [
+    ['項目', '做法與結果', '狀態'],
+    ['誰能管連接器', 'REST 走 HTTPS,認證用 AD 帳密,授權依群組與連接器名稱;無權限者列表為空、建立 403;命名規則是授權設計的一部分', '測試環境已驗證'],
+    ['連接器的身分', '每個連接器用自己的 AD 服務帳號(最小權限),不共用 worker 的身分;worker 本身不給資料 topic 的讀取權', '測試環境已驗證'],
+    ['壞資料', '預設遇到第一筆壞資料就停;errors.tolerance=all 加 DLQ 好壞分流並附錯誤標頭;DLQ 要有告警', '測試環境已驗證'],
+    ['密碼不落地', '連接器設定存在 Kafka 的 topic;直接寫密碼就是明文;改用 config provider 引用密碼檔(由 CyberArk 提供)', '測試環境已驗證'],
+    ['多 worker、source 連接器、密碼輪替生效方式', '單一 worker 與檔案型連接器做過;其餘沒有做', '未驗證'],
+  ], { rowH: 0.74, hdrH: 0.44, sz: 12, col: MDS }), rowCols: [SVC, SVC, SVC, SVC, RISK] },
+] });
+
+sec('七、待確認、限制與導入順序', '');
 add({ title: '要向客戶確認的事項', sub: '答案會決定幾個分支的做法', items: [
   { ...table(0.6, 1.5, [3.4, 5.2, 3.53], [
     ['主題', '問題', '影響'],
