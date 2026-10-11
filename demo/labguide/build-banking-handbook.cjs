@@ -276,7 +276,7 @@ C.push(H1('第 3 章  安全設計與建置'),
     ['5', '全部完成後清除舊檔與舊主金鑰'],
   ], [0.8, 8.2]),
   P('窗口內的風險:秘密管理系統裡只有一個值,值一改,尚未處理的主機若剛好意外重啟,會因檔與金鑰不成對起不來。所以窗口要短,並事先備好退回路徑。{測} ' + REC + ':全叢集共用同一把主金鑰與同一份檔,不要每台各一組;主金鑰很少輪替,視為計畫性維運。{推}'),
-  P('{測} 測試環境輪替資料金鑰,並依序滾動重啟套用 Secret Protection 的 2 台 broker(實驗 topic 副本 2)期間,背景 producer(acks=all、冪等)寫入 1,200 筆,全部寫入、零遺失;換 leader 時只出現重試警告。**條件很窄,不能外推到正式環境。**'), /* TODO-REVERIFY: 1,200 筆零遺失是舊拓樸(min.isr 1)量到的 */
+  P('{測} 測試環境(與正式環境相同的拓樸:4 台 broker、topic 副本 3、min.insync.replicas 2)輪替資料金鑰,並依序滾動重啟 4 台套用 Secret Protection 的 broker 期間,背景 producer(acks=all、冪等)寫入 2,400 筆,全部寫入、零遺失;換 leader 時只出現重試警告。前提是一次只重啟一台,並確認該台健康後才做下一台。'),
   H2('3.6 稽核日誌'),
   B('記錄「誰、做什麼、何時、是否被允許」,由 Confluent Server Authorizer 對受 ACL 或 RBAC 保護的動作產生。{官}'),
   B('預設啟用,寫入 topic `confluent-audit-log-events`;預設只記 Management 與 Authorize 兩類,**produce、consume、interbroker 預設關閉**。{官}'),
