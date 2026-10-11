@@ -72,3 +72,5 @@ demo/config/tier/
 # 第 34 章看門狗:Alertmanager 送心跳的帳密(隨機產生)
 demo/config/watchdog/secrets/
 demo/config/c3/watchdog-am.pw
+# 第 36 章 DR:link 帳號密碼與 link 設定(含密碼)
+demo/config/dr/secrets/

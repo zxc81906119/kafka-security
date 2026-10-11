@@ -110,7 +110,7 @@ lab_broker_down() {
   echo "停 broker3"; stop_containers broker3; sleep 20
   show_partitions ha.test
   urp=$(count_urp); echo "URP(副本不足的分區)數:$urp"
-  sent=$(produce_test ha.test 200 all); echo "只剩 2 台,acks=all 寫入:送出 ${sent:-0} 筆"
+  sent=$(produce_test ha.test 200 all); echo "ha.test 只剩 2 份副本(broker 剩 3 台),acks=all 寫入:送出 ${sent:-0} 筆"
   say "把 broker3 啟動回來,等 ISR 補齊"
   start_containers broker3; wait_healthy broker3 >/dev/null; wait_isr_full >/dev/null && echo "恢復 broker3:ISR 補齊、URP=0"
   [ "${sent:-0}" = 200 ] && [ "$urp" -gt 0 ] \
