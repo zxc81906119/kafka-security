@@ -86,7 +86,7 @@ if [ -f certs/.done ]; then
   # 內部通道共用憑證(CN=kafka-internal,mTLS;broker↔broker 與 broker↔controller 共用),舊環境沒有就補產
   if [ ! -f certs/internal.keystore.p12 ]; then
     openssl_in_certs "
-      printf '[req]\ndistinguished_name=dn\nreq_extensions=v3\nprompt=no\n[dn]\nCN=kafka-internal\nO=Demo\n[v3]\nsubjectAltName=DNS:broker1,DNS:broker2,DNS:broker3,DNS:broker4,DNS:controller1,DNS:controller2,DNS:controller3,DNS:localhost\nextendedKeyUsage=serverAuth,clientAuth\n' > internal.cnf
+      printf '[req]\ndistinguished_name=dn\nreq_extensions=v3\nprompt=no\n[dn]\nCN=kafka-internal\nO=Demo\n[v3]\nsubjectAltName=DNS:broker1,DNS:broker2,DNS:broker3,DNS:broker4,DNS:broker5,DNS:controller1,DNS:controller2,DNS:controller3,DNS:localhost\nextendedKeyUsage=serverAuth,clientAuth\n' > internal.cnf
       openssl genrsa -out internal.key 2048 2>/dev/null
       openssl req -new -key internal.key -out internal.csr -config internal.cnf
       openssl x509 -req -in internal.csr -CA ca.pem -CAkey ca.key -CAcreateserial -out internal.pem -days 825 -sha256 -extfile internal.cnf -extensions v3 2>/dev/null
@@ -125,6 +125,9 @@ if [ -f certs/.done ]; then
   # 第 34 章:外部看門狗(HTTPS);第 36 章:DR 站的 controller 與 broker(server 憑證與內部憑證都要)
   add_server_san "DNS:watchdog" 's/DNS:mailpit,/DNS:mailpit,DNS:watchdog,DNS:dr-controller1,DNS:dr-broker1,DNS:dr-broker2,DNS:dr-broker3,/' "watchdog / dr-*"
   add_internal_san "DNS:dr-broker1" 's/DNS:localhost/DNS:dr-controller1,DNS:dr-broker1,DNS:dr-broker2,DNS:dr-broker3,DNS:localhost/' "dr-*"
+  # 第 31 章:Self-Balancing 加 / 移除 broker 實驗的第 5 台 broker(基線已是 4 台;server 憑證與內部憑證都要)
+  add_server_san "DNS:broker5" 's/DNS:broker4,/DNS:broker4,DNS:broker5,/' "broker5"
+  add_internal_san "DNS:broker5" 's/DNS:broker4,/DNS:broker4,DNS:broker5,/' "broker5"
 
   # 缺的 client 憑證(舊環境升級時補產)
   for n in c3 restproxy bootstrap legacy-orders schema-registry monitor connect; do
@@ -172,7 +175,7 @@ prompt=no
 CN=kafka.demo.local
 O=Demo
 [v3]
-subjectAltName=DNS:kafka.demo.local,DNS:localhost,DNS:controller1,DNS:controller2,DNS:controller3,DNS:controller4,DNS:broker1,DNS:broker2,DNS:broker3,DNS:broker4,DNS:minio,DNS:restproxy,DNS:restproxy1,DNS:restproxy2,DNS:schema-registry1,DNS:schema-registry2,DNS:connect1,DNS:connect2,DNS:control-center,DNS:openldap,DNS:prometheus,DNS:alertmanager,DNS:conjur,DNS:schema-registry,DNS:blackbox-exporter,DNS:grafana,DNS:node-exporter,DNS:kafka-exporter,DNS:loki,DNS:tempo,DNS:connect,DNS:mailpit,DNS:watchdog,DNS:dr-controller1,DNS:dr-broker1,DNS:dr-broker2,DNS:dr-broker3,IP:127.0.0.1
+subjectAltName=DNS:kafka.demo.local,DNS:localhost,DNS:controller1,DNS:controller2,DNS:controller3,DNS:controller4,DNS:broker1,DNS:broker2,DNS:broker3,DNS:broker4,DNS:broker5,DNS:minio,DNS:restproxy,DNS:restproxy1,DNS:restproxy2,DNS:schema-registry1,DNS:schema-registry2,DNS:connect1,DNS:connect2,DNS:control-center,DNS:openldap,DNS:prometheus,DNS:alertmanager,DNS:conjur,DNS:schema-registry,DNS:blackbox-exporter,DNS:grafana,DNS:node-exporter,DNS:kafka-exporter,DNS:loki,DNS:tempo,DNS:connect,DNS:mailpit,DNS:watchdog,DNS:dr-controller1,DNS:dr-broker1,DNS:dr-broker2,DNS:dr-broker3,IP:127.0.0.1
 extendedKeyUsage=serverAuth,clientAuth
 EOF
 openssl genrsa -out server.key 2048 2>/dev/null
@@ -198,7 +201,7 @@ prompt=no
 CN=kafka-internal
 O=Demo
 [v3]
-subjectAltName=DNS:broker1,DNS:broker2,DNS:broker3,DNS:broker4,DNS:controller1,DNS:controller2,DNS:controller3,DNS:controller4,DNS:dr-controller1,DNS:dr-broker1,DNS:dr-broker2,DNS:dr-broker3,DNS:localhost
+subjectAltName=DNS:broker1,DNS:broker2,DNS:broker3,DNS:broker4,DNS:broker5,DNS:controller1,DNS:controller2,DNS:controller3,DNS:controller4,DNS:dr-controller1,DNS:dr-broker1,DNS:dr-broker2,DNS:dr-broker3,DNS:localhost
 extendedKeyUsage=serverAuth,clientAuth
 EOF2
 openssl genrsa -out internal.key 2048 2>/dev/null

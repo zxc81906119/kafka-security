@@ -80,7 +80,7 @@ prompt=no
 CN=kafka.demo.local
 O=Demo
 [v3]
-subjectAltName=DNS:kafka.demo.local,DNS:localhost,DNS:controller1,DNS:controller2,DNS:controller3,DNS:controller4,DNS:broker1,DNS:broker2,DNS:broker3,DNS:broker4,DNS:minio,DNS:restproxy,DNS:restproxy1,DNS:restproxy2,DNS:schema-registry1,DNS:schema-registry2,DNS:connect1,DNS:connect2,DNS:control-center,DNS:openldap,DNS:prometheus,DNS:alertmanager,DNS:conjur,DNS:schema-registry,DNS:blackbox-exporter,DNS:grafana,DNS:node-exporter,DNS:kafka-exporter,DNS:loki,DNS:tempo,DNS:connect,DNS:mailpit,DNS:watchdog,DNS:dr-controller1,DNS:dr-broker1,DNS:dr-broker2,DNS:dr-broker3,IP:127.0.0.1
+subjectAltName=DNS:kafka.demo.local,DNS:localhost,DNS:controller1,DNS:controller2,DNS:controller3,DNS:controller4,DNS:broker1,DNS:broker2,DNS:broker3,DNS:broker4,DNS:broker5,DNS:minio,DNS:restproxy,DNS:restproxy1,DNS:restproxy2,DNS:schema-registry1,DNS:schema-registry2,DNS:connect1,DNS:connect2,DNS:control-center,DNS:openldap,DNS:prometheus,DNS:alertmanager,DNS:conjur,DNS:schema-registry,DNS:blackbox-exporter,DNS:grafana,DNS:node-exporter,DNS:kafka-exporter,DNS:loki,DNS:tempo,DNS:connect,DNS:mailpit,DNS:watchdog,DNS:dr-controller1,DNS:dr-broker1,DNS:dr-broker2,DNS:dr-broker3,IP:127.0.0.1
 extendedKeyUsage=serverAuth,clientAuth
 EOF
 openssl genrsa -out server.key 2048
@@ -104,7 +104,7 @@ prompt=no
 CN=kafka-internal
 O=Demo
 [v3]
-subjectAltName=DNS:broker1,DNS:broker2,DNS:broker3,DNS:broker4,DNS:controller1,DNS:controller2,DNS:controller3,DNS:controller4,DNS:dr-controller1,DNS:dr-broker1,DNS:dr-broker2,DNS:dr-broker3,DNS:localhost
+subjectAltName=DNS:broker1,DNS:broker2,DNS:broker3,DNS:broker4,DNS:broker5,DNS:controller1,DNS:controller2,DNS:controller3,DNS:controller4,DNS:dr-controller1,DNS:dr-broker1,DNS:dr-broker2,DNS:dr-broker3,DNS:localhost
 extendedKeyUsage=serverAuth,clientAuth
 EOF2
 openssl genrsa -out internal.key 2048
