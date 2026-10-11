@@ -1104,6 +1104,11 @@ services:
       CONNECT_LISTENERS_HTTPS_SSL_KEYSTORE_TYPE: PKCS12
       CONNECT_LISTENERS_HTTPS_SSL_KEYSTORE_PASSWORD: changeit
       CONNECT_LISTENERS_HTTPS_SSL_KEY_PASSWORD: changeit
+      # 2 台 worker 時,非 leader 收到的 REST 請求(建立連接器等)要轉給 leader:轉送用的 REST client 也讀 listeners.https.* 的 TLS 設定,
+      #   沒有 truststore 就不信任對方憑證(實測:PKIX path building failed → 使用者拿到 HTTP 500)。單台時不會轉送,看不出來
+      CONNECT_LISTENERS_HTTPS_SSL_TRUSTSTORE_LOCATION: /etc/kafka/secrets/truststore.p12
+      CONNECT_LISTENERS_HTTPS_SSL_TRUSTSTORE_TYPE: PKCS12
+      CONNECT_LISTENERS_HTTPS_SSL_TRUSTSTORE_PASSWORD: changeit
       CONNECT_PLUGIN_PATH: /plugins,/usr/share/confluent-hub-components   # 只掃外掛目錄:掃 /usr/share/java 全部要數分鐘(實測),轉換器與 provider 本來就在 classpath
       CUB_CLASSPATH: '/usr/share/java/confluent-security/connect/*:/usr/share/java/kafka/*:/usr/share/java/cp-base-new/*'   # 啟動前的 kafka-ready 檢查也要認得 token callback handler(與 Schema Registry 同一個問題)
       # 每個連接器可以用自己的身分連 Kafka(producer.override.* / consumer.override.* / admin.override.*),不必共用 worker 的身分
