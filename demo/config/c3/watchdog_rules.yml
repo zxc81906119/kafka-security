@@ -1,0 +1,13 @@
+# 第 34 章:看門狗(dead man's switch)。這條告警「永遠在觸發」,Alertmanager 把它當心跳送到外部看門狗;
+#   心跳停了 = Prometheus、Alertmanager 或兩者之間的設定 / 網路壞了(監控本身失效時,不會有任何一般告警能送出)。
+#   做法依 kube-prometheus 的 Watchdog 規則(expr: vector(1)、severity: none)。
+groups:
+  - name: watchdog
+    rules:
+      - alert: Watchdog
+        expr: vector(1)
+        labels:
+          severity: none
+          kind: watchdog
+        annotations:
+          summary: 告警鏈路的心跳(永遠在觸發;外部看門狗收不到才是異常)

@@ -6,7 +6,7 @@
 #   還沒更新的另一端壞掉?Schema Registry 用「相容性模式」把關:改壞了就拒絕註冊(HTTP 409)。
 #   這支腳本實際試:哪些改法過、哪些被擋、三種模式差在哪、transitive 為什麼重要、
 #   授權(誰能註冊)和相容性(能不能這樣改)是兩道獨立的關卡、命名策略如何影響授權、資料契約規則(CEL)能不能擋壞資料。
-# 前置條件:HA 模式或基礎環境,且 Schema Registry 已啟動(scripts/sr-setup.sh);帳密沿用第 20 章(gary、yujie)
+# 前置條件:叢集已啟動,且 Schema Registry 已啟動(scripts/sr-setup.sh);帳密沿用第 20 章(gary、yujie)
 # 用法:
 #   scripts/schema-lab.sh evolve      演進:加有預設值的欄位過、加必填欄位 409、改型別 409、相容性檢查 API
 #   scripts/schema-lab.sh modes       BACKWARD / FORWARD / FULL 對同樣三種改法的結果(3×3 對照)
@@ -23,13 +23,14 @@ source "$(dirname "${BASH_SOURCE[0]}")/lib/common.sh"
 source "$(dirname "${BASH_SOURCE[0]}")/lib/kafka.sh"
 [ "${1:-}" = "--help" ] && { usage_from_header "$0"; exit 0; }
 cd "$DEMO_DIR" || exit 1
-need_container schema-registry "先執行:scripts/sr-setup.sh"
+need_container schema-registry1 "先執行:scripts/sr-setup.sh"
+need_container schema-registry2 "先執行:scripts/sr-setup.sh"
 
 SR=https://schema-registry:8081
 JSON_TYPE='Content-Type: application/vnd.schemaregistry.v1+json'
 SR_HOST_DIR="$(pwd -W 2>/dev/null || pwd)"
-# topic 的副本數:HA 模式 3,基礎環境(2 台 broker)2
-REPLICATION=$(grep -q "^COMPOSE_FILE=.*docker-compose.ha.yml" .env 2>/dev/null && echo 3 || echo 2)
+# topic 的副本數:叢集是 4 台 broker,預設副本 3
+REPLICATION=3
 
 # ---------- 小工具(這支腳本專用) ----------
 

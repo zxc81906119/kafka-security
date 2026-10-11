@@ -3,7 +3,7 @@
 # ch27-observability.sh — 第 27 章:日誌與追蹤——經過 Kafka 進 Loki 與 Tempo(Grafana Alloy 搬運)
 # ----------------------------------------------------------------------------
 # 白話:指標只回答「有沒有問題」,回答不了「為什麼」。這一章補日誌(Loki)與追蹤(Tempo),且讓資料先經過 Kafka 當緩衝:下游停機時資料不掉,trace 還能跨過 Kafka 串起 producer 與 consumer。
-# 前置條件:需要 HA 模式、Prometheus、Grafana:scripts/ha.sh on;docker compose --profile c3 up -d prometheus alertmanager blackbox-exporter;scripts/grafana.sh on
+# 前置條件:需要 Prometheus、Grafana:docker compose --profile c3 up -d prometheus alertmanager blackbox-exporter;scripts/grafana.sh on
 # 用法:
 #   ./demo.sh 27                  經由講解控制台跑這一章(DEMO_PAUSE=0 不暫停)
 #   ./scenarios/ch27-observability.sh    直接跑

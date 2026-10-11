@@ -5,12 +5,12 @@
 # 白話:告警只在 Prometheus 與 Alertmanager 亮燈,值班的人看不到。這支腳本實際驗證:
 #   告警真的變成信、依嚴重度寄給不同的人、同類告警合併成一封不會洗版、真的壞一台 broker 會收到「發生」與「解除」兩封,
 #   以及郵件伺服器本身有沒有被保護(強制 STARTTLS、要帳密)。
-# 前置條件:HA 模式(或基礎環境)、Prometheus 與 Alertmanager 已啟動,並已執行 scripts/mail-setup.sh on
+# 前置條件:Prometheus 與 Alertmanager 已啟動,並已執行 scripts/mail-setup.sh on
 # 用法:
 #   scripts/mail-lab.sh send      送一個測試告警,收件匣收到一封;主旨、收件人、內文正確
 #   scripts/mail-lab.sh route     critical 寄給值班信箱,warning 寄給維運群組信箱
 #   scripts/mail-lab.sh group     同一種告警的多個實例合併成一封
-#   scripts/mail-lab.sh real      停 1 台 broker → 收到「FIRING」;恢復 → 收到「RESOLVED」(需要 HA 模式的 JMX 告警規則)
+#   scripts/mail-lab.sh real      停 1 台 broker → 收到「FIRING」;恢復 → 收到「RESOLVED」(JMX 告警規則)
 #   scripts/mail-lab.sh security  郵件伺服器:不 STARTTLS、沒帳密、錯密碼都被拒,正確帳密才收
 # 會改動什麼:清空測試郵件伺服器的收件匣;向 Alertmanager 送測試告警(自動過期);real 會暫時停止 broker3(結束前啟動回來)。
 # 怎麼判斷成功:最後一行印「判定:…」。

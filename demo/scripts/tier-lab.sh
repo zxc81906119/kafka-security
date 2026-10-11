@@ -5,7 +5,7 @@
 # 白話:一般 Kafka 的資料全放在 broker 本機磁碟,保留 30 天就要買 30 天的磁碟。開了 Tiered Storage,
 #   寫滿的舊 segment 會上傳到物件儲存,broker 本機只留最近一段(hotset);讀舊資料時 broker 從物件儲存取回。
 #   這支腳本實際驗證:資料真的上傳、本機真的變小、從頭讀還是讀得到全部、重啟後仍讀得到,以及物件儲存的存取保護。
-# 前置條件:HA 模式,且已執行 scripts/tier-setup.sh on(MinIO 啟動、broker 載入 Tiered Storage 設定)
+# 前置條件:叢集已啟動,且已執行 scripts/tier-setup.sh on(MinIO 啟動、broker 載入 Tiered Storage 設定)
 # 用法:
 #   scripts/tier-lab.sh produce    建立啟用 tier 的 topic(小 segment、本機只留 60 秒)並寫入約 100 MB;記錄本機大小
 #   scripts/tier-lab.sh archive    等資料上傳:物件儲存裡出現物件(用 MinIO 管理帳號數筆數與大小)
@@ -61,7 +61,7 @@ objects_mb() { mc_root du "local/$BUCKET" | awk 'NR==1 {print $1}'; }
 # 要看真正佔用的磁碟,直接量 broker 容器裡該 topic 的目錄。
 local_mb() {
   local b
-  for b in broker1 broker2 broker3 broker4; do
+  for b in broker1 broker2 broker3 broker4 broker5; do
     docker ps --format '{{.Names}}' | grep -qx "$b" || continue
     docker exec "$b" sh -c "du -sm /var/lib/kafka/data/$TOPIC-* 2>/dev/null" | cut -f1
   done | awk '{s+=$1} END {print s+0}'

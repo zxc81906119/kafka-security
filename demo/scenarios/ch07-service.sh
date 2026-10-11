@@ -23,6 +23,8 @@ source "$(dirname "$0")/../scripts/lib-ev.sh"
 ch_begin ch07 "機器怎麼辦(不在 AD):服務帳號 SCRAM + RBAC"
 source "$DEMO_ROOT/scripts/rbac-lib.sh"
 UI() { (cd "$DEMO_ROOT/e2e" && node ch07-ui.mjs "$1" 2>&1 | grep -v '^$'); }
+# 本章要示範「授權前被拒 → 授權後成功」,起點必須是 svc-orders 沒有任何示範綁定;不依賴前面章節是否跑過 reset.sh
+for r in DeveloperRead DeveloperWrite; do rbac_unbind cert bootstrap User:svc-orders $r Topic orders. PREFIXED >/dev/null 2>&1; done
 
 step create-svc "【建立服務身分】AD 裡沒有這個帳號:在 Kafka 內建立 SCRAM 帳號 svc-orders(密碼存密碼庫,不是 AD)" \
   "kafka-configs --alter --add-config 'SCRAM-SHA-512=[password=***]' --entity-type users --entity-name svc-orders" \

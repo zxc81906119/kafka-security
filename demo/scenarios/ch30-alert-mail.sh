@@ -3,7 +3,7 @@
 # ch30-alert-mail.sh — 第 30 章:告警寄成信(Alertmanager → 自架郵件伺服器)
 # ----------------------------------------------------------------------------
 # 白話:告警只在 Prometheus 與 Alertmanager 亮燈,半夜值班的人不會知道。這一章讓告警變成信寄給人,並驗證:依嚴重度分流、同類告警合併不洗版、真實故障有「發生」與「解除」兩封、郵件伺服器本身有被保護。demo 用 Mailpit 代替行內的郵件伺服器。
-# 前置條件:HA 模式與 Prometheus、Alertmanager:scripts/ha.sh on --with-c3;docker compose --profile c3 up -d prometheus alertmanager blackbox-exporter
+# 前置條件:Prometheus、Alertmanager:docker compose --profile c3 up -d prometheus alertmanager blackbox-exporter
 # 用法:
 #   ./demo.sh 30                  經由講解控制台跑這一章(DEMO_PAUSE=0 不暫停)
 #   ./scenarios/ch30-alert-mail.sh    直接跑

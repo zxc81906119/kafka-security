@@ -2,7 +2,7 @@
 // 用法: node probe-c3-validate.mjs     (不印 token)
 import crypto from 'node:crypto';
 process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';   // demo 自簽 CA,只在本探測內放寬
-const MDS = 'https://localhost:8091', C3 = 'http://127.0.0.1:9021', URL = `${C3}/2.0/clusters/kafka`;
+const MDS = 'https://localhost:8091', C3 = 'https://127.0.0.1:9022', URL = `${C3}/2.0/clusters/kafka`;   // C3 對外只開 HTTPS 9022
 const login = async (u, p) => (await (await fetch(`${MDS}/security/1.0/authenticate`, { headers: { Authorization: 'Basic ' + Buffer.from(`${u}:${p}`).toString('base64'), Accept: 'application/json' } })).json()).auth_token;
 const call = async (label, tok) => { const r = await fetch(URL, { headers: tok ? { Authorization: `Bearer ${tok}` } : {} }); console.log(`  ${label.padEnd(46)} → HTTP ${r.status}`); return r.status; };
 const b64u = o => Buffer.from(typeof o === 'string' ? o : JSON.stringify(o)).toString('base64url');

@@ -1,0 +1,8 @@
+# 第 35 章:多機架(broker.rack)。由 scripts/rack-setup.sh on 加進 .env 的 COMPOSE_FILE;機架配置由 .env 的 RACK_B1~RACK_B4 決定。
+# 官方(Kafka broker 設定):broker.rack 用於「依機架分散副本」——建立 topic 或重新指派時,每個分區橫跨 min(機架數, 副本數) 個機架;
+#   建議每個機架的 broker 數量相同;修改要重啟 broker。只有 broker 需要設(controller 不存資料)。
+services:
+  broker1: { environment: { KAFKA_BROKER_RACK: "${RACK_B1:-rack-a}" } }
+  broker2: { environment: { KAFKA_BROKER_RACK: "${RACK_B2:-rack-a}" } }
+  broker3: { environment: { KAFKA_BROKER_RACK: "${RACK_B3:-rack-b}" } }
+  broker4: { environment: { KAFKA_BROKER_RACK: "${RACK_B4:-rack-b}" } }

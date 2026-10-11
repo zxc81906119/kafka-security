@@ -11,7 +11,7 @@ scrape_configs:
     basic_auth: { username: Prometheus, password_file: /mnt/config/jmx_exporter.pw }
     tls_config: { ca_file: /etc/tls/ca.pem }
     static_configs:
-      - targets: ['broker1:7778', 'broker2:7778', 'broker3:7778']
+      - targets: ['broker1:7778', 'broker2:7778', 'broker3:7778', 'broker4:7778']
         labels: { role: broker, env: demo }
   - job_name: kafka-controller
     scrape_interval: 15s
@@ -29,7 +29,9 @@ scrape_configs:
     scheme: https
     tls_config: { ca_file: /etc/tls/ca.pem, cert_file: /etc/tls/client-monitor.pem, key_file: /etc/tls/client-monitor.key }
     static_configs:
-      - targets: ['broker1:9094', 'broker2:9094', 'broker3:9094', 'broker1:8091', 'broker2:8092', 'broker3:8093']
+      - targets: ['broker1:9094', 'broker2:9094', 'broker3:9094', 'broker4:9094', 'broker1:8091', 'broker2:8092', 'broker3:8093', 'broker4:8094']
+      # 生態系元件也用同一張 server 憑證:每個對外 TLS 端點都要探測,否則到期時只有 broker 會告警
+      - targets: ['restproxy1:8086', 'restproxy2:8086', 'schema-registry1:8081', 'schema-registry2:8081', 'connect1:8083', 'connect2:8083', 'control-center:9022']
     relabel_configs:
       - source_labels: [__address__]
         target_label: __param_target
@@ -45,7 +47,7 @@ scrape_configs:
     scheme: https
     tls_config: { ca_file: /etc/tls/ca.pem, cert_file: /etc/tls/client-monitor.pem, key_file: /etc/tls/client-monitor.key }
     static_configs:
-      - targets: ['broker1:9092', 'broker2:9092', 'broker3:9092', 'controller1:9093', 'controller2:9093', 'controller3:9093']
+      - targets: ['broker1:9092', 'broker2:9092', 'broker3:9092', 'broker4:9092', 'controller1:9093', 'controller2:9093', 'controller3:9093']
     relabel_configs:
       - source_labels: [__address__]
         target_label: __param_target

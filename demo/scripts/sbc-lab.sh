@@ -5,16 +5,16 @@
 # 白話:第 24 章是人工搬分區(自己算計畫、限速、收尾)。Self-Balancing 是 Confluent 內建的自動版:
 #   新 broker 加進來,它自己把一部分副本搬過去;要下線一台 broker,下一個指令它就負責把副本搬走再關機。
 #   這支腳本實際驗證它在什麼情況會動、什麼情況不會動,以及移除 broker 的完整過程。
-# 前置條件:HA 模式,且已執行 scripts/sbc-setup.sh on(controller 與 broker 都啟用 balancer)
+# 前置條件:叢集已啟動,且已執行 scripts/sbc-setup.sh on(controller 與 broker 都啟用 balancer)
 # 用法:
 #   scripts/sbc-lab.sh status     balancer 狀態:跑在哪一台、觸發條件、是否正在搬
-#   scripts/sbc-lab.sh add        寫入資料後啟動第 4 台(空的)broker:它自己把副本搬過去,寫入不中斷(等計畫約 15 到 20 分鐘)
+#   scripts/sbc-lab.sh add        寫入資料後啟動第 5 台(空的)broker:它自己把副本搬過去,寫入不中斷(等計畫約 15 到 20 分鐘)
 #   scripts/sbc-lab.sh uneven     造出『資料全擠在兩台』的不均載:官方規則下用量太低不會觸發(實測確認)
-#   scripts/sbc-lab.sh remove     kafka-remove-brokers 移除第 4 台:副本搬回去、資料筆數不變、broker 自動關機
-# 會改動什麼:建立 topic sbc.data(add 時重建);啟動與移除 broker4;不改叢集設定(啟用在 sbc-setup.sh)。
+#   scripts/sbc-lab.sh remove     kafka-remove-brokers 移除第 5 台:副本搬回去、資料筆數不變、broker 自動關機
+# 會改動什麼:建立 topic sbc.data(add 時重建);啟動與移除 broker5;不改叢集設定(啟用在 sbc-setup.sh)。
 # 怎麼判斷成功:每個子命令最後一行印「判定:…」。
 # 常見失敗:balancer 狀態是 DISABLED → scripts/sbc-setup.sh on;remove 失敗並提示稍後重試 → 官方說明啟動後約 30 分鐘內
-#   還在蒐集指標,過一會兒再試;broker4 起不來 → docker logs broker4(憑證 SAN 要有 broker4,make-certs.sh 會補)
+#   還在蒐集指標,過一會兒再試;broker5 起不來 → docker logs broker5(憑證 SAN 要有 broker5,make-certs.sh 會補)
 # ============================================================================
 set -uo pipefail
 # shellcheck disable=SC2034  # produce_test(lib/kafka.sh)會讀
@@ -26,8 +26,8 @@ cd "$DEMO_DIR" || exit 1
 need_ha_mode
 
 TOPIC=sbc.data
-NEW_ID=14                      # broker4 的 node id
-NEW_NAME=broker4
+NEW_ID=15                      # broker5 的 node id(基線已有 broker1~4,實驗加入第 5 台)
+NEW_NAME=broker5
 
 # ---------- 小工具(這支腳本專用) ----------
 
@@ -65,7 +65,9 @@ reassign_idle() { ! reassigning; }
 detector_clean() {
   local c
   for c in controller1 controller2 controller3; do
-    docker logs --since "$1" "$c" 2>&1 | grep -q 'did not detect any violated goals' && return 0
+    # 先收進變數再比對:日誌很大時 grep -q 提早結束會讓上游 docker logs 吃 SIGPIPE,pipefail 下整條變成失敗
+    local out; out=$(docker logs --since "$1" "$c" 2>&1)
+    grep -q 'did not detect any violated goals' <<< "$out" && return 0
   done
   return 1
 }
@@ -89,13 +91,13 @@ lab_status() {
 lab_add() {
   need_balancer
   say "先建 topic $TOPIC(6 分區、副本 3)並寫入約 60 MB,讓叢集有資料可搬"
-  docker compose --profile sbc stop broker4 >/dev/null 2>&1
+  docker compose --profile sbc stop broker5 >/dev/null 2>&1
   kafka_topics --delete --topic "$TOPIC" >/dev/null 2>&1
   kafka_topics --create --topic "$TOPIC" --partitions 6 --replication-factor 3 --config min.insync.replicas=2 | tail -1
   produce_test "$TOPIC" 60000 all 2000 >/dev/null
   local before; before=$(topic_message_count "$TOPIC")
   echo "寫入後筆數:$before;broker $NEW_ID 上的副本數:$(replicas_on "$NEW_ID")"
-  say "啟動第 4 台 broker($NEW_NAME,空的);Self-Balancing 偵測到新的空 broker,自動把一部分副本搬過去"
+  say "啟動第 5 台 broker($NEW_NAME,空的);Self-Balancing 偵測到新的空 broker,自動把一部分副本搬過去"
   docker compose --profile sbc up -d "$NEW_NAME" >/dev/null 2>&1
   wait_healthy "$NEW_NAME" >/dev/null || die "$NEW_NAME 沒有 healthy:docker logs $NEW_NAME"
   say "等 Self-Balancing 計算搬移計畫:它要先蒐集到足夠的指標視窗(官方:啟動後需要一段時間蒐集指標),實測 15 到 20 分鐘"

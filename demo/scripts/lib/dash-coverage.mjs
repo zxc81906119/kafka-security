@@ -40,16 +40,18 @@ for (const f of files) {
   const dash = JSON.parse(fs.readFileSync(f, 'utf8'));
   const vars = { env: 'demo', Prometheus: 'Prometheus' };
   for (const v of dash.templating?.list || []) if (!(v.name in vars)) vars[v.name] = v.name === 'percentile' ? '0.99' : '.*';
-  let withData = 0, empty = 0, error = 0; const emptyList = [];
+  let withData = 0, empty = 0, error = 0, errSample = ''; const emptyList = [];
   for (const raw of exprs(dash)) {
     const q = substitute(raw, vars);
     const r = await get('/api/datasources/proxy/uid/Prometheus/api/v1/query?query=' + encodeURIComponent(q));
     let ok = false;
-    try { const j = JSON.parse(r.body); if (j.status === 'success') { ok = j.data.result.length > 0; } else error++; } catch { error++; }
+    try { const j = JSON.parse(r.body); if (j.status === 'success') { ok = j.data.result.length > 0; } else { error++; errSample ||= JSON.stringify(j).slice(0, 200); } }
+    catch { error++; errSample ||= `HTTP ${r.code ?? "?"} ${String(r.body).slice(0, 120)}`; }
     if (ok) withData++; else { empty++; emptyList.push(raw.slice(0, 110)); }
   }
   const name = f.split(/[\/]/).pop();
   console.log(`${name.padEnd(28)} 查詢 ${withData + empty} 個,有資料 ${withData} 個,沒資料 ${empty} 個(其中查詢出錯 ${error} 個)`);
+  if (errSample) console.log(`${''.padEnd(28)} 第一個查詢錯誤:${errSample}`);
   totalEmpty.push([name, emptyList]);
 }
 if (process.env.SHOW_EMPTY) for (const [n, l] of totalEmpty) { console.log('--- ' + n + ' 沒資料的查詢(前 ' + Math.min(l.length, +process.env.SHOW_EMPTY) + ' 個):'); l.slice(0, +process.env.SHOW_EMPTY).forEach(x => console.log('  ' + x)); }

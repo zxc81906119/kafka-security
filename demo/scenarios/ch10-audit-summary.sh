@@ -25,7 +25,12 @@ step audit-allowed "【被允許的事件】誰實際寫入/讀取了 orders.eve
   "kafka-console-consumer --topic confluent-audit-log-events  | granted=true 彙總" \
   'audit_events --topic "^orders\.events$" --granted true --summary --top 10' 'ALLOWED'
 
-step audit-mgmt "【權限變更紀錄】誰嘗試改授權(MDS 管理事件 AlterAccess)—— 非管理員的嘗試也被記錄" \
-  "kafka-console-consumer --topic confluent-audit-log-events  | mds.Authorize / AlterAccess" \
-  'audit_events --method "^mds\.Authorize$" --topic "^(orders|payments|kafka-cluster|security-metadata)" --summary --top 8' 'mds.Authorize'
+# 本章自己製造一次「非管理員改授權」:不依賴前面章節的執行順序(全 HA 回歸時,允許的事件多,前 8 名會把被拒那筆擠掉)
+source "$DEMO_ROOT/scripts/rbac-lib.sh"
+BIND_PAY="{\"scope\":{\"clusters\":{\"kafka-cluster\":\"$KAFKA_CLUSTER_ID\"}},\"resourcePatterns\":[{\"resourceType\":\"Topic\",\"name\":\"payments.\",\"patternType\":\"PREFIXED\"}]}"
+step audit-mgmt "【權限變更紀錄】誰嘗試改授權(MDS 管理事件 AlterAccess)—— yujie(沒有 rbac-admin)自己加授權被拒,也被記錄" \
+  "yujie POST /security/1.0/principals/Group:orders-write/roles/DeveloperWrite/bindings(預期 403);kafka-console-consumer --topic confluent-audit-log-events | mds.Authorize / AlterAccess" \
+  'mds basic yujie:yujie-pw POST /security/1.0/principals/Group%3Aorders-write/roles/DeveloperWrite/bindings "$BIND_PAY" | tail -1; sleep 15
+   echo "允許的(前 6 名):"; audit_events --method "^mds\.Authorize$" --topic "^(orders|payments|kafka-cluster|security-metadata)" --granted true --summary --top 6
+   echo "被拒的:"; audit_events --method "^mds\.Authorize$" --granted false --summary --top 5' 'mds\.Authorize +DENIED'
 ch_end

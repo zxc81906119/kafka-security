@@ -24,3 +24,4 @@ services:
   broker2: { environment: *tier, volumes: *tier-vol }
   broker3: { environment: *tier, volumes: *tier-vol }
   broker4: { environment: *tier, volumes: *tier-vol }
+  broker5: { environment: *tier, volumes: *tier-vol }

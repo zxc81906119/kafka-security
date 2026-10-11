@@ -11,7 +11,7 @@ const dlq = opts.includes('--dlq');
 
 const handler = 'io.confluent.kafka.clients.plugins.auth.token.TokenUserLoginCallbackHandler';
 const secretFile = '/etc/connect-secrets/orders-sink.properties';
-const mds = 'https://broker1:8091,https://broker2:8092';
+const mds = 'https://broker1:8091,https://broker2:8092,https://broker3:8093,https://broker4:8094';
 const jaas = principal === 'inline'
   ? `org.apache.kafka.common.security.oauthbearer.OAuthBearerLoginModule required username="SVC-ORDERS-SINK" password="${process.env.CONNECTOR_PASSWORD}" metadataServerUrls="${mds}";`
   : `org.apache.kafka.common.security.oauthbearer.OAuthBearerLoginModule required username="\${file:${secretFile}:username}" password="\${file:${secretFile}:password}" metadataServerUrls="${mds}";`;

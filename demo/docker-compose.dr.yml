@@ -1,0 +1,86 @@
+# 第 36 章:DR 站(災難備援)。由 scripts/dr-setup.sh up 啟動:docker compose -f docker-compose.yml -f docker-compose.dr.yml --profile dr
+# 縮小版(使用者 2026-10-11 決定,demo 的資源限制):1 台 controller + 3 台 broker、topic 副本 3 / min.insync.replicas 2。
+#   正式 DR 站應與主站同規格(3 controller + 4 broker)。安全設定沿用主站:同一個 AD(LDAPS)、同一個行內 CA、各自的 MDS / RBAC。
+# 設定以 extends 繼承主站的 controller1 / broker1,只覆寫叢集 ID、節點、主機名稱與連線位址;heap 調小、不開 JMX agent、不送 telemetry(省記憶體)。
+# 叢集 ID 與 controller 目錄 ID 為 demo 固定值(重建時保持一致)。
+x-dr-small: &dr-small
+  KAFKA_OPTS: "-Ddemo.cpsec=1"
+  KAFKA_METRIC_REPORTERS: org.apache.kafka.common.metrics.JmxReporter
+  KAFKA_CONFLUENT_TELEMETRY_EXPORTER_C3PLUSPLUS_ENABLED: "false"
+  CLUSTER_ID: 6UO2af5JhMr17GUHZbnmug
+  KAFKA_CONTROLLER_QUORUM_BOOTSTRAP_SERVERS: dr-controller1:9093
+
+x-dr-broker: &dr-broker
+  <<: *dr-small
+  KAFKA_HEAP_OPTS: "-Xms384m -Xmx384m"
+  KAFKA_KAFKA_REST_CONFLUENT_METADATA_BOOTSTRAP_SERVER_URLS: https://dr-broker1:8091,https://dr-broker2:8091,https://dr-broker3:8091
+  KAFKA_KAFKA_REST_BOOTSTRAP_SERVERS: SASL_SSL://dr-broker1:9094,SASL_SSL://dr-broker2:9094,SASL_SSL://dr-broker3:9094
+  KAFKA_CONFLUENT_METADATA_SERVER_LISTENERS: https://0.0.0.0:8091
+  KAFKA_CONFLUENT_BALANCER_ENABLE: "false"
+
+services:
+  dr-controller1:
+    extends: { file: docker-compose.yml, service: controller1 }
+    container_name: dr-controller1
+    hostname: dr-controller1
+    profiles: ["dr"]
+    ports: !reset []
+    healthcheck:
+      test: ["CMD-SHELL", "timeout 3 bash -c 'exec 3<>/dev/tcp/dr-controller1/9093'"]
+    environment:
+      <<: *dr-small
+      KAFKA_NODE_ID: 101
+      KAFKA_HEAP_OPTS: "-Xms192m -Xmx192m"
+      QUORUM_INITIAL_CONTROLLERS: "101@dr-controller1:9093:kFbz80UThUwbhCiYpOI1hw"
+      KAFKA_LISTENERS: CONTROLLER://dr-controller1:9093
+      KAFKA_CONFLUENT_METADATA_BOOTSTRAP_SERVERS: dr-broker1:9092,dr-broker2:9092,dr-broker3:9092
+      KAFKA_CONFLUENT_SECURITY_EVENT_LOGGER_EXPORTER_KAFKA_BOOTSTRAP_SERVERS: dr-broker1:9092,dr-broker2:9092,dr-broker3:9092
+      KAFKA_CONFLUENT_BALANCER_ENABLE: "false"
+
+  dr-broker1:
+    extends: { file: docker-compose.yml, service: broker1 }
+    container_name: dr-broker1
+    hostname: dr-broker1
+    profiles: ["dr"]
+    depends_on: !override
+      dr-controller1: { condition: service_healthy }
+      openldap: { condition: service_healthy }
+    ports: !reset []
+    environment:
+      <<: *dr-broker
+      KAFKA_NODE_ID: 121
+      KAFKA_LISTENERS: INTERNAL://dr-broker1:9092,CLIENT://0.0.0.0:9094
+      KAFKA_ADVERTISED_LISTENERS: INTERNAL://dr-broker1:9092,CLIENT://dr-broker1:9094
+      KAFKA_CONFLUENT_METADATA_SERVER_ADVERTISED_LISTENERS: https://dr-broker1:8091
+
+  dr-broker2:
+    extends: { file: docker-compose.yml, service: broker1 }
+    container_name: dr-broker2
+    hostname: dr-broker2
+    profiles: ["dr"]
+    depends_on: !override
+      dr-controller1: { condition: service_healthy }
+      openldap: { condition: service_healthy }
+    ports: !reset []
+    environment:
+      <<: *dr-broker
+      KAFKA_NODE_ID: 122
+      KAFKA_LISTENERS: INTERNAL://dr-broker2:9092,CLIENT://0.0.0.0:9094
+      KAFKA_ADVERTISED_LISTENERS: INTERNAL://dr-broker2:9092,CLIENT://dr-broker2:9094
+      KAFKA_CONFLUENT_METADATA_SERVER_ADVERTISED_LISTENERS: https://dr-broker2:8091
+
+  dr-broker3:
+    extends: { file: docker-compose.yml, service: broker1 }
+    container_name: dr-broker3
+    hostname: dr-broker3
+    profiles: ["dr"]
+    depends_on: !override
+      dr-controller1: { condition: service_healthy }
+      openldap: { condition: service_healthy }
+    ports: !reset []
+    environment:
+      <<: *dr-broker
+      KAFKA_NODE_ID: 123
+      KAFKA_LISTENERS: INTERNAL://dr-broker3:9092,CLIENT://0.0.0.0:9094
+      KAFKA_ADVERTISED_LISTENERS: INTERNAL://dr-broker3:9092,CLIENT://dr-broker3:9094
+      KAFKA_CONFLUENT_METADATA_SERVER_ADVERTISED_LISTENERS: https://dr-broker3:8091

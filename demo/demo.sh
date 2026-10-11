@@ -4,7 +4,7 @@
 # ----------------------------------------------------------------------------
 # 白話:對客戶或同事現場講解時用。它不自己做事,而是依選單去執行 scenarios/chNN-*.sh;每個步驟先顯示講稿、
 #   按 Enter 才執行,方便邊講邊做。
-# 前置條件:demo 環境已啟動(scripts/up.sh),章節若有額外需求(HA 模式、Prometheus、Schema Registry 等)
+# 前置條件:demo 環境已啟動(scripts/up.sh),章節若有額外需求(Prometheus、Schema Registry 等)
 #   已寫在選單說明裡;標示「不在 all 內」的章節要單獨執行。
 # 用法:
 #   ./demo.sh            互動選單
@@ -34,19 +34,23 @@ declare -A CH=(
   [17]="ch17-transport-hardening.sh|(進階)傳輸加密補強:AD 走 LDAPS、監控 HTTPS + Basic、C3 HTTPS"
   [18]="ch18-cyberark.sh|(進階)與行內 CyberArk 整合:應用程式取密碼、輪替、OP menu 取帳密、設定檔密碼不落地(Conjur)"
   [19]="ch19-stolen-account.sh|(進階)帳號被偷之後:限速、失效、告警(重新認證、連線上限、配額、認證失敗告警、AD 鎖定)"
-  [30]="ch30-alert-mail.sh|(進階)告警寄成信:Alertmanager 到自架郵件伺服器(分流、合併、解除通知、郵件伺服器保護;需 HA 模式與 Prometheus;不在 all 內)"
-  [31]="ch31-self-balancing.sh|(進階)Self-Balancing:自動搬分區(加 broker、負載不均不觸發的條件、移除 broker;需 HA 模式;約 40 分鐘;不在 all 內)"
-  [32]="ch32-tiered-storage.sh|(進階)Tiered Storage:舊資料放到物件儲存 MinIO(上傳、本機變小、從頭讀、重啟、存取保護;需 HA 模式;不在 all 內)"
+  [30]="ch30-alert-mail.sh|(進階)告警寄成信:Alertmanager 到自架郵件伺服器(分流、合併、解除通知、郵件伺服器保護;需 Prometheus;不在 all 內)"
+  [31]="ch31-self-balancing.sh|(進階)Self-Balancing:自動搬分區(加 broker、負載不均不觸發的條件、移除 broker;約 40 分鐘;不在 all 內)"
+  [32]="ch32-tiered-storage.sh|(進階)Tiered Storage:舊資料放到物件儲存 MinIO(上傳、本機變小、從頭讀、重啟、存取保護;不在 all 內)"
+  [33]="ch33-dynamic-quorum.sh|(進階)動態 quorum:靜態升級成動態、不停機汰換壞掉的 controller(需全新環境 scripts/ha.sh on;約 12 分鐘;不在 all 內)"
+  [34]="ch34-watchdog.sh|(進階)看門狗:監控自己壞掉時,誰會知道(停 Prometheus、停 Alertmanager、設定錯;約 25 分鐘;不在 all 內)"
+  [35]="ch35-rack.sh|(進階)多機架:整個機架斷電時,資料還寫得進去嗎(2 個與 3 個機架;約 25 分鐘;不在 all 內)"
+  [36]="ch36-dr.sh|(進階)DR 與演練:Cluster Linking、failover、量測 RPO / RTO、切回、演練紀錄(約 40 分鐘;不在 all 內)"
   [20]="ch20-schema-registry.sh|(進階)Schema Registry 納入同一套授權:subject 與 KEK 的權限;欄位級加密(CSFLE)的授權前提與授權限制"
-  [21]="ch21-ha.sh|(進階)HA 叢集:3 controller、3 broker 的停機行為與滾動重啟(需先 scripts/ha.sh on;不在 all 內)"
-  [22]="ch22-monitoring.sh|(進階)平台監控與告警:URP、離線分區、active controller 的告警實際觸發(需 HA 模式與 Prometheus;不在 all 內)"
-  [23]="ch23-cert-rotation.sh|(進階)憑證到期監控與不停機換憑證(需 HA 模式、Prometheus、blackbox-exporter;不在 all 內)"
-  [24]="ch24-reassign.sh|(進階)容量與再平衡:分區重新指派加限速(需 HA 模式;不在 all 內)"
-  [25]="ch25-app-reliability.sh|(進階)應用程式端的可靠性:冪等 producer、at-least-once、rebalance、靜態成員、交易(需 HA 模式;首次會下載 JDK 映像;不在 all 內)"
-  [26]="ch26-grafana.sh|(進階)Grafana 全元件監控:官方儀表板、主機指標(node_exporter)、consumer lag(kafka_exporter)、AD 登入(需 HA 模式與 Prometheus;不在 all 內)"
-  [27]="ch27-observability.sh|(進階)日誌與追蹤:經過 Kafka 進 Loki 與 Tempo(需 HA 模式與 Grafana;首次會下載映像與 OpenTelemetry agent;不在 all 內)"
+  [21]="ch21-ha.sh|(進階)HA 叢集:3 controller、4 broker 的停機行為與滾動重啟(不在 all 內)"
+  [22]="ch22-monitoring.sh|(進階)平台監控與告警:URP、離線分區、active controller 的告警實際觸發(需 Prometheus;不在 all 內)"
+  [23]="ch23-cert-rotation.sh|(進階)憑證到期監控與不停機換憑證(需 Prometheus、blackbox-exporter;不在 all 內)"
+  [24]="ch24-reassign.sh|(進階)容量與再平衡:分區重新指派加限速(不在 all 內)"
+  [25]="ch25-app-reliability.sh|(進階)應用程式端的可靠性:冪等 producer、at-least-once、rebalance、靜態成員、交易(首次會下載 JDK 映像;不在 all 內)"
+  [26]="ch26-grafana.sh|(進階)Grafana 全元件監控:官方儀表板、主機指標(node_exporter)、consumer lag(kafka_exporter)、AD 登入(需 Prometheus;不在 all 內)"
+  [27]="ch27-observability.sh|(進階)日誌與追蹤:經過 Kafka 進 Loki 與 Tempo(需 Grafana;首次會下載映像與 OpenTelemetry agent;不在 all 內)"
   [28]="ch28-schema-evolution.sh|(進階)Schema 演進與資料契約:相容性模式、命名策略、CEL 規則(需 Schema Registry;不在 all 內)"
-  [29]="ch29-connect.sh|(進階)Kafka Connect 的安全與可靠性:RBAC、連接器各用自己的身分、DLQ、密碼不落地(需 HA 模式;不在 all 內)"
+  [29]="ch29-connect.sh|(進階)Kafka Connect 的安全與可靠性:RBAC、連接器各用自己的身分、DLQ、密碼不落地(不在 all 內)"
 )
 run_ch() {
   local n="$1"; local f="${CH[$n]%%|*}"
@@ -59,13 +63,13 @@ run_ch() {
 case "${1:-menu}" in
   reset) ./scripts/reset.sh ;;
   all) for n in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 17 18 19 20; do run_ch "$n"; done ;;
-  [0-9]|1[0-9]|2[0-9]|3[0-2]) run_ch "$1" ;;
+  [0-9]|1[0-9]|2[0-9]|3[0-6]) run_ch "$1" ;;
   *)
     while true; do
       echo; echo "═══ Confluent 安全方案 Demo ═══"
-      for n in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 17 18 19 20 21 22 23 24 25 26 27 28 29 30; do printf "  %2s) %s\n" "$n" "${CH[$n]#*|}"; done
+      for n in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 35 36; do printf "  %2s) %s\n" "$n" "${CH[$n]#*|}"; done
       echo "   r) 重置   q) 離開"
       read -r -p "選擇章節: " c
-      case "$c" in q) break ;; r) ./scripts/reset.sh ;; [0-9]|1[0-9]|2[0-9]|3[0-2]) run_ch "$c" ;; esac
+      case "$c" in q) break ;; r) ./scripts/reset.sh ;; [0-9]|1[0-9]|2[0-9]|3[0-6]) run_ch "$c" ;; esac
     done ;;
 esac

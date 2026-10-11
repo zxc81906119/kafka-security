@@ -26,7 +26,7 @@ ok "cluster ID 仍由推算補上" "$(val "$out" KAFKA_CLUSTER_ID)" "derived|$re
 echo "== 3 少了必填的 BROKER_SERVICES → 登入階段明確報錯"
 cat > /tmp/opm-nobroker.conf <<'EOC'
 OPMENU_BACKEND=docker
-OPMENU_BOOTSTRAP='broker1:9094,broker2:9094'
+OPMENU_BOOTSTRAP='broker1:9094,broker2:9094,broker3:9094,broker4:9094'
 OPMENU_ALLOW_ENV_OVERRIDE=1
 EOC
 cp /tmp/opm-nobroker.conf ./.nobroker.conf

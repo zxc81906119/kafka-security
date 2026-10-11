@@ -32,10 +32,10 @@ verdict() { printf '判定:%s\n' "$*"; }
 # usage_from_header <腳本路徑>:把腳本開頭的說明區塊(第一段 # 開頭的註解)當成 --help 印出來。
 usage_from_header() { sed -n '2,/^# =\{20,\}$/p' "$1" | sed '1d;$d; s/^# \{0,1\}//'; }
 
-# need_ha_mode:確認目前是 HA 模式(3 controller + 3 broker),不是就提示怎麼切換並結束。
+# need_ha_mode:舊名稱,保留是為了相容。現在叢集一開始就是 3 controller + 4 broker、副本 3(不再有「基礎」與「HA」兩種模式),
+#   所以這裡不用檢查任何事;只確認 broker1 在跑(沒起來就提示怎麼啟動)。
 need_ha_mode() {
-  grep -q '^COMPOSE_FILE=.*docker-compose.ha.yml' "$DEMO_DIR/.env" 2>/dev/null \
-    || die "目前不是 HA 模式。先執行:scripts/ha.sh on(會清除資料並重建,約 2 分鐘)"
+  docker ps --format '{{.Names}}' | grep -qx broker1 || die "叢集沒有在跑。先執行:scripts/up.sh(或 scripts/ha.sh on 全新重建)"
 }
 
 # need_container <名稱>:確認某個容器正在執行,沒有就提示怎麼啟動並結束。
@@ -66,3 +66,17 @@ start_containers() { docker start "$@" >/dev/null; }
 
 # dcurl <curl 參數...>:在 demo 的 docker 網路內跑 curl,信任行內 CA;最後一行印出 [HTTP 狀態碼](連不上是 000)。
 dcurl() { bash "$DEMO_DIR/scripts/dcurl.sh" "$@"; }
+
+# compose_file_add <檔名> / compose_file_remove <檔名>:把疊加的 compose 檔加進 / 移出 .env 的 COMPOSE_FILE。
+#   多個實驗(第 32 章 tier、第 35 章 rack)可以同時疊加,互不覆蓋;全部移除後連 COMPOSE_FILE 一起刪掉。
+compose_file_add() {
+  local f="$1" env="$DEMO_DIR/.env"
+  grep -q '^COMPOSE_FILE=' "$env" || printf 'COMPOSE_PATH_SEPARATOR=,\nCOMPOSE_FILE=docker-compose.yml\n' >> "$env"
+  grep -q "^COMPOSE_FILE=.*$f" "$env" || sed -i "s|^COMPOSE_FILE=\(.*\)$|COMPOSE_FILE=\1,$f|" "$env"
+}
+compose_file_remove() {
+  local f="$1" env="$DEMO_DIR/.env"
+  sed -i "s|,$f||" "$env"
+  grep -q '^COMPOSE_FILE=docker-compose.yml$' "$env" && sed -i '/^COMPOSE_FILE=docker-compose.yml$/d;/^COMPOSE_PATH_SEPARATOR=/d' "$env"
+  return 0
+}

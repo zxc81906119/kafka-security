@@ -5,13 +5,14 @@
 # 白話:Control Center 只看得到 broker 與 controller;Grafana 把 Kafka、主機、consumer 放在同一個畫面。
 #   這支腳本逐項檢查:Grafana 本身有沒有被保護好(HTTPS、AD 登入)、官方儀表板真的有資料嗎(不是只有匯入成功)、
 #   主機磁碟指標、consumer 落後多少(故意讓 consumer 落後,看告警響不響)。
-# 前置條件:HA 模式,且已執行 scripts/grafana.sh on(會啟動 Grafana、node_exporter、kafka_exporter)
+# 前置條件:叢集已啟動,且已執行 scripts/grafana.sh on(會啟動 Grafana、node_exporter、kafka_exporter)
 # 用法:
 #   scripts/grafana-lab.sh stack        Grafana 的 HTTPS、資料來源、儀表板都就緒
 #   scripts/grafana-lab.sh dashboards   官方儀表板的每個查詢是否有資料(不是只有匯入成功)
 #   scripts/grafana-lab.sh host         node_exporter:mTLS 保護、磁碟指標、磁碟告警規則已載入
 #   scripts/grafana-lab.sh lag          kafka_exporter:最小權限、讓 consumer 落後 → 告警觸發 → 追上後解除
 #   scripts/grafana-lab.sh login        用 AD 帳號登入 Grafana:群組對映角色、錯密碼與匿名被擋
+#   scripts/grafana-lab.sh diskrule     磁碟告警規則的單元測試(promtool):合成時間序列驗證門檻、持續時間與解除(不需要把磁碟塞滿)
 # 會改動什麼:lag 會建立並刪除 topic mon.lag、用一個每次不同的 consumer group(g-lag-<時間>)讀資料;其餘只讀。
 # 怎麼判斷成功:最後一行印「判定:…」。
 # 常見失敗:「Grafana 沒有在跑」→ scripts/grafana.sh on;lag 的告警遲遲不來 → kafka_exporter 每 30 秒抓一次,告警要連續 2 分鐘,約 3 到 4 分鐘
@@ -53,11 +54,20 @@ lab_stack() {
     && verdict "Grafana 只收 HTTPS(明文請求被拒)、資料來源健康、$n 個儀表板已載入(5 個官方、1 個自製)"
 }
 
+# 給 wait_until 用:Grafana 經資料來源代理查 Prometheus,4 台 broker 的 kafka_server_replicamanager_leadercount 都有資料就回傳 0
+grafana_prom_ready() {
+  local url="https://localhost:3000/api/datasources/proxy/uid/Prometheus/api/v1/query?query=count(kafka_server_replicamanager_leadercount)" n
+  n=$(curl -s --ssl-no-revoke --cacert certs/ca.pem -u "$ADMIN_AUTH" "$url" | node "$LIB_DIR/prom-value.mjs" 2>/dev/null)
+  [ "${n%%.*}" -ge 4 ] 2>/dev/null
+}
+
 lab_dashboards() {
   say "把每個儀表板的每個 PromQL 查詢都透過 Grafana 跑一次,數有幾個回傳資料——匯入成功不等於用得起來"
   local out total with_data
   local f files=()
   for f in config/grafana/dashboards/*.json; do [ "${f##*/}" = cp-host-lag.json ] || files+=("$f"); done   # 自製的不算在『官方儀表板』裡
+  # 先等 Grafana 經資料來源查得到 Kafka 指標再量:剛啟動 / Prometheus 剛重啟時查詢會出錯(實測:同一組儀表板 24 個 → 穩定後 126 個有資料)
+  wait_until "Grafana 經資料來源查得到 Kafka 指標" 300 grafana_prom_ready >/dev/null || true
   out=$(node "$LIB_DIR/dash-coverage.mjs" https://localhost:3000 "$ADMIN_AUTH" certs/ca.pem "${files[@]}")
   echo "$out"
   total=$(echo "$out" | sed -E 's/.*查詢 ([0-9]+) 個,有資料 ([0-9]+) 個.*/\1/' | awk '{s+=$1} END {print s}')
@@ -107,12 +117,12 @@ lab_lag() {
     --topic mon.lag --group "$group" --from-beginning --max-messages 2000 --timeout-ms 20000 >/dev/null 2>&1
   wait_until "Prometheus 看到 $LAG_GROUP 落後超過 1000 筆" 180 lag_over_1000 || true
   echo "目前 $LAG_GROUP 的 lag:$(prom_query 'sum(kafka_consumergroup_lag{consumergroup="'$LAG_GROUP'"})')"
-  wait_until "KafkaConsumerLagHigh 觸發" 300 alert_is_firing KafkaConsumerLagHigh '^Kafka' && f1=1
+  wait_until "$LAG_GROUP 的 KafkaConsumerLagHigh 觸發(規則 for: 2m)" 300 lag_alert_firing && f1=1
 
   say "再讀完剩下的,lag 回到 0,告警應該解除"
   "$DEMO_DIR/scripts/k.sh" kafka-console-consumer --bootstrap-server "$KAFKA_BOOTSTRAP" --command-config "$KAFKA_ADMIN_CONFIG" \
     --topic mon.lag --group "$group" --from-beginning --max-messages 4000 --timeout-ms 20000 >/dev/null 2>&1
-  wait_until "KafkaConsumerLagHigh 解除" 300 alert_is_cleared KafkaConsumerLagHigh '^Kafka' && f2=1
+  wait_until "$LAG_GROUP 的 KafkaConsumerLagHigh 解除" 300 lag_alert_cleared && f2=1
   kafka_topics --delete --if-exists --topic mon.lag >/dev/null
   [ "${sent:-0}" = 6000 ] && [ "$listed" -ge 1 ] && [ "$denied" -ge 1 ] && [ "$f1" = 1 ] && [ "$f2" = 1 ] \
     && verdict "kafka_exporter 只有 Describe 權限(看得到 offset、讀訊息被拒);consumer 落後時 lag 指標與告警觸發,追上後解除"
@@ -122,6 +132,19 @@ lab_lag() {
 lag_over_1000() {
   local v; v=$(prom_query 'sum(kafka_consumergroup_lag{consumergroup="'$LAG_GROUP'"}) > 1000')
   [ "$v" != "無" ] && [ "$v" != "?" ]
+}
+
+# 只看這一章自己建立的 group:其他章節留下的 group 若也落後,同名告警會一直在,不能用告警名稱判斷
+lag_alert_firing()  { [ "$(prom_query 'count(ALERTS{alertname="KafkaConsumerLagHigh",alertstate="firing",consumergroup="'"$LAG_GROUP"'"}) or vector(0)')" -ge 1 ]; }
+lag_alert_cleared() { ! lag_alert_firing; }
+
+lab_diskrule() {
+  say "磁碟告警在容器環境沒辦法真的塞滿磁碟,改用 promtool 的規則單元測試:合成時間序列,驗證『超過 80% 持續 5 分鐘才告警、降下來就解除、tmpfs 不算』"
+  local out
+  out=$(docker run --rm --entrypoint promtool -v "$(pwd -W 2>/dev/null || pwd)/config/c3:/t:ro" prom/prometheus:latest test rules /t/ops_rules_host.test.yml 2>&1)
+  echo "$out" | tail -6 | sed 's/^/  /'
+  echo "$out" | grep -q 'SUCCESS' \
+    && verdict "磁碟規則單元測試通過:70% 不告警、85% 持續 5 分鐘後告警(含摘要文字)、降到 60% 解除、tmpfs 不算;真實磁碟寫滿未測"
 }
 
 lab_login() {
@@ -151,5 +174,6 @@ case "${1:-}" in
   host)       lab_host ;;
   lag)        lab_lag ;;
   login)      lab_login ;;
+  diskrule)   lab_diskrule ;;
   *)          usage_from_header "$0"; exit 1 ;;
 esac

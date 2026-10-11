@@ -20,6 +20,12 @@
 # ============================================================================
 source "$(dirname "$0")/../scripts/lib-ev.sh"
 ch_begin ch03 "RBAC 與 AD 群組:授權跟著群組走"
+source "$DEMO_ROOT/scripts/rbac-lib.sh"
+# 本章要示範「授權前被拒 → 授權後成功」,起點必須是 orders-write 沒有 orders. 的示範綁定;不依賴前面章節是否跑過 reset.sh
+for r in DeveloperRead DeveloperWrite; do rbac_unbind cert bootstrap Group:orders-write $r Topic orders. PREFIXED >/dev/null 2>&1; done
+# 同理:本章的對照組是「ming 不在任何群組」(第 4 章會把 ming 放進群組);先移出,並等 MDS 的群組快取更新
+for g in orders-read orders-write ops topic-admin cluster-admin rbac-admin security breakglass; do "$DEMO_ROOT/scripts/ldap-group.sh" remove ming $g >/dev/null 2>&1 || true; done
+wait_group_effect
 UI() { (cd "$DEMO_ROOT/e2e" && node ch03-ui.mjs "$1" 2>&1 | grep -v '^$'); }
 
 step before "【授權前】yujie 屬於 AD 群組 orders-write,但還沒有任何 role → 寫入被拒" \
@@ -41,7 +47,7 @@ step yujie-ok "【授權後】yujie 寫入 orders.events 成功(他的權限來�
 
 step ming-denied "【對照】ming 不在任何群組 → 同一個 topic 被拒" \
   "echo hi | kafka-console-producer ... --command-config ming.properties --topic orders.events" \
-  'as_produce ming orders.events hi-from-ming' 'not authorized|Not authorized|TopicAuthorization'
+  'as_produce ming orders.events hi-from-ming' 'not authorized|Not authorized|TopicAuthorization|Cluster authorization failed'   # 冪等 producer 先申請 producer ID,可能先撞到叢集層級的拒絕(第 4 章同)
 
 step ldap-add "【AD 操作】在 AD(LDAP 管理介面)把 ming 加進群組 orders-write —— Kafka/RBAC 這邊完全不動" \
   "(瀏覽器)phpLDAPadmin → cn=orders-write → member 加入 CN=MING" \

@@ -6,7 +6,7 @@
 #   誰能建立與看到連接器(RBAC)、連接器用自己的最小權限身分而不是 worker 的大權限、
 #   壞資料不會拖垮整個連接器(DLQ)、連接器的密碼不會寫在設定裡被人從 REST 或 topic 讀走。
 #   連接器用 Apache Kafka 自帶的 FileStreamSink(寫進檔案),只為了示範 Connect 本身的行為。
-# 前置條件:HA 模式 + scripts/connect-setup.sh on
+# 前置條件:叢集已啟動 + scripts/connect-setup.sh on
 # 用法:
 #   scripts/connect-lab.sh rbac       AD 群組決定誰能建立、看到、刪除連接器
 #   scripts/connect-lab.sh identity   連接器用自己的服務帳號(最小權限);用 worker 身分或讀沒授權的 topic 會失敗
@@ -22,7 +22,8 @@ source "$(dirname "${BASH_SOURCE[0]}")/lib/kafka.sh"
 [ "${1:-}" = "--help" ] && { usage_from_header "$0"; exit 0; }
 cd "$DEMO_DIR" || exit 1
 need_ha_mode
-need_container connect "先執行:scripts/connect-setup.sh on"
+need_container connect1 "先執行:scripts/connect-setup.sh on"
+need_container connect2 "先執行:scripts/connect-setup.sh on"
 
 CONNECT=https://connect:8083
 JSON_TYPE='Content-Type: application/json'
@@ -107,7 +108,7 @@ lab_dlq() {
   say "寫 8 筆進 orders.sink(5 筆好的 JSON、3 筆壞的)。對照:沒有容錯的連接器遇到壞資料就停;有容錯加 DLQ 的好的繼續、壞的進 DLQ"
   local strict_state tol_file dlq_n header
   delete_connector orders-sink orders-strict orders-dlq      # orders-sink 是手動試過的舊連接器,它也會把壞資料寫進同一個 DLQ,先刪掉
-  docker exec connect sh -c 'rm -f /tmp/orders-dlq.out /tmp/orders-strict.out' 2>/dev/null
+  for w in connect1 connect2; do docker exec "$w" sh -c 'rm -f /tmp/orders-dlq.out /tmp/orders-strict.out' 2>/dev/null; done   # 連接器的 task 會跑在任一台 worker,兩台都清
   reset_topics orders.sink orders.sink.dlq      # 清掉前面實驗留下的資料,數字才是這一次的
   create_connector gary:gary-pw orders-strict orders.sink >/dev/null
   create_connector gary:gary-pw orders-dlq orders.sink --dlq >/dev/null
@@ -117,7 +118,7 @@ lab_dlq() {
   echo "orders-strict(errors.tolerance=none,預設):$strict_state"
   echo "   錯誤:$(task_error orders-strict)"
   sleep 10
-  tol_file=$(docker exec connect cat /tmp/orders-dlq.out 2>/dev/null | grep -c '^{id=')
+  tol_file=$( { docker exec connect1 cat /tmp/orders-dlq.out 2>/dev/null; docker exec connect2 cat /tmp/orders-dlq.out 2>/dev/null; } | grep -c '^{id=')   # task 在哪一台 worker 不固定,兩台的檔案合併計算
   echo "orders-dlq(errors.tolerance=all + DLQ):狀態 $(connector_state orders-dlq);寫進檔案的好資料 $tol_file 筆"
   dlq_n=$("$DEMO_DIR/scripts/k.sh" kafka-get-offsets --bootstrap-server "$KAFKA_BOOTSTRAP" --command-config "$KAFKA_ADMIN_CONFIG" --topic orders.sink.dlq 2>/dev/null | awk -F: '{s+=$3} END {print s+0}')
   echo "DLQ topic orders.sink.dlq 共 $dlq_n 筆(壞資料 3 筆)"

@@ -6,9 +6,9 @@
 #   會吃網路與磁碟,搬太快會拖慢正在服務的讀寫,所以要『限速(throttle)』。限速是寫在叢集設定裡的,
 #   搬完如果沒有收尾(--verify),限速會一直留著,之後別的複製流量(例如重啟的 broker 追資料)也被默默限速。
 #   這支腳本依序練習:造出不均的叢集 → 存回退檔 → 限速搬家(寫入不中斷)→ 取消搬到一半的搬家 → 忘了收尾的殘留與清除。
-# 前置條件:HA 模式(scripts/ha.sh on:3 台 broker)
+# 前置條件:叢集已啟動(scripts/up.sh)
 # 用法:
-#   scripts/reassign-lab.sh skew       建 6 分區 topic cap.skew,所有副本只放在 broker1、broker2,寫入約 200 MB;broker3 是空的
+#   scripts/reassign-lab.sh skew       建 6 分區 topic cap.skew(副本 3),所有副本只放在 broker1~3,寫入約 200 MB;broker4 是空的(= 新加入的 broker)
 #   scripts/reassign-lab.sh plan       存目前的指派當回退檔;看工具建議的新指派(--generate);寫出審過的均衡計畫
 #   scripts/reassign-lab.sh execute    限速(預設 4 MB/s)搬家,同時背景持續寫入;用 --verify 追到完成並自動移除限速
 #   scripts/reassign-lab.sh cancel     以 1 MB/s 慢慢搬回去,搬到一半 --cancel:回到搬家前的指派
@@ -31,16 +31,16 @@ need_ha_mode
 
 TOPIC=cap.skew
 PARTITIONS=6
-BROKER_IDS="${CERT_BROKER_IDS:-11 12 13}"          # broker 的 node id(測試環境 broker1/2/3 = 11/12/13)
+BROKER_IDS="${CERT_BROKER_IDS:-11 12 13 14}"       # broker 的 node id(broker1~4 = 11~14)
 ROLLBACK_FILE=/tmp/cap-rollback.json               # 搬家前的指派(回退用)
 PLAN_FILE=/tmp/cap-plan.json                       # 審過、要執行的均衡計畫
 THROTTLE="${THROTTLE:-4000000}"
 
 # ---------- 小工具(這支腳本專用) ----------
 
-# 把 BROKER_IDS 拆成陣列 IDS,並算出『只放前兩台』的 id 清單(造不均用)。
+# 把 BROKER_IDS 拆成陣列 IDS;造不均時只用前 3 台(副本 3),第 4 台留空。
 read -r -a IDS <<< "$BROKER_IDS"
-SKEW_A=${IDS[0]}; SKEW_B=${IDS[1]}
+N=${#IDS[@]}                                   # broker 台數(4)
 
 # 目前每個分區的 Replicas 與 Isr(精簡顯示)。
 show_assignment() {
@@ -78,24 +78,24 @@ throttle_residue() {
   THROTTLE_COUNT=$((b + t))
 }
 
-# 組出「輪流放在三台」的均衡計畫:分區 p 的副本放在 IDS[p%3]、IDS[(p+1)%3]。
+# 組出「輪流放在全部 broker」的均衡計畫:分區 p 的 3 個副本放在 IDS[p%N]、IDS[(p+1)%N]、IDS[(p+2)%N]。
 write_balanced_plan() {
-  local p a b sep=""
+  local p a b c sep=""
   printf '{"version":1,"partitions":[' > "$PLAN_FILE"
   for p in $(seq 0 $((PARTITIONS - 1))); do
-    a=${IDS[$((p % 3))]}; b=${IDS[$(((p + 1) % 3))]}
-    printf '%s{"topic":"%s","partition":%d,"replicas":[%s,%s]}' "$sep" "$TOPIC" "$p" "$a" "$b" >> "$PLAN_FILE"; sep=","
+    a=${IDS[$((p % N))]}; b=${IDS[$(((p + 1) % N))]}; c=${IDS[$(((p + 2) % N))]}
+    printf '%s{"topic":"%s","partition":%d,"replicas":[%s,%s,%s]}' "$sep" "$TOPIC" "$p" "$a" "$b" "$c" >> "$PLAN_FILE"; sep=","
   done
   printf ']}\n' >> "$PLAN_FILE"
 }
 
-# 組出「全部擠在前兩台」的計畫(用來『搬回去』的另一個方向)。
+# 組出「全部擠在前 3 台」的計畫(用來『搬回去』的另一個方向):分區 p 的副本在 IDS[0..2] 之間輪替 leader。
 write_skew_plan() {
-  local file="$1" p a b sep=""
+  local file="$1" p a b c sep=""
   printf '{"version":1,"partitions":[' > "$file"
   for p in $(seq 0 $((PARTITIONS - 1))); do
-    if [ $((p % 2)) = 0 ]; then a=$SKEW_A; b=$SKEW_B; else a=$SKEW_B; b=$SKEW_A; fi
-    printf '%s{"topic":"%s","partition":%d,"replicas":[%s,%s]}' "$sep" "$TOPIC" "$p" "$a" "$b" >> "$file"; sep=","
+    a=${IDS[$((p % 3))]}; b=${IDS[$(((p + 1) % 3))]}; c=${IDS[$(((p + 2) % 3))]}
+    printf '%s{"topic":"%s","partition":%d,"replicas":[%s,%s,%s]}' "$sep" "$TOPIC" "$p" "$a" "$b" "$c" >> "$file"; sep=","
   done
   printf ']}\n' >> "$file"
 }
@@ -117,18 +117,20 @@ verify_until_done() {
 # ---------- 各個實驗 ----------
 
 lab_skew() {
-  say "建立一個 6 分區的 topic,故意把所有副本都放在 broker1 與 broker2,寫入約 200 MB;broker3 完全沒有資料"
-  local sent
+  say "建立一個 6 分區、副本 3 的 topic,故意把所有副本都放在 broker1~3,寫入約 200 MB;broker4 完全沒有資料(就像剛加入的新 broker)"
+  local sent assign="" p sep=""
   kafka_topics --delete --if-exists --topic "$TOPIC" >/dev/null; sleep 3
   write_skew_plan /tmp/cap-skew-assign.json
-  kafka_topics --create --topic "$TOPIC" --replica-assignment "$SKEW_A:$SKEW_B,$SKEW_B:$SKEW_A,$SKEW_A:$SKEW_B,$SKEW_B:$SKEW_A,$SKEW_A:$SKEW_B,$SKEW_B:$SKEW_A" \
-    --config min.insync.replicas=1 | grep -E "Created|rror" || echo "失敗"
+  for p in $(seq 0 $((PARTITIONS - 1))); do
+    assign="$assign$sep${IDS[$((p % 3))]}:${IDS[$(((p + 1) % 3))]}:${IDS[$(((p + 2) % 3))]}"; sep=","
+  done
+  kafka_topics --create --topic "$TOPIC" --replica-assignment "$assign" | grep -E "Created|rror" || echo "失敗"
   sent=$(RECORD_SIZE=1024 produce_test "$TOPIC" 200000 all)
   echo "寫入 ${sent:-0} 筆(每筆約 1 KB)"
   echo "每台 broker 上 $TOPIC 的資料量:"
   broker_sizes "$TOPIC"
-  [ "${sent:-0}" = 200000 ] && broker_sizes "$TOPIC" | grep -qE "broker ${IDS[2]} +0 MB" \
-    && verdict "資料全擠在 broker1、broker2,broker3 是空的(負載不均;新增 broker 後也是這種狀態)"
+  [ "${sent:-0}" = 200000 ] && broker_sizes "$TOPIC" | grep -qE "broker ${IDS[3]} +0 MB" \
+    && verdict "資料全擠在 broker1~3,broker4 是空的(負載不均;新增 broker 後就是這種狀態)"
 }
 
 lab_plan() {
@@ -141,7 +143,7 @@ lab_plan() {
   echo "工具建議的新指派(--generate;只是草稿,起點是隨機的、也不會刻意減少搬動量):"
   echo "$gen" | grep '^{' | tail -1 | grep -o '"partition":[0-9]*,"replicas":\[[0-9,]*\]' | sed 's/^/  /'
   write_balanced_plan
-  echo "審過、要執行的計畫 $PLAN_FILE(輪流放在三台,每台一樣多):"
+  echo "審過、要執行的計畫 $PLAN_FILE(輪流放在 4 台,每台一樣多):"
   grep -o '"partition":[0-9]*,"replicas":\[[0-9,]*\]' "$PLAN_FILE" | sed 's/^/  /'
   [ "$current_n" = "$PARTITIONS" ] \
     && verdict "已存回退檔(搬家前的指派)並寫出均衡計畫;--generate 只當草稿,正式執行的是審過的計畫"
@@ -171,12 +173,12 @@ lab_execute() {
   echo "搬家期間 producer 送出 ${sent:-?} 筆;topic 多了 $have 筆;搬家共 $secs 秒"
   echo -n "搬完後:"; throttle_residue
   [ "${sent:-}" = 600 ] && [ "$have" = 600 ] && [ "$THROTTLE_COUNT" = 0 ] && ! broker_sizes "$TOPIC" | grep -q "(無)" \
-    && verdict "限速搬家期間寫入零失敗(600 = 600)、三台 broker 都有資料、--verify 完成後限速自動移除"
+    && verdict "限速搬家期間寫入零失敗(600 = 600)、4 台 broker 都有資料、--verify 完成後限速自動移除"
 }
 
 lab_cancel() {
   need_files
-  say "以 1 MB/s 慢慢搬回『擠在兩台』的指派,搬到一半 --cancel:應該回到搬家前的均衡指派,且限速一併清掉"
+  say "以 1 MB/s 慢慢搬回『擠在前 3 台』的指派,搬到一半 --cancel:應該回到搬家前的均衡指派,且限速一併清掉"
   local skew_plan=/tmp/cap-skew-plan.json before after
   write_skew_plan "$skew_plan"
   echo "搬家前的指派:"; show_assignment; before=$(replica_layout)

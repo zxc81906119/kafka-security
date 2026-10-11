@@ -20,8 +20,8 @@ DC="$DEMO_ROOT/scripts/dcurl.sh"
 
 # ---------------- AD(LDAPS) ----------------
 step ldaps-from-broker "【AD ①】broker 連 AD 走 LDAPS(636):openldap 日誌裡,來自 broker 的連線全部落在 636,389 沒有 broker 的連線" \
-  "docker logs openldap | grep ACCEPT   # 依來源(broker1、broker2)與目的埠彙總" \
-  'a=0; b=0; for x in broker1 broker2; do ip=$(docker inspect $x --format "{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}"); n6=$(docker logs openldap 2>&1 | grep ACCEPT | grep "from IP=$ip:" | grep -c "IP=0.0.0.0:636"); n3=$(docker logs openldap 2>&1 | grep ACCEPT | grep "from IP=$ip:" | grep -c "IP=0.0.0.0:389"); echo "$x($ip): $n6 條連到 636、$n3 條連到 389"; a=$((a+n6)); b=$((b+n3)); done; [ $a -gt 0 ] && [ $b -eq 0 ] && echo "判定:broker 連 AD 只走 LDAPS(636)" || echo "判定:不符合"' '判定:broker 連 AD 只走 LDAPS'
+  "docker logs openldap | grep ACCEPT   # 依來源(broker1~4)與目的埠彙總" \
+  'a=0; b=0; for x in broker1 broker2 broker3 broker4; do ip=$(docker inspect $x --format "{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}"); n6=$(docker logs openldap 2>&1 | grep ACCEPT | grep "from IP=$ip:" | grep -c "IP=0.0.0.0:636"); n3=$(docker logs openldap 2>&1 | grep ACCEPT | grep "from IP=$ip:" | grep -c "IP=0.0.0.0:389"); echo "$x($ip): $n6 條連到 636、$n3 條連到 389"; a=$((a+n6)); b=$((b+n3)); done; [ $a -gt 0 ] && [ $b -eq 0 ] && echo "判定:broker 連 AD 只走 LDAPS(636)" || echo "判定:不符合"' '判定:broker 連 AD 只走 LDAPS'
 
 step ldaps-trust "【AD ②】LDAPS 要信任簽發憑證的 CA:信任 demo CA 才連得上;不信任就失敗(所以連 AD 的 JVM 才需要 ldap.ssl.truststore)" \
   "ldapsearch -H ldaps://openldap:636   # 對照:信任 / 不信任 CA" \

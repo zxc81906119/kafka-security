@@ -6,7 +6,7 @@
 #   (1) 誰能建立、查看、刪除連接器——交給 AD 群組與 RBAC(和其他元件同一套);
 #   (2) 連接器讀寫 Kafka 用什麼身分——每個連接器用自己的 AD 服務帳號(最小權限),不共用 worker 的大權限。
 #   這支腳本備妥:worker 的 client 憑證與角色、連接器的 AD 服務帳號與角色、使用者(群組)對連接器的角色、外掛、密碼檔。
-# 前置條件:HA 模式(scripts/ha.sh on);記憶體吃緊時先 scripts/observability.sh off、docker stop control-center
+# 前置條件:叢集已啟動(scripts/up.sh);記憶體吃緊時先 scripts/observability.sh off、docker stop control-center
 # 用法:
 #   scripts/connect-setup.sh on       備妥並啟動(可重複執行)
 #   scripts/connect-setup.sh off      停掉 Connect(topic、角色、帳號保留)
@@ -111,10 +111,10 @@ turn_on() {
   bash scripts/make-certs.sh >/dev/null           # 補 connect 的 client 憑證(已有的略過)
   fetch_plugin; prepare_ad_account; prepare_secret_file; prepare_topics; prepare_roles
   say "啟動 Connect worker"
-  docker compose --profile connect up -d connect >/dev/null 2>&1
-  wait_healthy connect >/dev/null || die "Connect 沒有 healthy:docker logs connect"
+  docker compose --profile connect up -d connect1 connect2 >/dev/null 2>&1
+  wait_healthy connect1 connect2 >/dev/null || die "Connect 沒有 healthy:docker logs connect1 / connect2"
   say "等 REST 與授權就緒(gary 可以列出連接器)"
-  wait_until "gary 能列出連接器" 180 connect_rest_ready || die "REST 授權沒有就緒:docker logs connect"
+  wait_until "gary 能列出連接器" 180 connect_rest_ready || die "REST 授權沒有就緒:docker logs connect1"
   note "[connect] 就緒:https://localhost:8083(AD 帳密,Basic)"
 }
 
@@ -124,14 +124,14 @@ connect_rest_ready() {
 
 turn_off() {
   say "停掉 Connect(Kafka 裡的內部 topic、角色與 AD 帳號保留)"
-  docker compose --profile connect stop connect >/dev/null 2>&1 || true
-  docker compose --profile connect rm -f connect >/dev/null 2>&1 || true
+  docker compose --profile connect stop connect1 connect2 >/dev/null 2>&1 || true
+  docker compose --profile connect rm -f connect1 connect2 >/dev/null 2>&1 || true
   note "[connect] 已關閉"
 }
 
 case "${1:-status}" in
   on)     turn_on ;;
   off)    turn_off ;;
-  status) docker ps -a --format '{{.Names}} {{.Status}}' | grep -E '^connect ' || echo "Connect 沒有在跑" ;;
+  status) docker ps -a --format '{{.Names}} {{.Status}}' | grep -E '^connect[12] ' || echo "Connect 沒有在跑" ;;
   *)      usage_from_header "$0"; exit 1 ;;
 esac

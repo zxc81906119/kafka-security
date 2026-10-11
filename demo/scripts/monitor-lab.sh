@@ -5,7 +5,7 @@
 # 白話:監控的價值在「出事時真的會響」。這支腳本實際把 broker 或 controller 停掉,
 #   看 Prometheus 的告警規則有沒有在預期時間內觸發、有沒有送到 Alertmanager、恢復後有沒有解除。
 #   另外檢查「監控自己」的安全:各個 exporter 與 Prometheus 是不是都要帳密或憑證才能連。
-# 前置條件:HA 模式(scripts/ha.sh on),且 prometheus、alertmanager 已啟動
+# 前置條件:叢集已啟動(scripts/up.sh),且 prometheus、alertmanager 已啟動
 #   (docker compose --profile c3 up -d prometheus alertmanager)
 # 用法:
 #   scripts/monitor-lab.sh jmx-endpoint  每個 broker、controller 都開了 JMX exporter(7778 埠),關鍵指標都在
@@ -35,7 +35,7 @@ need_container prometheus "先執行:docker compose --profile c3 up -d prometheu
 
 SRC="${SRC:-telemetry}"
 RULE_GROUP=$([ "$SRC" = jmx ] && echo kafka-platform-jmx || echo kafka-platform)
-NODES="broker1 broker2 broker3 controller1 controller2 controller3"
+NODES="broker1 broker2 broker3 broker4 controller1 controller2 controller3"
 # 平台告警的名稱都以 Kafka 開頭;KafkaAuthFailuresBurst 是另一章(認證失敗)的告警,這裡不算
 PLATFORM_ALERTS='^Kafka'
 NOT_PLATFORM='KafkaAuthFailuresBurst|KafkaConsumerLagHigh|KafkaExporterDown'   # 其他章節(認證失敗、第 26 章的 consumer lag)的告警,這裡不算
@@ -83,7 +83,7 @@ http_code() { dcurl "$@" 2>/dev/null | tail -1; }
 # ---------- 各個實驗 ----------
 
 lab_jmx_endpoint() {
-  say "確認 6 個節點都開了 JMX exporter(HTTPS + Basic 帳密),而且關鍵指標都在"
+  say "確認 7 個節點都開了 JMX exporter(HTTPS + Basic 帳密),而且關鍵指標都在"
   local sha ver miss=0 n c
   JMX_PW=$(cat config/c3/jmx_exporter.pw)
   sha=$(sha1sum config/jmx/jmx_prometheus_javaagent.jar | awk '{print $1}')
@@ -99,15 +99,15 @@ lab_jmx_endpoint() {
   jmx_get broker1 | grep -E '^kafka_server_replicamanager_(underreplicatedpartitions|underminisrpartitioncount) ' | sed 's/^/  /'
   echo "controller1 的關鍵指標:"
   jmx_get controller1 | grep -E '^kafka_controller_kafkacontroller_(offlinepartitionscount|activecontrollercount) ' | sed 's/^/  /'
-  [ "$miss" = 0 ] && verdict "6 個節點都開了 JMX exporter(7778 埠,HTTPS + Basic 帳密),URP、離線分區、active controller 等關鍵指標都在"
+  [ "$miss" = 0 ] && verdict "7 個節點都開了 JMX exporter(7778 埠,HTTPS + Basic 帳密),URP、離線分區、active controller 等關鍵指標都在"
 }
 
 lab_protect() {
   local bad=0 n a b c h probe n1 n2 n3 ok down up
   JMX_PW=$(cat config/c3/jmx_exporter.pw)
 
-  say "① 6 個 JMX exporter:不帶帳密、錯密碼都要被擋(401),正確帳密才給資料(200),明文 http 連不上"
-  echo "① 6 個節點的 JMX exporter(HTTPS + Basic 帳密):"
+  say "① 7 個 JMX exporter:不帶帳密、錯密碼都要被擋(401),正確帳密才給資料(200),明文 http 連不上"
+  echo "① 7 個節點的 JMX exporter(HTTPS + Basic 帳密):"
   for n in $NODES; do
     a=$(http_code "https://$n:7778/metrics")
     b=$(http_code -u Prometheus:wrong-pw "https://$n:7778/metrics")
@@ -132,7 +132,7 @@ lab_protect() {
   down=$(prom_query 'count(up{job=~"kafka-broker|kafka-controller|tls-expiry|tls-expiry-mtls"} == 0) or vector(0)')
   up=$(prom_query 'count(up{job=~"kafka-broker|kafka-controller|tls-expiry|tls-expiry-mtls"} == 1) or vector(0)')
   echo "③ Prometheus 以 https(驗證憑證鏈)+ 帳密 / mTLS 抓取:目標 up=1 的有 $up 個,up=0 的有 $down 個"
-  [ "$down" = 0 ] && [ "$up" -ge 18 ] || bad=1
+  [ "$down" = 0 ] && [ "$up" -ge 29 ] || bad=1   # JMX 7(broker 4、controller 3)+ TLS 探測 22(對外 15、內部 7)
 
   say "④ Prometheus 與 Alertmanager 的帳號依用途分開:各自的帳號有效,不認識的帳號一律 401"
   echo "④ Prometheus 與 Alertmanager 的帳號依用途分開(機制仍是 HTTPS + Basic):"
@@ -146,7 +146,7 @@ lab_protect() {
   case "$pa$aa" in *"nobody:x→[HTTP 401]"*"nobody:x→[HTTP 401]"*) ;; *) bad=1;; esac
   [ "$(echo "$pa" | grep -o 'HTTP 200' | wc -l)" = 4 ] && [ "$(echo "$aa" | grep -o 'HTTP 200' | wc -l)" = 4 ] && [ "$tk" = 1 ] && [ "$ak" = 1 ] || bad=1
 
-  [ "$bad" = 0 ] && verdict "監控端點全部受保護:6 個 exporter 都是 HTTPS + Basic(不帶帳密與錯密碼 401、明文無回應),blackbox 要求 mTLS(沒有或不被信任的 client 憑證握手被拒),Prometheus 正常抓取;Prometheus 與 Alertmanager 的帳號依用途分開(各自有效、未知帳號 401)"
+  [ "$bad" = 0 ] && verdict "監控端點全部受保護:7 個 exporter 都是 HTTPS + Basic(不帶帳密與錯密碼 401、明文無回應),blackbox 要求 mTLS(沒有或不被信任的 client 憑證握手被拒),Prometheus 正常抓取;Prometheus 與 Alertmanager 的帳號依用途分開(各自有效、未知帳號 401)"
 }
 
 lab_rules() {

@@ -5,7 +5,7 @@
 # 白話:三個維運演練。A 服務密碼輪替:先建新帳號並行、切換完再停舊,不中斷服務。
 #       B 內部通道:CONTROLLER / INTERNAL 埠只認 mTLS 憑證,帳密與沒憑證的連線都進不去,連上也沒有超級權限。
 #       C AD 故障:AD 掛了時服務(SCRAM)照常運作,但人的新登入失敗,AD 恢復後即恢復。
-# 前置條件:需先跑過第 7 章(svc-orders 帳號與寫入權限已存在);Docker 可用(會停止 / 啟動 openldap 容器);config/clients/ 需有 mtls-legacy-orders.properties 等設定檔
+# 前置條件:需先跑過第 3 章(yujie 所在的 orders-write 對 orders. 的寫入權限)與第 7 章(svc-orders 帳號與寫入權限已存在);Docker 可用(會停止 / 啟動 openldap 容器);config/clients/ 需有 mtls-legacy-orders.properties 等設定檔
 # 用法:
 #   ./demo.sh 9                            經由講解控制台跑這一章
 #   ./scenarios/ch09-rotate-internal.sh    直接跑(DEMO_PAUSE=0 不暫停)
@@ -51,7 +51,7 @@ step ctl-ad "【內部通道】拿 SCRAM 帳密(svc-orders)連 CONTROLLER → �
   "kafka-broker-api-versions --bootstrap-server controller1:9093 --command-config svc-orders.properties" \
   'K kafka-broker-api-versions --bootstrap-server controller1:9093 --command-config /clients/scram-svc-orders.properties 2>&1 | head -3' 'handshake is not completed|Authentication failed|authentication|isconnected'
 step int-svc "【內部通道】INTERNAL 埠(9092)也是 mTLS:同一個 CA 簽的任何 client 憑證(這裡用 CN=legacy-orders)都能完成 TLS、能列出 topic —— 所以仍然要靠防火牆只開放給 broker/controller 節點"   "kafka-topics --bootstrap-server broker1:9092 --command-config mtls-legacy-orders.properties --list"   'K kafka-topics --bootstrap-server broker1:9092 --command-config /clients/mtls-legacy-orders.properties --list 2>&1 | head -4' '__internal_confluent_only_broker_info|orders.events'
-step int-svc-authz "【內部通道】但授權仍然生效:CN=legacy-orders 不是 super user,連上 INTERNAL 埠也不能做叢集管理(建立 topic → 被拒);只有 CN=kafka-internal(broker 與 controller 共用那張)才是 super user"   "kafka-topics --bootstrap-server broker1:9092 --command-config mtls-legacy-orders.properties --create --topic hack"   'K kafka-topics --bootstrap-server broker1:9092 --command-config /clients/mtls-legacy-orders.properties --create --topic hack --partitions 1 --replication-factor 2 2>&1 | head -3' 'Authorization failed|not authorized|Not authorized|TopicAuthorization'
+step int-svc-authz "【內部通道】但授權仍然生效:CN=legacy-orders 不是 super user,連上 INTERNAL 埠也不能做叢集管理(建立 topic → 被拒);只有 CN=kafka-internal(broker 與 controller 共用那張)才是 super user"   "kafka-topics --bootstrap-server broker1:9092 --command-config mtls-legacy-orders.properties --create --topic hack"   'K kafka-topics --bootstrap-server broker1:9092 --command-config /clients/mtls-legacy-orders.properties --create --topic hack --partitions 1 --replication-factor 3 2>&1 | head -3' 'Authorization failed|not authorized|Not authorized|TopicAuthorization'
 
 # ---- C. AD 故障時 ----
 echo "    ── AD(LDAP)故障演練:停掉 openldap 容器 ──"
