@@ -38,7 +38,7 @@ produce_test() {
   local name="perf-$$-$RANDOM"
   K_NAME="$name" timeout "${PRODUCE_TIMEOUT:-240}" "$DEMO_DIR/scripts/k.sh" kafka-producer-perf-test --topic "$1" --num-records "$2" --throughput "${4:--1}" --record-size "${RECORD_SIZE:-100}" \
     --command-config "$KAFKA_ADMIN_CONFIG" \
-    --producer-props bootstrap.servers="$KAFKA_BOOTSTRAP" acks="$3" delivery.timeout.ms="${DELIVERY_MS:-20000}" request.timeout.ms=8000 max.block.ms=30000 > "$PERF_OUT" 2>&1
+    --producer-props bootstrap.servers="$KAFKA_BOOTSTRAP" acks="$3" delivery.timeout.ms="${DELIVERY_MS:-20000}" request.timeout.ms=8000 max.block.ms=30000 ${PRODUCER_EXTRA:-} > "$PERF_OUT" 2>&1
   docker rm -f "$name" >/dev/null 2>&1
   grep -aoE '^[0-9]+ records sent' "$PERF_OUT" | tail -1 | awk '{print $1}'
 }

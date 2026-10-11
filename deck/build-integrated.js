@@ -317,8 +317,8 @@ add({ title: '高可用:壞幾台還撐得住', sub: '3 台 controller、3 台�
     ['停 1 台 controller', '叢集照常:建 topic、寫入都正常', '測試環境已驗證'],
     ['停 2 台 controller', '失去多數:建 topic 沒回應(describe 有時逾時);既有 topic 的讀寫暫時還可用,不是可依賴的容錯', '測試環境已驗證'],
     ['滾動重啟', 'broker 一台一台(等 URP 回 0),controller 非 active 先、active 最後;背景寫入零失敗零遺失', '測試環境已驗證'],
-    ['動態 quorum', '測試用靜態 quorum;正式環境建議動態 quorum 並在 VM 上演練', '未驗證'],
-  ], { rowH: 0.66, hdrH: 0.44, sz: 12, col: MDS }), rowCols: [SVC, RISK, SVC, RISK, SVC, PLT] },
+    ['動態 quorum', '靜態可不停機升級成動態(寫入零失敗);壞掉的 controller 以「先加新的、再移除舊的」汰換,不動其他節點;建議正式環境用動態', '測試環境已驗證(自動加入、同時壞兩台未驗證)'],
+  ], { rowH: 0.66, hdrH: 0.44, sz: 12, col: MDS }), rowCols: [SVC, RISK, SVC, RISK, SVC, SVC] },
 ] });
 
 add({ title: '監控與告警:兩條指標路徑', sub: '告警要「真的會響」;銀行自有監控走 JMX exporter,不依賴 Control Center', items: [

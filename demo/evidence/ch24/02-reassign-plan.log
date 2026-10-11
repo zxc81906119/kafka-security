@@ -6,9 +6,9 @@ $ kafka-reassign-partitions --generate --topics-to-move-json-file … --broker-l
   "partition":0,"replicas":[12,13]
   "partition":1,"replicas":[13,11]
   "partition":2,"replicas":[11,12]
-  "partition":3,"replicas":[11,13]
-  "partition":4,"replicas":[13,12]
-  "partition":5,"replicas":[12,11]
+  "partition":3,"replicas":[13,12]
+  "partition":4,"replicas":[12,11]
+  "partition":5,"replicas":[11,13]
 審過、要執行的計畫 /tmp/cap-plan.json(輪流放在三台,每台一樣多):
   "partition":0,"replicas":[11,12]
   "partition":1,"replicas":[12,13]

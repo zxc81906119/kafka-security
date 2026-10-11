@@ -729,4 +729,23 @@ hc -u gary:gary-pw -X POST -H "$J" -d "$ORDER_ENC_BODY" https://schema-registry:
         warn: '沒有測:物件儲存端的稽核日誌與存取紀錄、bucket 的版本控制與物件鎖(WORM)與 Kafka 刪除行為的相容性(Kafka 會自己刪過期物件,物件鎖會讓它刪不掉)、跨資料中心複寫物件儲存。授權:官方 Tiered Storage 頁沒有寫授權範圍,導入前請向 Confluent 確認。MinIO 的映像取得方式與版本更新政策請自行確認;正式環境請用客戶行內經官方認證的物件儲存。' },
     ],
   },
+  {
+    id: 'ch33', n: 33, title: '(進階)動態 quorum:靜態升級成動態、不停機汰換壞掉的 controller', time: '15 分',
+    goal: 'demo 為了簡單用靜態 quorum:controller 名單寫在每台節點的設定檔(controller.quorum.voters)。換一台壞掉的 controller 要改全部節點的設定並全部重啟,半夜出事時是個高風險動作。官方建議正式環境用動態 quorum:名單存進叢集 metadata,換 controller 只要「新的加進來、舊的移出去」兩個指令。這個 Lab 從靜態升級到動態,再模擬一台 controller 主機損壞並汰換,全程驗證寫入與控制面。',
+    pre: ['Lab 21 的 HA 模式,而且是全新環境:scripts/ha.sh on(這個 Lab 會永久改變 voter 名單,3 換成 4,做完用 scripts/ha.sh on 重建)。', '若曾啟動第 4 台 broker(Lab 31),先 scripts/sbc-setup.sh off。', '第 4 台 controller 用 docker compose 的 profile quorum 啟動(controller4)。'],
+    autoAll: ['./demo.sh 33', './scenarios/ch33-dynamic-quorum.sh'],
+    steps: [
+      { t: '33.1 現況:靜態 quorum', why: 'kafka-features describe 看 kraft.version:0(或沒有)是靜態,1 以上是動態。kafka-metadata-quorum describe --status 的 CurrentVoters 在靜態模式只有 id 與端點,沒有 directory id(動態模式每個 voter 都有一個 directory id,移除 controller 時要用)。',
+        manual: ['bash scripts/quorum-lab.sh status'],
+        ev: 'quorum-status', re: /判定:目前是 靜態 quorum/, expect: 'kraft.version = 0;CurrentVoters 3 個(id 1、2、3,沒有 directoryId);CurrentObservers 是 3 台 broker;判定:目前是 靜態 quorum,voter 3 個。' },
+      { t: '33.2 升級:靜態 → 動態,背景持續寫入', why: '官方遷移順序:① kafka-features upgrade --feature kraft.version=1(靜態 voters 在這一步被寫進叢集 metadata)② 每台 controller 與 broker 移除 controller.quorum.voters、改設 controller.quorum.bootstrap.servers ③ controller 一台一台重啟(等回來、quorum 完整再下一台),再重啟 broker。實測 3 台 controller 與 3 台 broker 重啟期間,背景 1500 筆 acks=all 寫入全部成功。完成後每個 voter 都有 directory id。',
+        manual: ['bash scripts/quorum-lab.sh upgrade'],
+        ev: 'quorum-upgrade', re: /判定:靜態 → 動態完成/, expect: 'kraft.version was upgraded to 1;controller1-3、broker1-3 依序重啟;送出 1500 筆、topic 1500 筆;voter 3 個都有 directory id;判定:靜態 → 動態完成…。',
+        warn: '本環境踩到的坑:cp-server 容器每次啟動都會跑 kafka-storage format,動態 quorum 沒有 voters 設定時,format 在檢查「已經格式化過」之前就先要求 --standalone / --initial-controllers / --no-initial-controllers 其中一個,重啟就失敗。demo 的 ensure 腳本改成「已有 meta.properties 就略過 format」。RHEL VM 的 systemd 流程只在安裝時 format 一次,不會遇到。另外升級前要有備份、所有節點健康,官方不建議在 quorum 不完整時做。' },
+      { t: '33.3 汰換:壞掉的 controller 換成全新的一台', why: '模擬 controller3 的主機損壞(停掉),剩 2/3 仍有多數、叢集照常。在全新節點 controller4 用 kafka-storage format --no-initial-controllers 格式化並啟動——它只是 observer,不會自己變成 voter(實測預設不會自動加入)。再在新節點上執行 kafka-metadata-quorum --bootstrap-controller <既有 controller> --command-config <新節點自己的設定> add-controller:工具從該設定讀 node.id 與磁碟上的 directory id。確認 controller4 成為 voter 後,用 remove-controller --controller-id 3 --controller-directory-id <id> 把壞掉的移出。最後停掉 controller1,驗證新名單 {1,2,4} 仍選得出 leader、可寫入、可建 topic。整個過程沒有重啟 broker 或其他 controller。',
+        manual: ['bash scripts/quorum-lab.sh replace'],
+        ev: 'quorum-replace', re: /判定:控制器汰換完成/, expect: 'Added controller 4 with directory id …;Removed KRaft controller 3 with directory id …;替換後 voter:1 2 4;停 controller1 後寫入 200 筆、建立 topic 成功;判定:控制器汰換完成…。',
+        warn: '操作細節:① add-controller 要在「新節點」上、用它自己的設定檔執行(它從磁碟的 meta.properties 讀 directory id);在本環境的容器裡還要 -e KAFKA_OPTS= 關掉 JMX agent,否則工具啟動時 port 衝突。② 順序是先 add 再 remove:先移除會讓名單縮到 2 個、少一台就失去多數。③ 要先把 controller 加進來、追上資料後才 add;沒追上會被拒。④ 新 controller 的憑證 SAN 要包含它的主機名稱(demo 的 make-certs.sh 補了 controller4)。沒有測:controller.quorum.auto.join.enable 自動加入(官方說 8.2 起新叢集預設啟用,本環境沒設,實測沒有自動加入);同時壞兩台;跨資料中心的 quorum 佈局;5 台 controller。' },
+    ],
+  },
 ];

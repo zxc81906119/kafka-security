@@ -65,7 +65,9 @@ reassign_idle() { ! reassigning; }
 detector_clean() {
   local c
   for c in controller1 controller2 controller3; do
-    docker logs --since "$1" "$c" 2>&1 | grep -q 'did not detect any violated goals' && return 0
+    # 先收進變數再比對:日誌很大時 grep -q 提早結束會讓上游 docker logs 吃 SIGPIPE,pipefail 下整條變成失敗
+    local out; out=$(docker logs --since "$1" "$c" 2>&1)
+    grep -q 'did not detect any violated goals' <<< "$out" && return 0
   done
   return 1
 }

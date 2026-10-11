@@ -2,7 +2,7 @@
 $ openssl verify -CAfile;kafka-configs(逐台);openssl s_client -verify_return_error
 ▶ 背景持續寫入 300 筆,同時不重啟換成 825 天的新憑證:先換一台當金絲雀驗證,再換其餘兩台
 簽新憑證(825 天、同 DN 與 SAN):
-   新憑證 srv-new:4474B9BA75C8AEC73D198B55BD22276108461BB6 到期 Jan 12 17:59:51 2029 GMT 
+   新憑證 srv-new:4474B9BA75C8AEC73D198B55BD22276108461BC2 到期 Jan 13 12:03:22 2029 GMT 
 Created topic cert.roll.
    預檢 srv-new:鏈驗證 → srv-new.pem: OK;SAN 與現有相同
 寫入進行中,動態換成新憑證(不重啟)。先換一台當金絲雀(broker1 = id 11),用 client 的角度驗證通過,再換其他台:
@@ -10,7 +10,7 @@ Completed updating config for broker 11.
    金絲雀 broker1 實際送出的鏈驗證:Verify return code: 0 (ok)
 Completed updating config for broker 12.
 Completed updating config for broker 13.
-三台 broker CLIENT 埠送出的序號:4474B9BA75C8AEC73D198B55BD22276108461BB6 4474B9BA75C8AEC73D198B55BD22276108461BB6 4474B9BA75C8AEC73D198B55BD22276108461BB6 
+三台 broker CLIENT 埠送出的序號:4474B9BA75C8AEC73D198B55BD22276108461BC2 4474B9BA75C8AEC73D198B55BD22276108461BC2 4474B9BA75C8AEC73D198B55BD22276108461BC2 
 producer 送出 300 筆;topic 實際 300 筆;broker 啟動時間 沒有變(沒重啟)
-   34 秒後 KafkaTlsCertExpiringSoon@broker1:9094 解除
+   36 秒後 KafkaTlsCertExpiringSoon@broker1:9094 解除
 判定:不重啟換成新憑證:序號已變、broker 沒有重啟、寫入期間零失敗(300 = 300)、到期告警解除

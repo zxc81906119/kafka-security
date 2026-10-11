@@ -1,9 +1,0 @@
-# 【AD 登入】GARY(cluster-admin 群組)是 Admin,YUJIE、MING 是 Viewer;錯密碼、匿名、沒帶帳密的 /metrics 都是 401
-$ curl -u gary:… https://grafana:3000/api/org/users
-▶ 用 AD 帳號登入 Grafana:群組對映角色(cluster-admin → Admin,其他 → Viewer);錯密碼、匿名、沒帶帳密的 /metrics 都被擋
-GARY(cluster-admin 群組)能管理使用者(Admin 才可):[HTTP 200]
-YUJIE(orders-write)[HTTP 403];MING [HTTP 403](Viewer 看得到儀表板,但不能管理使用者)
-錯密碼 [HTTP 401];匿名 [HTTP 401];/metrics 不帶帳密 [HTTP 401]、帶 Prometheus 帳號 [HTTP 200]
-Grafana 知道的使用者與登入方式:
-  "admin" [] "gary" ["LDAP"] "ming" ["LDAP"] "yujie" ["LDAP"]
-判定:AD 帳號登入 Grafana:cluster-admin 群組是 Admin,其他人是 Viewer;錯密碼、匿名、沒帶帳密的 /metrics 都是 401

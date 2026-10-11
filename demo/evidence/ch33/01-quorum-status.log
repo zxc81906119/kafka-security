@@ -1,0 +1,10 @@
+# 【現況】靜態 quorum:kraft.version=0,voter 名單來自設定檔,沒有 directory id
+$ kafka-features describe;kafka-metadata-quorum describe --status
+▶ kraft.version 與 voter 名單(靜態 quorum 沒有 directory id)
+kraft.version = 0(0 = 靜態、1 = 動態)
+  ClusterId:              XyZBQ3-GTvKH2qNfP7X33A
+  LeaderId:               1
+  LeaderEpoch:            1
+  CurrentVoters:          [{"id": 1, "endpoints": ["CONTROLLER://controller1:9093"]}, {"id": 2, "endpoints": ["CONTROLLER://controller2:9093"]}, {"id": 3, "endpoints": ["CONTROLLER://controller3:9093"
+  CurrentObservers:       [{"id": 13, "directoryId": "0nMHeCp22Q5j5hbbyL979w"}, {"id": 12, "directoryId": "PYXLHhciOxW-pa79C1Z6fQ"}, {"id": 11, "directoryId": "vE_Swmq8AQC2a-2bUZqwnw"}]
+判定:目前是 靜態 quorum,voter 3 個

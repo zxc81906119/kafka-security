@@ -1,9 +1,0 @@
-# 【主機指標】node_exporter 要求 mTLS;磁碟用量進了 Prometheus;磁碟告警規則已載入
-$ curl --cert … https://node-exporter:9100/metrics;PromQL node_filesystem_*
-▶ node_exporter 要求 mTLS(沒有憑證或不是行內 CA 簽的憑證,握手就被拒),再確認磁碟指標與磁碟告警規則
-不帶 client 憑證 [HTTP 000];不是行內 CA 簽的 client 憑證 [HTTP 000];Prometheus 的 monitor 憑證 [HTTP 200]
-Prometheus 看到 2 個 ext4 / xfs 裝置,最高用量 57.6%
-磁碟與主機告警規則:
-  NodeDiskUsageHigh                   ok    inactive
-  NodeExporterDown                    ok    inactive
-判定:node_exporter 要求 mTLS(無憑證與外來憑證握手被拒),磁碟指標進了 Prometheus,磁碟告警規則已載入(目前用量低於 80%,沒有觸發)

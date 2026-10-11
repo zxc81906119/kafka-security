@@ -186,7 +186,7 @@ services:
 
   controller1:
     stop_grace_period: 60s
-    image: confluentinc/cp-server:8.3.2
+    image: confluentinc/cp-server:${CP_VERSION:-8.3.2}   # 第 35 章(升級實驗):CP_VERSION 可切換 controller / broker 的版本;預設 8.3.2
     container_name: controller1
     hostname: controller1
     healthcheck:   # CP 映像沒有 curl/nc,用 bash 的 /dev/tcp 確認 controller 埠已在聽(只代表埠開了,功能就緒由 up.sh 的 MDS 檢查確認)
@@ -252,7 +252,7 @@ services:
 
   broker1:
     stop_grace_period: 60s
-    image: confluentinc/cp-server:8.3.2
+    image: confluentinc/cp-server:${CP_VERSION:-8.3.2}
     container_name: broker1
     hostname: broker1
     depends_on:
@@ -279,7 +279,7 @@ services:
 
   broker2:
     stop_grace_period: 60s
-    image: confluentinc/cp-server:8.3.2
+    image: confluentinc/cp-server:${CP_VERSION:-8.3.2}
     container_name: broker2
     hostname: broker2
     depends_on:

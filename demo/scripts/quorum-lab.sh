@@ -49,7 +49,7 @@ quorum_md() {
 live_controller() {
   local c
   for c in controller1 controller2 controller3 controller4; do
-    docker ps --format '{{.Names}}' | grep -qx "$c" && { echo "$c:9093"; return; }
+    docker ps --format '{{.Names}}' | grep -x "$c" >/dev/null && { echo "$c:9093"; return; }
   done
 }
 
@@ -66,13 +66,13 @@ voters() {
 }
 
 # 名單中是否有某節點。
-has_voter() { voters | awk '{print $1}' | grep -qx "$1"; }
+has_voter() { voters | awk '{print $1}' | grep -x "$1" >/dev/null; }   # 不用 grep -q:pipefail 下 grep 提早結束會讓上游吃 SIGPIPE,整條回傳非 0
 
 # 給 wait_until 用:controller 名單(靜態版沒有 directoryId)有 N 個 voter。
 voter_count_is() { [ "$(voters | wc -l)" -eq "$1" ]; }
 
 # 給 wait_until 用:叢集有 leader。
-has_leader() { quorum_md "$(live_controller)" describe --status | grep -qE '^LeaderId: [0-9]+'; }
+has_leader() { quorum_md "$(live_controller)" describe --status | grep -E '^LeaderId:[[:space:]]+[0-9]+' >/dev/null; }
 
 # 目前寫入測試:在背景持續寫 N 筆(每秒 R 筆),結果存 $PERF_OUT;回傳背景 pid 用 BG_PID。
 start_writes() {
@@ -97,13 +97,20 @@ lab_status() {
 }
 
 lab_upgrade() {
-  [ "$(kraft_version)" = 1 ] && { verdict "已經是動態 quorum(kraft.version=1),不需要再升級"; return 0; }
+  # 已經完整升級(功能版本是 1、設定已改、所有節點已用新設定重啟)就不重做;做到一半(例如重啟失敗)可以重跑接續。
+  if [ "$(kraft_version)" = 1 ] && grep -q 'docker-compose.dynq.yml' .env \
+     && [ -z "$(docker exec controller1 printenv KAFKA_CONTROLLER_QUORUM_VOTERS 2>/dev/null)" ] \
+     && [ -z "$(docker exec broker3 printenv KAFKA_CONTROLLER_QUORUM_VOTERS 2>/dev/null)" ]; then
+    verdict "已經是動態 quorum(kraft.version=1、設定已切換),不需要再升級"; return 0
+  fi
   say "背景持續寫入(升級期間不應該中斷或遺失)"
   kafka_topics --delete --if-exists --topic "$TOPIC" >/dev/null; sleep 2
   kafka_topics --create --topic "$TOPIC" --partitions 3 --replication-factor 3 --config min.insync.replicas=2 | tail -1
   start_writes 1500 5
   say "① 升級功能版本:kafka-features upgrade --feature kraft.version=1(靜態 voters 在這一步被寫進叢集 metadata)"
-  quorum_tool kafka-features --bootstrap-controller "$(live_controller)" --command-config "$TOOL_CFG" upgrade --feature kraft.version=1 | tail -2
+  if [ "$(kraft_version)" = 1 ]; then note "kraft.version 已經是 1(前一次已升級),略過"; else
+    quorum_tool kafka-features --bootstrap-controller "$(live_controller)" --command-config "$TOOL_CFG" upgrade --feature kraft.version=1 | tail -2
+  fi
   echo "kraft.version = $(kraft_version)"
   say "② 設定檔:移除 controller.quorum.voters、改設 controller.quorum.bootstrap.servers(docker-compose.dynq.yml 疊進 COMPOSE_FILE)"
   grep -q 'docker-compose.dynq.yml' .env || sed -i 's|^COMPOSE_FILE=\(.*\)$|COMPOSE_FILE=\1,docker-compose.dynq.yml|' .env
@@ -141,7 +148,7 @@ lab_replace() {
   sleep 10
   say "把 controller4 加進 quorum:在新節點上執行 add-controller(--command-config 用它自己的設定,工具從中讀 node.id 與 directory id)"
   docker exec controller4 bash -c "cp /etc/kafka/kafka.properties /tmp/add.properties; printf 'security.protocol=SSL\nssl.keystore.location=/etc/kafka/secrets/internal.keystore.p12\nssl.keystore.type=PKCS12\nssl.keystore.password=changeit\nssl.key.password=changeit\n' >> /tmp/add.properties" >/dev/null
-  docker exec controller4 kafka-metadata-quorum --bootstrap-controller controller1:9093 --command-config /tmp/add.properties add-controller 2>&1 \
+  docker exec -e KAFKA_OPTS= controller4 kafka-metadata-quorum --bootstrap-controller controller1:9093 --command-config /tmp/add.properties add-controller 2>&1 \
     | grep -v -E 'SLF4J|^WARNING|WARN' | tail -3
   wait_until "controller4 成為 voter" 60 has_voter 4 || true
   local dir3; dir3=$(voters | awk '$1==3 {print $2}')

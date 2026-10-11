@@ -420,6 +420,19 @@ gary 在 C3 指派 `orders-read` → DeveloperRead;LDAP 介面把 ming 從 devel
 
 **踩坑**:`cred.file.path` 要 `accessKey=`、`secretKey=`(properties),給 AWS CLI 格式 broker 起不來;預設 SSE AES256 對沒有 KMS 的 MinIO 回 501,上傳無限重試(topic 正常、沒有物件);HTTPS 需 `-Djavax.net.ssl.trustStore`;MinIO 映像的健康檢查工具是 curl(沒有 `mc`);`kafka-log-dirs` 含已上傳資料,看本機占用要用 `du`。
 
+## 第 33 章(進階)動態 quorum:靜態升級成動態、汰換 controller(`./demo.sh 33`,需全新 HA 環境;約 12 分鐘)
+
+**準備**:`scripts/ha.sh on`(全新環境)。`scripts/quorum-lab.sh` 子命令:status、upgrade、replace、reset。做完會永久改變 voter 名單,用 `scripts/ha.sh on` 重建。
+
+| 項目 | 實測結果 |
+|---|---|
+| 現況 | `kafka-features describe`:kraft.version 0(靜態);`describe --status` 的 CurrentVoters 沒有 directoryId |
+| 升級 | `kafka-features upgrade --feature kraft.version=1` → `docker-compose.dynq.yml` 把 `KAFKA_CONTROLLER_QUORUM_VOTERS` 設空、加 `KAFKA_CONTROLLER_QUORUM_BOOTSTRAP_SERVERS` → controller1-3、broker1-3 依序重建;背景寫入 1500 筆全成功 |
+| 汰換 | 停 controller3 → controller4(profile quorum,`QUORUM_FORMAT_FLAG=--no-initial-controllers`)啟動為 observer → 新節點上 `add-controller` → `remove-controller --controller-id 3 --controller-directory-id <id>` → 名單 {1,2,4} |
+| 驗證 | 再停 controller1:leader 約 3 到 5 秒選出,寫入與建 topic 成功 |
+
+**踩坑**:`ensure-controller.sh` 要「已格式化就略過」;add-controller 要在新節點執行且 `-e KAFKA_OPTS=`;新 controller 的憑證 SAN(server 與 internal 都要)要先備好;`grep -q` 在 pipefail 下的 SIGPIPE。
+
 ## 對應到客戶 RHEL 9 VM 的位置與步驟(手動部署)
 | demo | RHEL 9 VM |
 |---|---|
@@ -429,6 +442,9 @@ gary 在 C3 指派 `orders-read` → DeveloperRead;LDAP 介面把 ming 從 devel
 | `ensure-controller.sh`(`--add-scram`) | 每個 controller 節點首次啟動前:`kafka-storage format --cluster-id <id> -c controller.properties --add-scram '...'`(**順序錯誤需重新 format**)。CP 8.3 的 `kafka-storage format` 另須指定 `--standalone`、`--initial-controllers` 或 `--no-initial-controllers` 其中之一(Rocky 9 實測) |
 | systemd(RPM 安裝) | unit `confluent-server`,預設讀 `/etc/kafka/server.properties`、`Restart=no`、`LimitNOFILE=1000000`;預設 `log.dirs` 在 `/tmp`,必須改到 `/var/lib/kafka/...`(見 DESIGN-BASIS 2026-10-11 RHEL 9 手動安裝實測) |
 | `.env`(audit router) | `server.properties`:`confluent.security.event.router.config=<JSON 單行>` |
+| 防火牆實作(firewalld) | 預設區不開 9092/9093;對每個節點加 rich rule:`firewall-cmd --permanent --add-rich-rule='rule family=ipv4 source address=<對方>/32 port port=9092 protocol=tcp accept'` 再 `--reload`(Rocky 9 容器實測:只有指定來源連得上,其餘被 REJECT) |
+| 離線安裝 | 有網路的機器:`dnf download --resolve --alldeps --destdir <dir> confluent-server confluent-security java-21-openjdk-headless` + `createrepo_c <dir>`;隔離環境:`file://` repo、`dnf --disablerepo="*" --enablerepo=local install …`(實測可裝,約 100 個 RPM、1.9 GB) |
+| SELinux | 容器環境無法驗證(核心 Disabled);targeted policy 連接埠標籤:7778 interwise_port_t、9090 websm_port_t、9100 hplip_port_t,9092/9093/8091 無專屬標籤;需在 enforcing 的 VM 實測 |
 | 防火牆 | 9092(INTERNAL)、9093(CONTROLLER)只開放給 broker/controller 節點;Prometheus(9090)、Alertmanager(9093,另一台主機時)只開放給 C3 與必要的監控來源,除非已啟用其 TLS + Basic 認證;8091 為 MDS 與 Admin REST 共用,需對使用者與元件開放,保護靠第 14 章的安全擴充 |
 
 ## 已知限制與如實說明

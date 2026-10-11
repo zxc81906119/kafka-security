@@ -54,7 +54,7 @@ export const ACTS = [
     scene: ['平台穩了、看得見了,接下來的麻煩變成人與人之間:訂單團隊和對帳團隊各自改程式、各自上線。Ming 要把『欄位怎麼改才不會互相弄壞』變成機器擋得住的規矩,而不是靠開會。'] }
   ,{ id: 'week6', title: '第六週:告警送到人', when: '第六週', labs: [30],
     scene: ['儀表板、日誌、追蹤、資料契約都有了。主管最後問的是最樸素的問題:「半夜壞了,誰會知道?」'] }
-  ,{ id: 'week7', title: '第七週:容量與成本', when: '第七週', labs: [31, 32],
+  ,{ id: 'week7', title: '第七週:容量與成本', when: '第七週', labs: [31, 32, 33],
     scene: ['告警有人接了。下一個問題來自採購:「資料留 30 天,磁碟要買多少?加機器又要排幾個晚上搬資料?」Ming 把官方文件裡兩個看起來能省事的功能拿來實測,看它們到底省了什麼、又多要求了什麼。'] }
 ];
 
@@ -177,6 +177,11 @@ export const LAB_STORY = {
       '修好後數字很漂亮:約 100 MB 寫進去,本機從三百降到二十 MB,從頭讀還是全部讀到,broker 重啟也在。但他在報告裡寫明:歷史資料現在多了一個依賴,物件儲存掛掉時的行為他還沒測;而且 kafka-log-dirs 顯示的還是邏輯大小,看磁碟要自己量。'],
     mission: ['建立專用帳號與 bucket(最小權限、HTTPS),讓 broker 啟用 Tiered Storage。', '確認資料真的上傳、本機真的變小。', '從頭讀與重啟 broker 後仍讀到全部資料。', '確認物件儲存本身受保護。'],
     recap: ['cred.file.path 要 accessKey= / secretKey= 的 properties 檔;預設要求伺服器端加密,物件儲存要能支援;HTTPS 要讓 JVM 信任行內 CA。', 'topic 層級開 confluent.tier.enable 與 hotset;broker 預設保持 false,影響最小。', 'kafka-log-dirs 是邏輯大小,看磁碟占用要量 broker 目錄。', '物件儲存是歷史資料的依賴:專用帳號只限單一 bucket,匿名被拒,密碼走唯讀檔。', '沒測:物件儲存中斷、回補 30 天的讀取效能、壓縮 topic、物件鎖、授權範圍。'] },
+  33: { scene: ['Ming 在高可用那一章留了一個備註:demo 用的是靜態 quorum,正式環境官方建議動態。主管問得很直接:「如果半夜一台 controller 的主機壞了,換它要重啟全部嗎?」他不想憑文件回答。',
+      '他先把 demo 升級:一個指令把功能版本升到 1,再把設定檔從「名單」改成「去哪裡找 quorum」,controller 與 broker 一台一台重啟,背景寫入一筆沒掉。升級完,名單裡每個成員多了一個 directory id——之後要移除誰,就靠它。',
+      '然後他停掉 controller3,在一台全新的主機上格式化 controller4,加進去、再把壞的移出去,全程沒有碰其他節點的設定。他故意再停掉 controller1,新的名單照樣選出 leader、照樣能建 topic。他在報告裡寫下順序:先加、後移除,而且要在新節點上執行 add。'],
+    mission: ['把靜態 quorum 升級成動態,期間寫入不中斷。', '模擬一台 controller 損壞並汰換成全新的一台。', '確認新的名單在再損失一台時仍能服務。'],
+    recap: ['動態 quorum:kafka-features upgrade --feature kraft.version=1,再把 controller.quorum.voters 換成 controller.quorum.bootstrap.servers,依序重啟。', '汰換順序:新節點用 --no-initial-controllers 格式化 → add-controller(在新節點上執行)→ remove-controller(要 controller id 與 directory id)。', '先 add 再 remove;先移除會讓名單縮小、少一台就失去多數。', 'directory id 從 describe --status 取;新 controller 的憑證 SAN 要先備好。', '沒測:自動加入、同時壞兩台、5 台 controller、跨資料中心。'] },
   30: { scene: ['值班表上寫著「看 Grafana」,Ming 看了一眼,默默把它劃掉:半夜三點,沒有人會盯著儀表板。告警目前只亮在 Alertmanager 的畫面上,他得讓它「找上人」。',
       '行內本來就有自架的郵件伺服器,所以他選了最不需要新東西的通道:Alertmanager 寄信。但寄信本身有幾個陷阱,他一個一個試:不分輕重的話,輕微的告警也會把值班的人叫醒,所以 critical 與 warning 要寄給不同的人;一台壞掉常常同時觸發一串告警,不合併的話信箱會被灌爆;最後他停掉一台 broker,真的在信箱收到 FIRING,恢復後又收到 RESOLVED。',
       '最後是郵件伺服器自己:告警信裡有主機名稱與錯誤訊息。他確認伺服器強制 STARTTLS、要帳密,Alertmanager 的密碼從檔案讀、不在設定裡。他在報告裡寫明:信件只是通道之一,簡訊、通訊軟體與靜音、抑制、Alertmanager 高可用都還沒做。'],
