@@ -135,6 +135,16 @@ if [ -f certs/.done ]; then
       echo "補產 client 憑證: $n"
     fi
   done
+  # client 憑證要標明用途 clientAuth(最佳實踐:只能當 client 用,不會被誤當成 server 憑證):舊環境沒有就用同一把 key 重簽
+  if ! openssl_in_certs "openssl x509 -in client-c3.pem -noout -ext extendedKeyUsage 2>/dev/null" | grep -q "Client Authentication"; then
+    openssl_in_certs "
+      printf '[v3]\nextendedKeyUsage=clientAuth\n' > client-eku.cnf
+      openssl req -new -key client-c3.key -subj '/CN=c3/O=Demo' -out client-c3.csr
+      openssl x509 -req -in client-c3.csr -CA ca.pem -CAkey ca.key -CAcreateserial -out client-c3.pem -days 825 -sha256 -extfile client-eku.cnf -extensions v3 2>/dev/null
+      openssl pkcs12 -export -in client-c3.pem -inkey client-c3.key -certfile ca.pem -name c3 -out client-c3.keystore.p12 -passout pass:$PASS
+      chmod 644 client-c3.*"
+    echo "client 憑證 c3 已補上用途 clientAuth(同 key、同 CA)"
+  fi
   # 密碼檔(cp 映像用 *_CREDENTIALS 讀檔)
   for f in keystore_creds sslkey_creds truststore_creds; do [ -f "certs/$f" ] || printf '%s' "$PASS" > "certs/$f"; done
   echo "certs 已存在,略過其餘"; exit 0
@@ -167,10 +177,11 @@ openssl req -new -key server.key -out server.csr -config san.cnf
 openssl x509 -req -in server.csr -CA ca.pem -CAkey ca.key -CAcreateserial -out server.pem -days 825 -sha256 -extfile san.cnf -extensions v3 2>/dev/null
 openssl pkcs12 -export -in server.pem -inkey server.key -certfile ca.pem -name server -out server.keystore.p12 -passout pass:'"$PASS"'
 # --- 對照用:各元件的 client 憑證(不同 DN) ---
+printf "[v3]\nextendedKeyUsage=clientAuth\n" > client-eku.cnf      # client 憑證標明用途 clientAuth
 for n in c3 restproxy bootstrap legacy-orders schema-registry monitor connect; do
   openssl genrsa -out client-$n.key 2048 2>/dev/null
   openssl req -new -key client-$n.key -subj "/CN=$n/O=Demo" -out client-$n.csr
-  openssl x509 -req -in client-$n.csr -CA ca.pem -CAkey ca.key -CAcreateserial -out client-$n.pem -days 825 -sha256 2>/dev/null
+  openssl x509 -req -in client-$n.csr -CA ca.pem -CAkey ca.key -CAcreateserial -out client-$n.pem -days 825 -sha256 -extfile client-eku.cnf -extensions v3 2>/dev/null
   openssl pkcs12 -export -in client-$n.pem -inkey client-$n.key -certfile ca.pem -name $n -out client-$n.keystore.p12 -passout pass:'"$PASS"'
 done
 # --- 內部通道共用憑證:broker↔broker(INTERNAL)與 broker↔controller(CONTROLLER)都用這一張,做 mTLS 身分 ---

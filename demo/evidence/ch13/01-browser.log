@@ -14,4 +14,4 @@ $ (瀏覽器開發者工具)Network → Authorization 標頭型態
   2x GET /2.0/clusters/connect  [Bearer]
   2x GET /2.0/clusters/schema-registry  [Bearer]
   2x GET /api/metadata/security/1.0/lookup/managed/clusters/principal/User:GARY  [Bearer]
-  1x GET /api/kafka-rest/<id>/v1/metadata/schemaRegistryUrls  [Bearer]
+  1x GET /api/connect/connect/connectors  [Bearer]

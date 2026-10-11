@@ -1,0 +1,6 @@
+# ming(唯讀)可以讀取 orders.events
+$ kafka-console-consumer --command-config ming.properties --topic orders.events --from-beginning
+{"order":"L-1","by":"legacy-app"}
+{"order":"H-1","by":"yujie"}
+{"x":1}
+Processed a total of 3 messages

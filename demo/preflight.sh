@@ -38,6 +38,13 @@ done
 for p in $CNP $CN2P; do
   chk "Connect($p):不帶帳密 401、AD 帳號 200"         "[ \"$(code https://localhost:$p/connectors)\" = 401 ] && [ \"$(code https://localhost:$p/connectors -u gary:gary-pw)\" = 200 ]"
 done
+# c3_sr_healthcheck_ids:最近 2 分鐘 SR 收到的 C3 健康檢查(armeria)所帶的身分,一行一個
+c3_sr_healthcheck_ids() {
+  local ip s; ip=$(docker inspect control-center --format '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}')
+  for s in schema-registry1 schema-registry2; do docker logs "$s" --since 120s 2>&1; done \
+    | grep "INFO $ip " | grep armeria | sed -E 's/.* - ("[^"]*"|[^ ]+) \[.*/\1/' | sort -u
+}
+chk "C3 連 SR 的健康檢查身分是 CN=c3(不是共用 server 憑證)" '[ "$(c3_sr_healthcheck_ids)" = "\"O=Demo,CN=c3\"" ]'
 chk "C3 登入頁(HTTPS 9022,憑證驗證)"      "[ \"\$(curl -s --ssl-no-revoke --cacert certs/ca.pem -o /dev/null -w '%{http_code}' https://localhost:9022/login)\" = 200 ]"
 chk "Prometheus:不帶帳密 401、帶帳密 200"   "[ \"\$(bash scripts/dcurl.sh https://prometheus:9090/-/healthy | tail -1)\" = '[HTTP 401]' ] && [ \"\$(bash scripts/dcurl.sh -u c3:prom-pw https://prometheus:9090/-/healthy | tail -1)\" = '[HTTP 200]' ]"
 chk "AD 連線走 LDAPS(broker 沒連到 389)"    "( for b in broker1 broker2 broker3 broker4; do ip=\$(docker inspect \$b --format '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}'); docker logs openldap 2>&1 | grep ACCEPT | grep \"from IP=\$ip:\" | grep -q 'IP=0.0.0.0:389' && exit 1; done; exit 0 )"

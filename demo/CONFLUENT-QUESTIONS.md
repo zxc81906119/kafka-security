@@ -30,7 +30,7 @@
 |---|---|---|---|---|
 | C1 | KAFKA-20774(刪除 SCRAM 憑證後重啟 broker 失敗):CP 8.3.x 的修補版本與時程?是否有 patch? | 目前以「覆寫成隨機密碼、不刪除」繞過 | 全新叢集 100% 重現 | |
 | C2 | JMX exporter 對 mTLS 的支援:官方是否有建議的監控端點保護方式(1.0.1 只支援 TLS + Basic) | 監控端點的保護強度 | Lab 22 | |
-| C3 | Control Center(next-gen 2.6.1)對 RBAC 的 Schema Registry:健康檢查固定打 `/` 且不帶身分 → 401 → 判定「all nodes in SchemaRegistry cluster are down」。有沒有官方設定讓健康檢查改打 `/v1/metadata/id`(Connect 有 `confluent.controlcenter.connect.healthcheck.endpoint`)或帶 token?給 C3 固定的 `basic.auth.user.info` 會讓所有使用者都以該身分查 SR | C3 要能依使用者授權顯示 schema;目前只能在 C3 關閉 SR | `authentication.skip.paths`、`confluent.schema.registry.anonymous.principal` 對 Bearer/Basic 都無效;固定帳密時 gary 直連 5 個 subject、經 C3 為 0 | |
+| C3 | Schema Registry 用 `InstallCompositeSecurityHandler`(client 憑證與 Token / Basic 並存)是否在支援範圍內?(安全外掛裡有此類別,SR 文件只寫 `InstallBearerOrBasicSecurityHandler` 與 `auth.mechanism=SSL`)另:C3 對 SR 的健康檢查能否改打 `/v1/metadata/id`(Connect 有 `connect.healthcheck.endpoint`)? | C3 的背景健康檢查固定打 SR 的 `/` 且沒有使用者身分;只用 BearerOrBasic 時 401、C3 判定 SR 全掛;不想為 C3 開 AD 帳號 | 採組合認證 + C3 `schema.registry.schema.registry.alias.name=c3`:健康檢查以 CN=c3 通過、使用者操作仍用各自 token(gary 5 / yujie 1 / ming 0) | |
 
 ## D. 設計確認
 

@@ -41,7 +41,7 @@ step yujie-ok "【授權後】yujie 寫入 orders.events 成功(他的權限來�
 
 step ming-denied "【對照】ming 不在任何群組 → 同一個 topic 被拒" \
   "echo hi | kafka-console-producer ... --command-config ming.properties --topic orders.events" \
-  'as_produce ming orders.events hi-from-ming' 'not authorized|Not authorized|TopicAuthorization'
+  'as_produce ming orders.events hi-from-ming' 'not authorized|Not authorized|TopicAuthorization|Cluster authorization failed'   # 冪等 producer 先申請 producer ID,可能先撞到叢集層級的拒絕(第 4 章同)
 
 step ldap-add "【AD 操作】在 AD(LDAP 管理介面)把 ming 加進群組 orders-write —— Kafka/RBAC 這邊完全不動" \
   "(瀏覽器)phpLDAPadmin → cn=orders-write → member 加入 CN=MING" \

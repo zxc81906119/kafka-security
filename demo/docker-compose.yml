@@ -632,7 +632,13 @@ services:
       # RBAC:使用者以 Basic(AD 帳密)或 Bearer(MDS token)進來,授權交給 MDS
       SCHEMA_REGISTRY_RESOURCE_EXTENSION_CLASS: io.confluent.kafka.schemaregistry.security.SchemaRegistrySecurityResourceExtension,io.confluent.dekregistry.DekRegistryResourceExtension,io.confluent.kafka.schemaregistry.rulehandler.RuleSetResourceExtension   # DekRegistry = KEK / DEK 管理(沒加時 /dek-registry/v1/* 回 404);RuleSetResource = 資料合約的 ruleSet(沒加時註冊 schema 會默默丟掉 ruleSet,不報錯)。舊註解: 後者 = DEK Registry(欄位級加密的 KEK / DEK 管理);沒加時 /dek-registry/v1/* 回 404
       SCHEMA_REGISTRY_CONFLUENT_SCHEMA_REGISTRY_AUTHORIZER_CLASS: io.confluent.kafka.schemaregistry.security.authorizer.rbac.RbacAuthorizer
-      SCHEMA_REGISTRY_REST_SERVLET_INITIALIZOR_CLASSES: io.confluent.common.security.jetty.initializer.InstallBearerOrBasicSecurityHandler
+      # 認證:同時接受「client 憑證(mTLS)」與「Token / AD 帳密」(InstallCompositeSecurityHandler)。
+      #   原因:C3 對 SR 的健康檢查固定打 / 且不帶使用者身分,只帶 client 憑證(CN=c3,C3 端以 alias.name 指定);若只用 InstallBearerOrBasicSecurityHandler(官方 RBAC 範例)會 401,
+      #   C3 就判定 SR 全掛。使用者經 C3 的操作仍帶各自的 token(實測 gary 5 / yujie 1 / ming 0 個 subject)。
+      #   注意:這個 initializer 存在於官方安全外掛,但 SR 文件未寫 → 已列 CONFLUENT-QUESTIONS 確認支援範圍。
+      SCHEMA_REGISTRY_REST_SERVLET_INITIALIZOR_CLASSES: io.confluent.common.security.jetty.initializer.InstallCompositeSecurityHandler
+      SCHEMA_REGISTRY_SSL_CLIENT_AUTHENTICATION: REQUESTED   # 有帶 client 憑證就驗(必須是行內 CA 簽的),沒帶照常走 Token / 帳密
+      SCHEMA_REGISTRY_AUTH_SSL_PRINCIPAL_MAPPING_RULES: RULE:^CN=([a-zA-Z0-9.-]*).*$$/$$1/,DEFAULT   # 憑證主體取 CN(CN=c3 → c3;沒有任何 SR 角色)
       SCHEMA_REGISTRY_CONFLUENT_SCHEMA_REGISTRY_AUTH_MECHANISM: JETTY_AUTH
       SCHEMA_REGISTRY_DEK_REGISTRY_RBAC_ENABLE: "true"     # 沒設時 DEK Registry 的 KEK 端點對所有人 403(日誌:Couldn't find a corresponding operation to authorize);設了才依 Kek:<名稱> 的 role 授權
       SCHEMA_REGISTRY_PUBLIC_KEY_PATH: /etc/kafka/secrets/public.pem
@@ -780,12 +786,18 @@ services:
       CONTROL_CENTER_REST_SSL_TRUSTSTORE_PASSWORD: changeit
       # RBAC:使用者以 AD 帳號(經 MDS)登入;C3 自身向 MDS 以 mTLS(CN=c3)認證
       CONTROL_CENTER_REST_AUTHENTICATION_METHOD: BEARER
-      # Schema Registry:C3 內維持關閉(實測 C3 2.6.1):C3 對 SR 的健康檢查固定打根路徑 / 且不帶身分,SR 開 RBAC 後一律 401
-      #   → C3 判定「all nodes in SchemaRegistry cluster are down」。SR 端的 authentication.skip.paths、anonymous.principal 對
-      #   Bearer/Basic 認證都無效;給 C3 一組固定的 SR 帳密(basic.auth.user.info)雖能通過健康檢查,但 C3 之後一律用那組身分查 SR,
-      #   使用者各自的授權失效(實測 gary 直連看得到 5 個 subject,經 C3 變成空的)→ 違反「授權跟著群組走」,不採用。
-      #   schema 管理一律走 SR 的 REST / CLI(使用者自己的身分);已列入 CONFLUENT-QUESTIONS 向 Confluent 確認。
-      CONTROL_CENTER_SCHEMA_REGISTRY_ENABLE: "false"
+      # Schema Registry 2 台:兩台都列出。使用者在 C3 的操作以自己的 token 轉送,授權由 MDS 判斷(實測 gary 5 / yujie 1 / ming 0 個 subject)。
+      #   C3 自己的背景健康檢查(固定打 SR 的 /,沒有使用者身分)以 C3 的 client 憑證通過:keystore 放 client-c3,
+      #   alias.name 指定用 c3(官方設定;沒指定時 C3 會拿自己對外 HTTPS 的 server 憑證去連,實測)。SR 端見 InstallCompositeSecurityHandler。
+      CONTROL_CENTER_SCHEMA_REGISTRY_ENABLE: "true"
+      CONTROL_CENTER_SCHEMA_REGISTRY_URL: https://schema-registry1:8081,https://schema-registry2:8081
+      CONTROL_CENTER_SCHEMA_REGISTRY_SCHEMA_REGISTRY_SSL_TRUSTSTORE_LOCATION: /etc/kafka/secrets/truststore.p12
+      CONTROL_CENTER_SCHEMA_REGISTRY_SCHEMA_REGISTRY_SSL_TRUSTSTORE_PASSWORD: changeit
+      CONTROL_CENTER_SCHEMA_REGISTRY_SCHEMA_REGISTRY_SSL_KEYSTORE_LOCATION: /etc/kafka/secrets/client-c3.keystore.p12
+      CONTROL_CENTER_SCHEMA_REGISTRY_SCHEMA_REGISTRY_SSL_KEYSTORE_TYPE: PKCS12
+      CONTROL_CENTER_SCHEMA_REGISTRY_SCHEMA_REGISTRY_SSL_KEYSTORE_PASSWORD: changeit
+      CONTROL_CENTER_SCHEMA_REGISTRY_SCHEMA_REGISTRY_SSL_KEY_PASSWORD: changeit
+      CONTROL_CENTER_SCHEMA_REGISTRY_SCHEMA_REGISTRY_ALIAS_NAME: c3
       # Connect 2 台:兩台都列出(官方:C3 用其中一台,失敗時改試另一台)。健康檢查打 /v1/metadata/id(不需認證),使用者的操作以自己的 token 轉送
       CONTROL_CENTER_CONNECT_CONNECT_CLUSTER: https://connect1:8083,https://connect2:8083   # confluent.controlcenter.connect.<名稱>.cluster;名稱取 connect
       CONTROL_CENTER_CONNECT_CONNECT_SSL_TRUSTSTORE_LOCATION: /etc/kafka/secrets/truststore.p12

@@ -1,15 +1,17 @@
-# 【輪替 ④:滾動重啟期間 producer 受影響嗎】背景持續寫入(acks=all、冪等、每秒 5 筆),同時輪替資料金鑰並依序重啟 broker1 → broker2;比對送出筆數與 topic 實際筆數。條件:副本數 2、min.insync.replicas=1(demo 只有 2 台 broker;正式環境建議副本 3、min.isr 2)
-$ scripts/rolling-rotate-test.sh   # 約 4 分鐘
+# 【輪替 ④:滾動重啟期間 producer 受影響嗎】背景持續寫入(acks=all、冪等、每秒 5 筆),同時輪替資料金鑰並依序重啟 broker1 → broker4;比對送出筆數與 topic 實際筆數。條件:副本 3、min.insync.replicas 2(與正式環境相同;一次只重啟一台,仍有 2 份同步副本)
+$ scripts/rolling-rotate-test.sh   # 約 8 分鐘
 Created topic zdt.test.
-① 背景 producer:1200 筆、每秒 5 筆、acks=all、冪等;同時輪替資料金鑰並滾動重啟 broker1 → broker2
+① 背景 producer:2400 筆、每秒 5 筆、acks=all、冪等;同時輪替資料金鑰並滾動重啟 broker1 → broker2 → broker3 → broker4
       新檔變動行數:4
    [secret-protection] 重啟 broker1 → 健康;gary 經 broker1 登入 → [HTTP 200]
    [secret-protection] 重啟 broker2 → 健康;gary 經 broker2 登入 → [HTTP 200]
-   判定:資料金鑰已輪替——所有值重新加密、主金鑰不變、Conjur 不用動,broker2 重啟後正常
+   [secret-protection] 重啟 broker3 → 健康;gary 經 broker3 登入 → [HTTP 200]
+   [secret-protection] 重啟 broker4 → 健康;gary 經 broker4 登入 → [HTTP 200]
+   判定:資料金鑰已輪替——所有值重新加密、主金鑰不變、Conjur 不用動,各台依序重啟後正常
 ② 等 producer 寫完…
    producer 的警告(重試、換 leader、斷線重連,屬正常)前幾種:
-           1 WARN [Producer clientId=perf-producer-client] Received invalid metadata error in produce request on partition zdt.test-0
-           1 WARN [Producer clientId=perf-producer-client] Got error produce response with correlation id 672 on topic-partition zdt.
-           1 WARN [Producer clientId=perf-producer-client] Got error produce response with correlation id 311 on topic-partition zdt.
-   producer 回報送出 1200 筆;topic 實際 1200 筆;送出失敗 0 筆;警告行 14
-判定:滾動重啟期間 producer 零送出失敗、零遺失(送出 1200 筆 = topic 1200 筆)
+           4 WARN [Producer clientId=perf-producer-client] Received invalid metadata error in produce request on partition zdt.test-2
+           2 WARN [Producer clientId=perf-producer-client] Received invalid metadata error in produce request on partition zdt.test-1
+           1 WARN [Producer clientId=perf-producer-client] Got error produce response with correlation id 814 on topic-partition zdt.
+   producer 回報送出 2400 筆;topic 實際 2400 筆;送出失敗 0 筆;警告行 12
+判定:滾動重啟期間 producer 零送出失敗、零遺失(送出 2400 筆 = topic 2400 筆)

@@ -1,6 +1,6 @@
 # 【日常】ming(orders-read)可讀資料
 $ kafka-console-consumer --command-config ming.properties --topic orders.events --from-beginning
-still-ok
-{"order":"A-3001","by":"yujie"}
-heartbeat from yujie at 2026-10-11T13:29:15Z
+old-pw
+new-pw
+new-pw
 Processed a total of 3 messages

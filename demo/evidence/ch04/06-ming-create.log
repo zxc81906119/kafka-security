@@ -1,0 +1,4 @@
+# ming(唯讀)想建立 topic → 被拒
+$ kafka-topics --command-config ming.properties --create --topic ming-test
+Error while executing topic command : Authorization failed.
+ERROR org.apache.kafka.common.errors.TopicAuthorizationException: Authorization failed.

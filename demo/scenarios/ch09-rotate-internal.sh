@@ -5,7 +5,7 @@
 # 白話:三個維運演練。A 服務密碼輪替:先建新帳號並行、切換完再停舊,不中斷服務。
 #       B 內部通道:CONTROLLER / INTERNAL 埠只認 mTLS 憑證,帳密與沒憑證的連線都進不去,連上也沒有超級權限。
 #       C AD 故障:AD 掛了時服務(SCRAM)照常運作,但人的新登入失敗,AD 恢復後即恢復。
-# 前置條件:需先跑過第 7 章(svc-orders 帳號與寫入權限已存在);Docker 可用(會停止 / 啟動 openldap 容器);config/clients/ 需有 mtls-legacy-orders.properties 等設定檔
+# 前置條件:需先跑過第 3 章(yujie 所在的 orders-write 對 orders. 的寫入權限)與第 7 章(svc-orders 帳號與寫入權限已存在);Docker 可用(會停止 / 啟動 openldap 容器);config/clients/ 需有 mtls-legacy-orders.properties 等設定檔
 # 用法:
 #   ./demo.sh 9                            經由講解控制台跑這一章
 #   ./scenarios/ch09-rotate-internal.sh    直接跑(DEMO_PAUSE=0 不暫停)

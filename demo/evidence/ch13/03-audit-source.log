@@ -1,6 +1,6 @@
 # 【人 ③】broker 的 audit log:來自 C3 的使用者操作,主體是登入的使用者(ming、gary),不是 User:c3(c3 自己的背景操作不在預設 audit 範圍)
 $ kafka-console-consumer --topic confluent-audit-log-events | 依來源 IP 彙總
-   8×  C3         | User:MING | kafka.DescribeConfigs
+  12×  C3         | User:MING | kafka.DescribeConfigs
+   8×  C3         | User:GARY | kafka.CreateTopics
+   6×  C3         | User:MING | kafka.CreateTopics
    6×  C3         | User:c3 | kafka.CreateTopics
-   4×  C3         | User:MING | kafka.CreateTopics
-   4×  C3         | User:GARY | kafka.CreateTopics

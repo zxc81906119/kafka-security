@@ -1,6 +1,8 @@
 # 【稽核】broker 端看到的主體是 User:legacy-orders(不是 restproxy);人是 User:YUJIE
 $ kafka-console-consumer --topic confluent-audit-log-events | 整理
-13:41:42  User:legacy-orders kafka.Metadata      DENIED   orders.events
-13:42:17  User:legacy-orders kafka.Produce       ALLOWED  orders.events
-13:42:19  User:legacy-orders kafka.Metadata      DENIED   payments.events
-13:42:23  User:legacy-other  kafka.Metadata      DENIED   orders.events
+15:10:15  User:legacy-other  kafka.Metadata      DENIED   orders.events
+15:11:44  User:legacy-orders kafka.Metadata      DENIED   payments.events
+15:42:40  User:legacy-orders kafka.Metadata      DENIED   orders.events
+15:43:17  User:legacy-orders kafka.Produce       ALLOWED  orders.events
+15:43:19  User:legacy-orders kafka.Metadata      DENIED   payments.events
+15:43:24  User:legacy-other  kafka.Metadata      DENIED   orders.events
