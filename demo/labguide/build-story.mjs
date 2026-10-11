@@ -156,7 +156,7 @@ add(new Paragraph({ children: [new TextRun({ text: '目錄', font: FONT, size: 3
 
 // 課前準備
 add(H1('課前準備(開課前一天完成)'));
-add(P('目標:上課當天每個人的電腦都能在 5 分鐘內把環境建起來。最花時間的是下載映像(約 7 GB),請提前做。全部做完預估 30 到 60 分鐘(視網速)。'));
+add(P('目標:上課當天每個人的電腦都能在 10 分鐘內把環境建起來(映像已在本機時,完整建置實測約 8 分鐘)。最花時間的是下載映像(基線約 4.3 GB,解壓後約 11 GB),請提前做。全部做完預估 30 到 60 分鐘(視網速)。'));
 add(H2('要安裝的軟體'));
 add(...table([
   ['軟體', '版本 / 設定', '用途'],
@@ -168,13 +168,13 @@ add(...table([
 ], [2300, 3000, 3726], { size: 18 }));
 add(H2('課前步驟(打勾清單)'));
 [
-  ['取得專案目錄(含 demo/),確認磁碟剩餘空間 ≥ 15 GB;不要放在有中文或空白的路徑。', null, null],
-  ['第一次建置:會下載映像(約 7 GB),最後印出「[up] 完成。」', 'cd demo\nbash scripts/up.sh', '不帶參數 = 全部元件;約 5 到 30 分鐘(視網速);中途失敗可以重跑同一指令'],
-  ['自檢:容器、端點、登入、瀏覽器自動化都通過', './preflight.sh', '通過 18 / 失敗 0'],
+  ['取得專案目錄(含 demo/),確認磁碟剩餘空間 ≥ 30 GB(基線映像解壓後約 11 GB,選修 Lab 另有映像與資料);不要放在有中文或空白的路徑。', null, null],
+  ['第一次建置:會下載映像(約 4.3 GB),最後印出「[up] 完成。」', 'cd demo\nbash scripts/up.sh', '不帶參數 = 全部元件(20 個容器);映像已在本機時約 8 分鐘,第一次視網速另加下載時間;中途失敗可以重跑同一指令'],
+  ['自檢:全部容器、各元件端點與登入、C3 連 SR 的身分、瀏覽器自動化都通過', './preflight.sh', '通過 33 / 失敗 0'],
   ['瀏覽器自動化(各 Lab 的 C3、phpLDAPadmin 截圖用;需要連網,約 150 MB)', 'bash scripts/setup-e2e.sh', 'OK: 瀏覽器自動化可用'],
   ['瀏覽器開 Control Center 登入頁(demo 的 CA 是自簽的:按「進階」繼續,或把 demo/certs/ca.pem 匯入「受信任的根憑證授權單位」)', '瀏覽器:https://localhost:9022/login', '看到 Welcome to Confluent Platform 登入畫面(載入需數秒)'],
   ['(選做)Postman:匯入 demo/postman/ 的 collection 與環境,並信任 demo CA(做法見 Lab 5.1)', null, null],
-  ['清掉環境,Lab 0 上課時從零建(映像保留在本機,不會重新下載;第二次建置約 3 分鐘)', 'docker compose --profile c3 --profile restproxy --profile sr --profile connect down -v', '容器與資料全部移除'],
+  ['清掉環境,Lab 0 上課時從零建(映像保留在本機,不會重新下載;第二次建置約 8 分鐘)', 'bash scripts/down.sh', '所有 profile 的容器與資料全部移除,印出「[down] 已清除」'],
 ].forEach(([t, cmd, exp], i) => {
   add(P([run('☐  ', { color: STORY_C, bold: true }), run(`${i + 1}. ${t}`)], { indent: { left: 360 } }));
   if (cmd) add(...code(cmd, { bar: MUTE }));
@@ -190,10 +190,12 @@ add(...table([
   ['osixia/openldap:1.5.0、osixia/phpldapadmin:0.9.0', '0.4 GB + 0.4 GB', '模擬 AD 與管理介面'],
   ['curlimages/curl、alpine/openssl', '50 MB', 'hc 函式的 curl、產生憑證'],
   ['postman/newman:alpine', '0.3 GB', 'Lab 5 的批次測試(第一次跑 Lab 5 時才下載)'],
-  ['cyberark/conjur、cyberark/conjur-cli:9、postgres:15、nginx:stable、confluentinc/confluent-cli', '約 1.2 GB', 'Lab 18(CyberArk 整合;第一次跑 Lab 18 時才下載)'],
+  ['cyberark/conjur、cyberark/conjur-cli:9、postgres:15、confluentinc/confluent-cli', '約 1.2 GB', 'Lab 18(CyberArk 整合;第一次跑 Lab 18 時才下載)'],
   ['confluentinc/cp-schema-registry:8.3.2', '1.5 GB', 'Schema Registry ×2(Lab 0 起就啟動;Lab 20 設定授權)'],
   ['confluentinc/cp-server-connect:8.3.2', '2.7 GB', 'Connect ×2(Lab 0 起就啟動;Lab 29 示範)'],
-  ['nginx:stable', '約 0.2 GB', 'REST Proxy 前面的 L4 負載平衡器(F5 的替身)'],
+  ['nginx:stable', '0.24 GB', 'REST Proxy 前面的 L4 負載平衡器(F5 的替身);Lab 18 的 Conjur 也用它'],
+  ['prom/blackbox-exporter:v0.25.0', '40 MB', '憑證到期監控(22 個 TLS 端點)'],
+  ['python:3-alpine', '0.08 GB', 'Lab 34 的外部看門狗(第一次跑 Lab 34 時才下載)'],
 ], [4200, 1500, 3326], { size: 17 }));
 add(H2('課前常見問題'));
 add(...table([

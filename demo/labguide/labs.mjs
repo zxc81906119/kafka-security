@@ -160,7 +160,7 @@ curl -s --ssl-no-revoke --cacert certs/ca.pem -o /dev/null -w "C3 login page (HT
         manual: [R`bash scripts/connect-setup.sh on`], auto: ['(包含在 scripts/up.sh)'], expect: '最後印出 [connect] 就緒。' },
       { t: '0.11 開場前自檢', why: '一次確認全部容器、各端點的認證(不帶帳密要 401、AD 帳號要 200)、AD 走 LDAPS、瀏覽器自動化可用。',
         manual: [R`./preflight.sh
-docker ps --format "table {{.Names}}\t{{.Status}}"`], auto: ['./preflight.sh'], ev0: 'preflight', expect: '結果 通過 32 / 失敗 0;20 個容器都是 Up(healthy)。' },
+docker ps --format "table {{.Names}}\t{{.Status}}"`], auto: ['./preflight.sh'], ev0: 'preflight', expect: '結果 通過 33 / 失敗 0;20 個容器都是 Up(healthy)。' },
     ],
   },
 
