@@ -4,6 +4,6 @@ $ java -javaagent:otel-javaagent.jar …;Tempo /api/search
 Created topic app.trace.
 producer idempotent=true 確認成功=5 失敗=0
 已提交 offset
-Tempo 找到跨兩個服務的 trace(程式結束後約 20 秒):b8792f319ac3fb16fc25397d2880f226 orders-consumer,orders-producer app.trace publish
+Tempo 找到跨兩個服務的 trace(程式結束後約 20 秒):1c8c5b754338c868e1b231992d33669b orders-consumer,orders-producer app.trace publish
 (格式:trace-id  服務清單  根 span;根 span 是寫入端的 publish,讀取端的 process 掛在同一個 trace 底下)
 判定:一個 trace 跨過 Kafka 串起寫入端(orders-producer)與讀取端(orders-consumer):context 隨訊息標頭傳遞,應用程式碼沒有改

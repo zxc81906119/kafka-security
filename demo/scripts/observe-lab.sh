@@ -63,11 +63,13 @@ as_kafka_user() {
 
 lab_flow() {
   say "確認平台容器的日誌真的經 Kafka 進了 Loki,而且 Loki、Tempo 都要 mTLS"
-  local c total off a b
+  local c total off a b n missing=0
   total=$(loki_value 'sum(count_over_time({job="kafka-platform"}[10m]))')
   echo "最近 10 分鐘 Loki 收到的平台日誌:$total 行"
+  echo "各節點最近 30 分鐘的日誌行數(日誌先經 Kafka 再進 Loki,10 分鐘窗口可能剛好落在批次間隔):"
   for c in broker1 broker2 broker3 broker4 controller1 controller2 controller3; do
-    echo "  $c:$(loki_value "sum(count_over_time({job=\"kafka-platform\", container=\"$c\"}[10m]))") 行"
+    n=$(loki_value "sum(count_over_time({job=\"kafka-platform\", container=\"$c\"}[30m]))"); echo "  $c:$n 行"
+    case "$n" in 無|"?"|0) missing=$((missing+1));; esac
   done
   off=$("$DEMO_DIR/scripts/k.sh" kafka-get-offsets --bootstrap-server "$KAFKA_BOOTSTRAP" --command-config "$KAFKA_ADMIN_CONFIG" --topic otel-logs 2>/dev/null | awk -F: '{s+=$3} END {print s+0}')
   echo "Kafka topic otel-logs 累計 $off 筆(日誌是先寫進這裡,再由 Alloy 讀出送進 Loki)"
@@ -76,8 +78,8 @@ lab_flow() {
   [ "$a" = "[HTTP 000]" ] || a=bad
   a2=$(http_code "$TEMPO/ready"); b2=$(http_code "${MONITOR_CERT[@]}" "$TEMPO/ready")
   echo "Tempo 不帶 client 憑證 $a2;帶 monitor 憑證 $b2"
-  [ "$total" != "無" ] && [ "$off" -gt 0 ] && [ "$a" = "[HTTP 000]" ] && [ "$a2" = "[HTTP 000]" ] \
-    && verdict "平台日誌經 Kafka(otel-logs 累計 $off 筆)進了 Loki($total 行 / 10 分鐘);Loki 與 Tempo 都要 mTLS(無憑證握手被拒)"
+  [ "$total" != "無" ] && [ "$missing" = 0 ] && [ "$off" -gt 0 ] && [ "$a" = "[HTTP 000]" ] && [ "$a2" = "[HTTP 000]" ] \
+    && verdict "平台日誌經 Kafka(otel-logs 累計 $off 筆)進了 Loki($total 行 / 10 分鐘,7 個節點都有);Loki 與 Tempo 都要 mTLS(無憑證握手被拒)"
 }
 
 lab_buffer() {
