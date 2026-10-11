@@ -45,7 +45,7 @@ tempo_traces() { dcurl "${MONITOR_CERT[@]}" -G --data-urlencode "q=$1" --data-ur
 # 平台容器的日誌行數(含關鍵字):用 docker logs 當「真相」,和 Loki 比對。
 truth_count() {
   local total=0 n c
-  for c in broker1 broker2 broker3 controller1 controller2 controller3; do n=$(docker logs "$c" 2>&1 | grep -c "$1"); total=$((total + n)); done
+  for c in broker1 broker2 broker3 broker4 controller1 controller2 controller3; do n=$(docker logs "$c" 2>&1 | grep -c "$1"); total=$((total + n)); done
   echo "$total"
 }
 
@@ -66,7 +66,7 @@ lab_flow() {
   local c total off a b
   total=$(loki_value 'sum(count_over_time({job="kafka-platform"}[10m]))')
   echo "最近 10 分鐘 Loki 收到的平台日誌:$total 行"
-  for c in broker1 broker2 broker3 controller1 controller2 controller3; do
+  for c in broker1 broker2 broker3 broker4 controller1 controller2 controller3; do
     echo "  $c:$(loki_value "sum(count_over_time({job=\"kafka-platform\", container=\"$c\"}[10m]))") 行"
   done
   off=$("$DEMO_DIR/scripts/k.sh" kafka-get-offsets --bootstrap-server "$KAFKA_BOOTSTRAP" --command-config "$KAFKA_ADMIN_CONFIG" --topic otel-logs 2>/dev/null | awk -F: '{s+=$3} END {print s+0}')

@@ -13,7 +13,7 @@ discovery.docker "platform" {
   host = "unix:///var/run/docker.sock"
   filter {
     name   = "name"
-    values = ["broker1", "broker2", "broker3", "controller1", "controller2", "controller3"]
+    values = ["broker1", "broker2", "broker3", "broker4", "controller1", "controller2", "controller3"]
   }
 }
 
@@ -53,7 +53,7 @@ otelcol.receiver.loki "platform" {
 
 // ---------- 寫進 Kafka(alloy-producer:只能寫 otel-logs、otel-traces) ----------
 otelcol.exporter.kafka "logs" {
-  brokers          = ["broker1:9094", "broker2:9094", "broker3:9094"]
+  brokers          = ["broker1:9094", "broker2:9094", "broker3:9094", "broker4:9094"]
   protocol_version = "3.6.0"
   sending_queue {
     enabled        = true
@@ -77,7 +77,7 @@ otelcol.exporter.kafka "logs" {
 }
 
 otelcol.exporter.kafka "traces" {
-  brokers          = ["broker1:9094", "broker2:9094", "broker3:9094"]
+  brokers          = ["broker1:9094", "broker2:9094", "broker3:9094", "broker4:9094"]
   protocol_version = "3.6.0"
   sending_queue {
     enabled        = true
@@ -115,7 +115,7 @@ otelcol.receiver.otlp "apps" {
 
 // ---------- 從 Kafka 讀出(alloy-consumer:只能讀 otel-*、稽核 topic,group 限定 alloy-*) ----------
 otelcol.receiver.kafka "logs" {
-  brokers          = ["broker1:9094", "broker2:9094", "broker3:9094"]
+  brokers          = ["broker1:9094", "broker2:9094", "broker3:9094", "broker4:9094"]
   protocol_version = "3.6.0"
   group_id         = "alloy-logs"
   initial_offset   = "earliest"
@@ -139,7 +139,7 @@ otelcol.receiver.kafka "logs" {
 }
 
 otelcol.receiver.kafka "traces" {
-  brokers          = ["broker1:9094", "broker2:9094", "broker3:9094"]
+  brokers          = ["broker1:9094", "broker2:9094", "broker3:9094", "broker4:9094"]
   protocol_version = "3.6.0"
   group_id         = "alloy-traces"
   initial_offset   = "earliest"
@@ -163,7 +163,7 @@ otelcol.receiver.kafka "traces" {
 }
 
 otelcol.receiver.kafka "audit" {
-  brokers          = ["broker1:9094", "broker2:9094", "broker3:9094"]
+  brokers          = ["broker1:9094", "broker2:9094", "broker3:9094", "broker4:9094"]
   protocol_version = "3.6.0"
   group_id         = "alloy-audit"
   initial_offset   = "latest"
