@@ -38,6 +38,9 @@ declare -A CH=(
   [31]="ch31-self-balancing.sh|(進階)Self-Balancing:自動搬分區(加 broker、負載不均不觸發的條件、移除 broker;約 40 分鐘;不在 all 內)"
   [32]="ch32-tiered-storage.sh|(進階)Tiered Storage:舊資料放到物件儲存 MinIO(上傳、本機變小、從頭讀、重啟、存取保護;不在 all 內)"
   [33]="ch33-dynamic-quorum.sh|(進階)動態 quorum:靜態升級成動態、不停機汰換壞掉的 controller(需全新環境 scripts/ha.sh on;約 12 分鐘;不在 all 內)"
+  [34]="ch34-watchdog.sh|(進階)看門狗:監控自己壞掉時,誰會知道(停 Prometheus、停 Alertmanager、設定錯;約 25 分鐘;不在 all 內)"
+  [35]="ch35-rack.sh|(進階)多機架:整個機架斷電時,資料還寫得進去嗎(2 個與 3 個機架;約 25 分鐘;不在 all 內)"
+  [36]="ch36-dr.sh|(進階)DR 與演練:Cluster Linking、failover、量測 RPO / RTO、切回、演練紀錄(約 40 分鐘;不在 all 內)"
   [20]="ch20-schema-registry.sh|(進階)Schema Registry 納入同一套授權:subject 與 KEK 的權限;欄位級加密(CSFLE)的授權前提與授權限制"
   [21]="ch21-ha.sh|(進階)HA 叢集:3 controller、4 broker 的停機行為與滾動重啟(不在 all 內)"
   [22]="ch22-monitoring.sh|(進階)平台監控與告警:URP、離線分區、active controller 的告警實際觸發(需 Prometheus;不在 all 內)"
@@ -60,13 +63,13 @@ run_ch() {
 case "${1:-menu}" in
   reset) ./scripts/reset.sh ;;
   all) for n in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 17 18 19 20; do run_ch "$n"; done ;;
-  [0-9]|1[0-9]|2[0-9]|3[0-3]) run_ch "$1" ;;
+  [0-9]|1[0-9]|2[0-9]|3[0-6]) run_ch "$1" ;;
   *)
     while true; do
       echo; echo "═══ Confluent 安全方案 Demo ═══"
-      for n in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33; do printf "  %2s) %s\n" "$n" "${CH[$n]#*|}"; done
+      for n in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 35 36; do printf "  %2s) %s\n" "$n" "${CH[$n]#*|}"; done
       echo "   r) 重置   q) 離開"
       read -r -p "選擇章節: " c
-      case "$c" in q) break ;; r) ./scripts/reset.sh ;; [0-9]|1[0-9]|2[0-9]|3[0-3]) run_ch "$c" ;; esac
+      case "$c" in q) break ;; r) ./scripts/reset.sh ;; [0-9]|1[0-9]|2[0-9]|3[0-6]) run_ch "$c" ;; esac
     done ;;
 esac
