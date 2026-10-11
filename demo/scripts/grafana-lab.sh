@@ -108,12 +108,12 @@ lab_lag() {
     --topic mon.lag --group "$group" --from-beginning --max-messages 2000 --timeout-ms 20000 >/dev/null 2>&1
   wait_until "Prometheus 看到 $LAG_GROUP 落後超過 1000 筆" 180 lag_over_1000 || true
   echo "目前 $LAG_GROUP 的 lag:$(prom_query 'sum(kafka_consumergroup_lag{consumergroup="'$LAG_GROUP'"})')"
-  wait_until "KafkaConsumerLagHigh 觸發" 300 alert_is_firing KafkaConsumerLagHigh '^Kafka' && f1=1
+  wait_until "$LAG_GROUP 的 KafkaConsumerLagHigh 觸發(規則 for: 2m)" 300 lag_alert_firing && f1=1
 
   say "再讀完剩下的,lag 回到 0,告警應該解除"
   "$DEMO_DIR/scripts/k.sh" kafka-console-consumer --bootstrap-server "$KAFKA_BOOTSTRAP" --command-config "$KAFKA_ADMIN_CONFIG" \
     --topic mon.lag --group "$group" --from-beginning --max-messages 4000 --timeout-ms 20000 >/dev/null 2>&1
-  wait_until "KafkaConsumerLagHigh 解除" 300 alert_is_cleared KafkaConsumerLagHigh '^Kafka' && f2=1
+  wait_until "$LAG_GROUP 的 KafkaConsumerLagHigh 解除" 300 lag_alert_cleared && f2=1
   kafka_topics --delete --if-exists --topic mon.lag >/dev/null
   [ "${sent:-0}" = 6000 ] && [ "$listed" -ge 1 ] && [ "$denied" -ge 1 ] && [ "$f1" = 1 ] && [ "$f2" = 1 ] \
     && verdict "kafka_exporter 只有 Describe 權限(看得到 offset、讀訊息被拒);consumer 落後時 lag 指標與告警觸發,追上後解除"
@@ -124,6 +124,10 @@ lag_over_1000() {
   local v; v=$(prom_query 'sum(kafka_consumergroup_lag{consumergroup="'$LAG_GROUP'"}) > 1000')
   [ "$v" != "無" ] && [ "$v" != "?" ]
 }
+
+# 只看這一章自己建立的 group:其他章節留下的 group 若也落後,同名告警會一直在,不能用告警名稱判斷
+lag_alert_firing()  { [ "$(prom_query 'count(ALERTS{alertname="KafkaConsumerLagHigh",alertstate="firing",consumergroup="'"$LAG_GROUP"'"}) or vector(0)')" -ge 1 ]; }
+lag_alert_cleared() { ! lag_alert_firing; }
 
 lab_diskrule() {
   say "磁碟告警在容器環境沒辦法真的塞滿磁碟,改用 promtool 的規則單元測試:合成時間序列,驗證『超過 80% 持續 5 分鐘才告警、降下來就解除、tmpfs 不算』"
