@@ -20,6 +20,12 @@
 # ============================================================================
 source "$(dirname "$0")/../scripts/lib-ev.sh"
 ch_begin ch03 "RBAC 與 AD 群組:授權跟著群組走"
+source "$DEMO_ROOT/scripts/rbac-lib.sh"
+# 本章要示範「授權前被拒 → 授權後成功」,起點必須是 orders-write 沒有 orders. 的示範綁定;不依賴前面章節是否跑過 reset.sh
+for r in DeveloperRead DeveloperWrite; do rbac_unbind cert bootstrap Group:orders-write $r Topic orders. PREFIXED >/dev/null 2>&1; done
+# 同理:本章的對照組是「ming 不在任何群組」(第 4 章會把 ming 放進群組);先移出,並等 MDS 的群組快取更新
+for g in orders-read orders-write ops topic-admin cluster-admin rbac-admin security breakglass; do "$DEMO_ROOT/scripts/ldap-group.sh" remove ming $g >/dev/null 2>&1 || true; done
+wait_group_effect
 UI() { (cd "$DEMO_ROOT/e2e" && node ch03-ui.mjs "$1" 2>&1 | grep -v '^$'); }
 
 step before "【授權前】yujie 屬於 AD 群組 orders-write,但還沒有任何 role → 寫入被拒" \
