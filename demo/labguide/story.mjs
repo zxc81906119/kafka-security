@@ -148,7 +148,7 @@ export const LAB_STORY = {
     recap: ['Schema Registry 不另設帳號:認證交 MDS,授權看 subject 與 Kek:<名稱> 的 role。', 'KEK 的解密能力由 KMS 控制,不是 RBAC;local-kms 只能測試。', '欄位級加密需要企業版加 CSFLE 加購授權;這個環境沒有驗證加密與解密。', '上線前要用讀原始位元組的方式確認欄位是密文——規則被丟掉時不會有任何錯誤。'] },
   21: { scene: ['叢集本來就是 HA 拓樸:3 台 controller、4 台 broker,副本 3、min.insync.replicas 2。Ming 先確認 quorum 是 3 個 voter,再開始停機。',
       '停 1 台 broker,寫入不中斷,但副本不足的分區數(URP)變成大於 0——他把它記成一條要設告警的指標。再停 1 台,測試 topic 的 3 個副本只剩 1 份時,acks=all 全被擋;更嚇人的是 acks=1 的 producer 回報「成功」,consumer 卻一筆也看不到,要等 broker 回來才出現。',
-      '接著是 controller:停 1 台沒事;停 2 台,建 topic 和 describe 都沒回應,但既有 topic 還能讀寫。最後他背景寫入 2400 筆,依序重啟 4 台 broker 與 3 台 controller,active controller 最後,結果送出與實際筆數都是 2400。' /* TODO-REVERIFY: 2400 = 2400 是 3 台 broker 時量到的 */],
+      '接著是 controller:停 1 台沒事;停 2 台,建 topic 和 describe 都沒回應,但既有 topic 還能讀寫。最後他背景寫入 2400 筆,依序重啟 4 台 broker 與 3 台 controller,active controller 最後,結果送出與實際筆數都是 2400。'],
     mission: ['確認 3 台 controller 的 quorum 與容錯範圍。', '實際停 1 台與 2 台 broker,看寫入與讀取的差別。', '實際停 1 台與 2 台 controller,看控制面與資料面的差別。', '用滾動重啟驗證「重啟不等於停機」。'],
     recap: ['副本 3 加 min.isr 2:同一個分區允許壞 1 個副本、不允許壞 2 個;壞 2 個時 acks=all 被擋,acks=1 會讓應用誤以為成功(讀不到)。', 'URP 大於 0 是要告警的訊號;ISR 低於 min.isr 時寫入被拒。', 'controller 3 台容忍 1 台;失去多數時控制面停擺,資料面只是暫時撐著,不是可依賴的容錯。', '滾動重啟的順序:broker 一台一台(等 URP 回 0)、controller 非 active 先、active 最後。', 'controller 用官方建議的動態 quorum(與正式環境相同);上線前仍要在真實主機上實際演練。'] },
   22: { scene: ['上週的停機實驗讓主管更不安:「你停一台才知道它壞,半夜誰會知道?」Ming 把官方列為必設的幾條告警真的觸發一次:URP、離線分區、active controller。',

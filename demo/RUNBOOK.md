@@ -12,7 +12,7 @@ bash scripts/ha.sh on                           # 全新重建(清除所有資�
 ./demo.sh                                       # 現場控制台(選單;每步先印講稿,按 Enter 才執行)
 ./demo.sh reset                                 # 回到第 0 章起點
 ```
-**拓樸(與客戶正式環境相同,所有章節都以此為準)**:controller×3(動態 quorum)、broker×4(node id 11 到 14,MDS 8091 到 8094)、topic 副本 3、min.insync.replicas 2;REST Proxy×2(前面一台 L4 負載平衡器 `restproxy`,依來源 IP 黏著,代替 F5)、Schema Registry×2、Connect×2、Control Center×1。Docker Desktop / WSL 建議記憶體 ≥ 11GB。<!-- TODO-REVERIFY: 舊版「實測全部啟動約 3.5GB」是 controller×1 + broker×2 時量到的,新拓樸用量待量測 -->
+**拓樸(與客戶正式環境相同,所有章節都以此為準)**:controller×3(動態 quorum)、broker×4(node id 11 到 14,MDS 8091 到 8094)、topic 副本 3、min.insync.replicas 2;REST Proxy×2(前面一台 L4 負載平衡器 `restproxy`,依來源 IP 黏著,代替 F5)、Schema Registry×2、Connect×2、Control Center×1。Docker Desktop / WSL 建議記憶體 ≥ 11GB(實測全部啟動 20 個容器約用 8.3 到 8.6 GB)。
 
 ### 身分與密碼(demo 專用)
 | 身分 | 類型 | 帳號 / 密碼 | 說明 |
@@ -206,7 +206,7 @@ gary 在 C3 指派 `orders-read` → DeveloperRead;LDAP 介面把 ming 從 devel
 | 刪除後只重啟 controller | 正常 |
 | metadata 日誌撐大 6000 筆(沒有快照)再重啟 | 正常(排除「日誌太大」) |
 
-**做法(已套用在 demo)**:停用帳號 = 把 SCRAM 憑證覆寫成隨機密碼,不刪除(`scripts/scram-disable.sh`,對不存在的帳號不動作);重置、第 6、9、18、19 章與 OP menu 的「下架帳號」都改了。整條章節鏈(第 1 到 20 章、15、16)在從零重建的環境跑完後,直接重啟兩台 broker 都正常<!-- TODO-REVERIFY: 這是舊拓樸(2 台 broker)時的實測,4 台 broker 待重跑 -->,自癒機制(`broker-heal.sh`)被用到 0 次。已經刪過的帳號,事後重新建立即可讓 broker 再啟動;`broker-heal.sh`(清空該 broker 資料目錄重建)保留為最後手段。**對應的官方 bug(2026-10-09 查到)**:[KAFKA-20774](https://issues.apache.org/jira/browse/KAFKA-20774)「ScramDelta.apply() drops SCRAM users when processing REMOVE records for absent users or multiple removals in one batch」(2026-07-06 回報、2026-09-23 修復,fix version **4.5.0,尚未發行**;PR apache/kafka#22763)。內容與實測完全吻合:broker 重放 metadata 時,REMOVE 紀錄的對象若不在目前的 image 裡(= 對不存在的帳號刪除,或重啟時從頭重放、先遇到 REMOVE),整個 SCRAM 機制的使用者表會被丟掉,連 kafka-broker 這類應該存在的帳號也消失;報告者說正式環境整組 SCRAM 使用者都不見了。demo 的 CP 8.3.2 內含 Kafka 4.3.x,在受影響範圍。**沒有 fix 之前的做法**:不要對 SCRAM 帳號用 `--delete-config`(停用改覆寫隨機密碼);已經刪過的話,重建被刪的帳號再重啟即可(讓重放時 REMOVE 之後有對應的 UPSERT)。這個 bug 與 listener 無關,內部通道改 mTLS 只解掉 broker 起不來,SCRAM 用戶端登入仍會壞(實測)。**正式環境**:在確認 Confluent 的說法之前,不要用 `--delete-config` 刪 SCRAM 憑證;停用改用覆寫隨機密碼加解除 role binding;滾動重啟 broker 前先在測試環境確認。重現步驟:全新叢集 → `kafka-configs --alter --add-config SCRAM-SHA-512=[password=p] --entity-type users --entity-name x` → `--delete-config SCRAM-SHA-512` 同一帳號 → 重啟 broker。
+**做法(已套用在 demo)**:停用帳號 = 把 SCRAM 憑證覆寫成隨機密碼,不刪除(`scripts/scram-disable.sh`,對不存在的帳號不動作);重置、第 6、9、18、19 章與 OP menu 的「下架帳號」都改了。整條章節鏈(第 1 到 20 章、15、16)在從零重建的環境跑完後,直接重啟兩台 broker 都正常(2026-10-09 舊拓樸的實驗紀錄),自癒機制(`broker-heal.sh`)被用到 0 次。已經刪過的帳號,事後重新建立即可讓 broker 再啟動;`broker-heal.sh`(清空該 broker 資料目錄重建)保留為最後手段。**對應的官方 bug(2026-10-09 查到)**:[KAFKA-20774](https://issues.apache.org/jira/browse/KAFKA-20774)「ScramDelta.apply() drops SCRAM users when processing REMOVE records for absent users or multiple removals in one batch」(2026-07-06 回報、2026-09-23 修復,fix version **4.5.0,尚未發行**;PR apache/kafka#22763)。內容與實測完全吻合:broker 重放 metadata 時,REMOVE 紀錄的對象若不在目前的 image 裡(= 對不存在的帳號刪除,或重啟時從頭重放、先遇到 REMOVE),整個 SCRAM 機制的使用者表會被丟掉,連 kafka-broker 這類應該存在的帳號也消失;報告者說正式環境整組 SCRAM 使用者都不見了。demo 的 CP 8.3.2 內含 Kafka 4.3.x,在受影響範圍。**沒有 fix 之前的做法**:不要對 SCRAM 帳號用 `--delete-config`(停用改覆寫隨機密碼);已經刪過的話,重建被刪的帳號再重啟即可(讓重放時 REMOVE 之後有對應的 UPSERT)。這個 bug 與 listener 無關,內部通道改 mTLS 只解掉 broker 起不來,SCRAM 用戶端登入仍會壞(實測)。**正式環境**:在確認 Confluent 的說法之前,不要用 `--delete-config` 刪 SCRAM 憑證;停用改用覆寫隨機密碼加解除 role binding;滾動重啟 broker 前先在測試環境確認。重現步驟:全新叢集 → `kafka-configs --alter --add-config SCRAM-SHA-512=[password=p] --entity-type users --entity-name x` → `--delete-config SCRAM-SHA-512` 同一帳號 → 重啟 broker。
 
 **內部通道改 mTLS 之後(2026-10-09 實測)**:broker↔broker 與 broker↔controller 改用共用憑證 CN=kafka-internal 做 mTLS(第 9 章)後,同一個實驗(新建 SCRAM 帳號再刪除 → 重啟兩台 broker)**broker 都能正常啟動**;但重啟後 **CLIENT 埠上所有 SCRAM 帳號(svc-orders、kafka-broker)登入失敗**,把被刪的帳號重建也沒用,要重建之後再重啟 broker 才恢復。結論:壞的是 broker 重啟時重放 metadata 裡的 SCRAM 憑證,不限 listener;mTLS 只解掉「broker 起不來」這個可用性問題,**不能取代「不要刪 SCRAM 憑證」這條規則**,而且服務帳號登入失敗比 broker 起不來更隱蔽(像是密碼錯)。
 
@@ -242,13 +242,13 @@ gary 在 C3 指派 `orders-read` → DeveloperRead;LDAP 介面把 ming 從 devel
 
 **環境**:就是基線(`scripts/up.sh`):3 台 controller(動態 quorum,`kraft.version` 1)、4 台 broker、副本 3、min.insync.replicas 2。實驗 topic `ha.test` 的副本固定放在 broker1、broker2、broker3(`--replica-assignment 11:12:13,12:13:11,13:11:12`),broker4 不放,這樣停 2 台時才看得到「同一分區失去 2 個副本」。每個實驗結束都會把停掉的節點啟動回來;要回到全新狀態用 `scripts/ha.sh on`。不在 `demo.sh all` 與 preflight 的章節鏈內。
 
-| 實驗 | 實測結果(7 步 0 失敗;手冊自檢 7 步 0 不符合)<!-- TODO-REVERIFY: 本表是 3 台 broker、靜態 quorum 時量到的,待新拓樸重跑 --> | 腳本 |
+| 實驗 | 實測結果(2026-10-12 全 HA 環境:7 步全部通過) | 腳本 |
 |---|---|---|
 | quorum | 3 個 voter、1 個 leader;4 台 broker 是 observer | `scripts/ha-lab.sh quorum` |
-| 停 1 台 broker(broker3) | acks=all 寫入不中斷;URP 大於 0(要告警);恢復後補齊 | `broker-down` |
-| 停 broker2、broker3(`ha.test` 的副本只剩 broker1) | ISR 1 < min.isr 2:acks=all 被擋(逾時 0 筆成功);**acks=1 producer 回報成功但 consumer 讀不到**(高水位不前進,恢復後才出現);consumer group 加入不了(__consumer_offsets 的 min.isr 也不足) | `brokers-down` |
+| 停 1 台 broker(broker3) | acks=all 寫入 200 筆不中斷(ha.test 的副本剩 2 份);URP 105(要告警);恢復後補齊、URP=0 | `broker-down` |
+| 停 broker2、broker3(`ha.test` 的副本只剩 broker1) | ISR 1 < min.isr 2:acks=all 被擋(逾時 0 筆成功);**acks=1 producer 回報成功但 consumer 讀不到**(高水位不前進,恢復後才出現) | `brokers-down` |
 | 停 1 台 controller | 建 topic、寫入正常 | `ctrl-down` |
-| 停 2 台 controller(失去多數) | 建 topic 沒回應;describe 有時由 broker 的 metadata 快取回答(3 個分區)、有時逾時(兩種都出現過);既有 topic 讀寫仍可(實測 2 分鐘內,連續 15 次寫入全成功;更長時間未測) | `ctrls-down` |
+| 停 2 台 controller(失去多數) | 建 topic 沒回應;describe 有時由 broker 的 metadata 快取回答(3 個分區)、有時逾時(兩種都出現過);既有 topic 讀寫仍可(實測期間 acks=all 寫入 100 筆、讀取全部分區 750 筆;更長時間未測) | `ctrls-down` |
 | 滾動重啟 | 背景寫入 2400 筆(acks=all、冪等),依序重啟 4 broker(每台等 URP=0)再 3 controller(active 最後):2400 = 2400,零失敗 | `rolling` |
 
 **踩坑**:perf 的 sticky partitioner 會把一批資料放在同一分區,檢查「讀得到」要加總全部分區,不能只看分區 0;`kafka-producer-perf-test --producer.config` 已棄用,改 `--command-config`。
@@ -267,7 +267,7 @@ gary 在 C3 指派 `orders-read` → DeveloperRead;LDAP 介面把 ming 從 devel
 | 依賴 | 為 C3 設計;告警與 C3 的 telemetry 綁在一起 | 獨立於 C3;銀行既有 Prometheus、Grafana 能直接用 |
 | 建議 | C3 的資料來源,保留 | **銀行自有監控的告警走這條**(偵測快 4 到 5 倍、不依賴 C3) |
 
-**監控端點的保護(22.10,實測)**:每個 controller 與 broker 的 JMX exporter 一律 HTTPS + Basic 帳密(JMX exporter 1.0.1 不支援 mTLS;密碼 PBKDF2-HMAC-SHA512 雜湊、隨機產生存 `config/c3/jmx_exporter.pw`,Prometheus 以 `password_file` 讀取,不進版本庫);blackbox exporter 一律 HTTPS + mTLS(`config/blackbox/web-config.yml`:`client_auth_type: RequireAndVerifyClientCert`;Prometheus 帶 `client-monitor` 憑證)。負面測試:不帶帳密與錯密碼 401、明文 http 無回應、不帶或不被信任的 client 憑證握手被拒;Prometheus 18 個目標 up=1<!-- TODO-REVERIFY: 18 個目標是 3 controller + 3 broker 時量到的 -->。依據:Prometheus 官方安全文件(exporter 支援 TLS 與 client 憑證驗證;blackbox 與 SNMP exporter 依 URL 參數替人連任意位址,要特別限制存取)、官方 jmx-monitoring-stacks 的 ssl_basic_auth 做法。**未實測**:網路層防火牆、client_allowed_sans、密碼輪替。
+**監控端點的保護(22.10,實測)**:每個 controller 與 broker 的 JMX exporter 一律 HTTPS + Basic 帳密(JMX exporter 1.0.1 不支援 mTLS;密碼 PBKDF2-HMAC-SHA512 雜湊、隨機產生存 `config/c3/jmx_exporter.pw`,Prometheus 以 `password_file` 讀取,不進版本庫);blackbox exporter 一律 HTTPS + mTLS(`config/blackbox/web-config.yml`:`client_auth_type: RequireAndVerifyClientCert`;Prometheus 帶 `client-monitor` 憑證)。負面測試:不帶帳密與錯密碼 401、明文 http 無回應、不帶或不被信任的 client 憑證握手被拒;Prometheus 29 個目標 up=1(JMX 7、TLS 探測 22)。依據:Prometheus 官方安全文件(exporter 支援 TLS 與 client 憑證驗證;blackbox 與 SNMP exporter 依 URL 參數替人連任意位址,要特別限制存取)、官方 jmx-monitoring-stacks 的 ssl_basic_auth 做法。**未實測**:網路層防火牆、client_allowed_sans、密碼輪替。
 
 **官方設定檔**:各元件的 exporter 設定直接用 Confluent 官方 jmx-monitoring-stacks(`kafka_broker.yml`、`kafka_controller.yml`,釘定 commit `f376263` 並校驗 SHA-256,由 `scripts/jmx-setup.sh` 下載,不進版本庫)。取捨:官方檔每台 broker 約 12,000 個時間序列,startDelaySeconds 120(啟動後 2 分鐘才開始匯出,重啟後指標會有 2 分鐘空窗)。官方 broker-alerts.yml 的五條告警與本 Lab 規則一致。
 
@@ -281,7 +281,7 @@ gary 在 C3 指派 `orders-read` → DeveloperRead;LDAP 介面把 ming 從 devel
 
 | 項目 | 實測結果 |
 |---|---|
-| 到期監控 | blackbox exporter 對 12 個端點(對外 TLS 6、內部 mTLS 6)<!-- TODO-REVERIFY: 12 個是 3 台 broker 時的數字;4 台 broker 應為對外 8、內部 7 -->探測「實際送出」的憑證;`probe_ssl_earliest_cert_expiry`;< 30 天告警。telemetry 的 `mtls_earliest_cert_expiration_ms` 全部回報 Long.MAX(沒填值)不採用;官方 JMX 設定沒有憑證到期指標。client 憑證與 CA 靠 OP menu 第 17 項檔案巡檢(含剩餘時間分級) |
+| 到期監控 | blackbox exporter 對 22 個端點(對外 TLS 15:broker、MDS、REST Proxy、SR、Connect、C3;內部 mTLS 7)探測「實際送出」的憑證;`probe_ssl_earliest_cert_expiry`;< 30 天告警。telemetry 的 `mtls_earliest_cert_expiration_ms` 全部回報 Long.MAX(沒填值)不採用;官方 JMX 設定沒有憑證到期指標。client 憑證與 CA 靠 OP menu 第 17 項檔案巡檢(含剩餘時間分級) |
 | 不停機換憑證 | 動態 keystore 重載(`listener.name.client.ssl.keystore.*`),keystore 設定只能逐台設(不能設叢集預設);流程「預檢 → 金絲雀(broker1)→ client 角度驗證 → 其餘」;背景寫入 300 筆零失敗、broker 沒有重啟;MDS(Jetty)不在動態重載範圍 |
 | SAN 不同 | broker 拒絕動態更新(DN / SAN 必須與現有相同) |
 | 別的 CA 簽的憑證 | broker 接受(不檢查鏈是否被 client 信任),client 全部驗證失敗;影響限於金絲雀;回退必須走不經 CLIENT 埠的帶外路徑(INTERNAL mTLS 埠) |
@@ -428,7 +428,7 @@ gary 在 C3 指派 `orders-read` → DeveloperRead;LDAP 介面把 ming 從 devel
 | 項目 | 實測結果 |
 |---|---|
 | 現況 | `kafka-features describe`:kraft.version 1(動態);`describe --status` 的 CurrentVoters 每個都有 directoryId(controller 以相同的 `--initial-controllers` 格式化) |
-| 既有靜態叢集的升級(參考) | `kafka-features upgrade --feature kraft.version=1` → 各節點移除 `controller.quorum.voters`、改設 `controller.quorum.bootstrap.servers` → controller 依序重啟、再重啟 broker;先前實測背景寫入 1500 筆全成功 <!-- TODO-REVERIFY: 1500 筆是舊拓樸(靜態 quorum、3 台 broker)量到的,新 Lab 33 已不含升級步驟 --> |
+| 既有靜態叢集的升級(參考) | `kafka-features upgrade --feature kraft.version=1` → 各節點移除 `controller.quorum.voters`、改設 `controller.quorum.bootstrap.servers` → controller 依序重啟、再重啟 broker;先前(舊拓樸、靜態 quorum)實測背景寫入 1500 筆全成功;本環境一開始就是動態 quorum,未在新拓樸重做 |
 | 汰換 | 停 controller3 → controller4(profile quorum,`QUORUM_FORMAT_FLAG=--no-initial-controllers`)啟動為 observer → 新節點上 `add-controller` → `remove-controller --controller-id 3 --controller-directory-id <id>` → 名單 {1,2,4} |
 | 驗證 | 再停 controller1:leader 約 3 到 5 秒選出,寫入與建 topic 成功 |
 

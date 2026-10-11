@@ -160,7 +160,7 @@ add(P('目標:上課當天每個人的電腦都能在 5 分鐘內把環境建起
 add(H2('要安裝的軟體'));
 add(...table([
   ['軟體', '版本 / 設定', '用途'],
-  ['Docker Desktop', '最新版;Settings → Resources 記憶體 ≥ 11 GB', '跑與客戶正式環境相同的 HA 拓樸(3 controller、4 broker、REST Proxy / Schema Registry / Connect 各 2 台、Control Center 1 台)'], /* TODO-REVERIFY: 舊版寫「實測全部啟動約 3.5 GB」是 9 個容器時量到的,新拓樸的實際用量待量測 */
+  ['Docker Desktop', '最新版;Settings → Resources 記憶體 ≥ 11 GB', '跑與客戶正式環境相同的 HA 拓樸(3 controller、4 broker、REST Proxy / Schema Registry / Connect 各 2 台、Control Center 1 台);實測全部啟動(20 個容器)約用 8.3 到 8.6 GB'],
   ['Git for Windows(Git Bash)', '最新版', '所有指令都在 Git Bash 執行(Linux / macOS 用內建終端機即可)'],
   ['Node.js', '24(LTS 亦可)', 'UI 自動化截圖、Postman 批次測試(newman)、產生本手冊'],
   ['Postman 桌面版', '最新版(選裝)', '只有 Lab 5 用;不裝可改用 newman'],

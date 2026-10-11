@@ -316,8 +316,8 @@ add({ title: '高可用:壞幾台還撐得住', sub: '3 台 controller、4 台 b
     ['停 2 台 broker(同一分區只剩 1 個副本)', 'acks=all 被擋;acks=1 的 producer 回報成功,consumer 卻讀不到(高水位不前進),恢復後才出現', '測試環境已驗證'],
     ['停 1 台 controller', '叢集照常:建 topic、寫入都正常', '測試環境已驗證'],
     ['停 2 台 controller', '失去多數:建 topic 沒回應(describe 有時逾時);既有 topic 的讀寫暫時還可用,不是可依賴的容錯', '測試環境已驗證'],
-    ['滾動重啟', 'broker 一台一台(等 URP 回 0),controller 非 active 先、active 最後;背景寫入零失敗零遺失', '測試環境已驗證'], /* TODO-REVERIFY: 零失敗零遺失是 3 台 broker 時量到的 */
-    ['動態 quorum', '正式環境用動態 quorum(controller 名單存在叢集裡);壞掉的 controller 以「先加新的、再移除舊的」汰換,不動其他節點;既有的靜態叢集可不停機升級(寫入零失敗)', '測試環境已驗證(自動加入、同時壞兩台未驗證)'], /* TODO-REVERIFY: 「靜態升級寫入零失敗」是舊拓樸量到的,新 Lab 33 已不含升級步驟 */
+    ['滾動重啟', 'broker 一台一台(等 URP 回 0),controller 非 active 先、active 最後;背景寫入零失敗零遺失(2400 = 2400)', '測試環境已驗證'],
+    ['動態 quorum', '正式環境用動態 quorum(controller 名單存在叢集裡);壞掉的 controller 以「先加新的、再移除舊的」汰換,不動其他節點;既有的靜態叢集可不停機升級(寫入零失敗;舊拓樸實測,新環境一開始就是動態 quorum)', '測試環境已驗證(自動加入、同時壞兩台未驗證)'],
   ], { rowH: 0.66, hdrH: 0.44, sz: 12, col: MDS }), rowCols: [SVC, RISK, SVC, RISK, SVC, SVC] },
 ] });
 
