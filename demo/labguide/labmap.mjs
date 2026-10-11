@@ -14,7 +14,7 @@ const COMP = {
 // 每個 Lab:prove 一句話;use 用到的元件;flows [誰 / 做什麼, 經過哪裡, 結果]
 export const MAPS = [
   { n: 0, prove: '把零件立起來:憑證 → 模擬 AD → controller → broker(含 MDS)→ 第一批授權 → REST Proxy、Control Center', use: ['cli', 'certs', 'ad', 'ldapadmin', 'controller', 'broker', 'rp', 'c3', 'prom', 'am'],
-    flows: [['make-certs.sh', 'demo/certs', '✔ 一張共用 server 憑證 + client 憑證 + MDS token 金鑰'], ['up.sh(或逐步手動)', 'LDAP → controller → broker → bootstrap 授權 → 服務帳號、topic', '✔ preflight 18 / 18']] },
+    flows: [['make-certs.sh', 'demo/certs', '✔ 一張共用 server 憑證 + client 憑證 + MDS token 金鑰'], ['up.sh(或逐步手動)', 'LDAP → controller → broker → bootstrap 授權 → 服務帳號、topic', '✔ preflight 33 / 33']] },
   { n: 1, prove: '預設全部拒絕:沒有身分、密碼錯、有身分但沒授權,三種都進不來', use: ['cli', 'rp', 'broker', 'ad'],
     flows: [['不帶帳密', 'REST Proxy', '✘ 401'], ['yujie 密碼錯', 'REST Proxy / broker(PLAIN)', '✘ 401 / 認證失敗'], ['ming 帳密正確、沒有 role', 'broker', '✘ 看不到任何業務 topic']] },
   { n: 2, prove: '人用 AD 帳號登入 Control Center;三個人看到的內容由 RBAC 決定', use: ['browser', 'c3', 'broker', 'ad'],
