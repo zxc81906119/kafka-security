@@ -1086,6 +1086,9 @@ services:
       - ./config/connect/plugins:/plugins:ro                    # 外掛(connect-file,由 connect-setup.sh 從 Maven Central 下載並校驗 SHA-1)
       - ./config/connect/secrets:/etc/connect-secrets:ro        # 連接器的密碼檔(config provider 讀這裡;正式環境由 CyberArk 提供)
     environment:
+      # 堆積要小於容器上限:映像預設 -Xmx2G 大於 mem_limit 1280m,堆積長大時容器被 OOM 終止(實測 connect2 exit 137、OOMKilled=true)。
+      #   官方建議 Connect 堆積 0.5 到 4 GB;堆積之外還要留 metaspace、執行緒與直接記憶體,所以取約上限的六成
+      KAFKA_HEAP_OPTS: "-Xms512M -Xmx768M"
       CONNECT_BOOTSTRAP_SERVERS: broker1:9094,broker2:9094,broker3:9094,broker4:9094
       CONNECT_GROUP_ID: connect-cluster
       CONNECT_CONFIG_STORAGE_TOPIC: connect-configs
