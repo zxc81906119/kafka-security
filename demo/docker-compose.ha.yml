@@ -21,6 +21,13 @@ x-ha-rf: &ha-rf
 x-ha-ctrl: &ha-ctrl
   <<: *ha-rf
   KAFKA_HEAP_OPTS: "-Xms384m -Xmx384m"
+  KAFKA_CONFLUENT_BALANCER_GOAL_VIOLATION_DELAY_ON_NEW_BROKERS_MS: 180000   # 第 31 章 demo 專用:預設 1800000(30 分鐘),broker 有變動後負載不均偵測器暫停這麼久。官方設定頁沒列這項(從 broker 的有效設定看到),正式環境維持預設
+  KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL     # 第 31 章:KRaft 下 Self-Balancing 跑在 controller,官方要求 controller 也設 inter.broker.listener.name(沒設會找不到 bootstrap)
+  KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:SSL,INTERNAL:SSL     # 同上:controller 不監聽 INTERNAL,只是以 client 身分連 broker 的 INTERNAL 埠(balancer)
+  KAFKA_LISTENER_NAME_INTERNAL_SSL_KEYSTORE_LOCATION: /etc/kafka/secrets/internal.keystore.p12   # mTLS 身分 CN=kafka-internal(super user),與 broker 的內部通道相同
+  KAFKA_LISTENER_NAME_INTERNAL_SSL_KEYSTORE_TYPE: PKCS12
+  KAFKA_LISTENER_NAME_INTERNAL_SSL_KEYSTORE_PASSWORD: changeit
+  KAFKA_LISTENER_NAME_INTERNAL_SSL_KEY_PASSWORD: changeit
   KAFKA_CONFLUENT_METADATA_BOOTSTRAP_SERVERS: broker1:9092,broker2:9092,broker3:9092
   KAFKA_CONFLUENT_SECURITY_EVENT_LOGGER_EXPORTER_KAFKA_BOOTSTRAP_SERVERS: broker1:9092,broker2:9092,broker3:9092
 
@@ -114,6 +121,55 @@ services:
       KAFKA_ADVERTISED_LISTENERS: INTERNAL://broker3:9092,CLIENT://broker3:9094
       KAFKA_CONFLUENT_METADATA_SERVER_LISTENERS: https://0.0.0.0:8093
       KAFKA_CONFLUENT_METADATA_SERVER_ADVERTISED_LISTENERS: https://broker3:8093
+
+  # 第 31 章:Self-Balancing 的「加 broker」「移除 broker」實驗用的第 4 台(只在 --profile sbc 啟動;scripts/sbc-lab.sh 會啟動它)
+  broker4:
+    extends: { file: docker-compose.yml, service: broker2 }
+    container_name: broker4
+    hostname: broker4
+    profiles: ["sbc"]
+    depends_on:
+      controller1: { condition: service_healthy }
+      controller2: { condition: service_healthy }
+      controller3: { condition: service_healthy }
+      openldap: { condition: service_healthy }
+    healthcheck:
+      test: ["CMD-SHELL", "timeout 3 bash -c 'exec 3<>/dev/tcp/localhost/9094 && exec 3<>/dev/tcp/localhost/8094'"]
+    ports: !override
+      - "${HOST_PORT_MDS4:-8094}:8094"
+      - "${HOST_PORT_BROKER4:-19394}:9094"
+    volumes:
+      - ./config/jmx:/opt/jmx:ro
+    environment:
+      <<: [*ha-rf, *ha-jmx-broker]
+      KAFKA_NODE_ID: 14
+      KAFKA_LISTENERS: INTERNAL://broker4:9092,CLIENT://0.0.0.0:9094
+      KAFKA_ADVERTISED_LISTENERS: INTERNAL://broker4:9092,CLIENT://broker4:9094
+      KAFKA_CONFLUENT_METADATA_SERVER_LISTENERS: https://0.0.0.0:8094
+      KAFKA_CONFLUENT_METADATA_SERVER_ADVERTISED_LISTENERS: https://broker4:8094
+
+  # 第 32 章:Tiered Storage 的物件儲存(S3 相容)。測試用 MinIO(RELEASE.2025-09-07);正式環境用客戶行內的 S3 相容物件儲存。
+  # 只在 --profile tier 啟動;scripts/tier-setup.sh on 會產生帳密與 TLS 檔、建 bucket 與專用帳號。
+  minio:
+    image: quay.io/minio/minio:latest
+    container_name: minio
+    hostname: minio
+    profiles: ["tier"]
+    command: server /data --console-address :9001 --certs-dir /certs
+    mem_limit: 512m
+    environment:
+      MINIO_ROOT_USER_FILE: /run/tier/root-user
+      MINIO_ROOT_PASSWORD_FILE: /run/tier/root-password
+      MINIO_KMS_SECRET_KEY_FILE: /run/tier/kms-key     # 測試用靜態金鑰,讓 MinIO 接受伺服器端加密(Kafka 預設 AES256);正式環境用 KES + 行內 KMS/HSM
+    volumes:
+      - minio-data:/data
+      - ./config/tier/certs:/certs:ro
+      - ./config/tier/secrets:/run/tier:ro
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsk https://localhost:9000/minio/health/live"]     # 本機探測,不驗證憑證(只問「活著嗎」)
+      interval: 10s
+      timeout: 5s
+      retries: 12
 
   # 第 23 章:TLS 憑證到期探測(只在需要時用 --profile c3 一起啟動)
   blackbox-exporter:
@@ -349,6 +405,7 @@ services:
       start_period: 40s
 
 volumes:
+  minio-data:
   loki-data:
   tempo-data:
   alloy-data:

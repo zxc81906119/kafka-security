@@ -391,13 +391,43 @@ gary 在 C3 指派 `orders-read` → DeveloperRead;LDAP 介面把 ming 從 devel
 
 **踩坑**:`demo.sh` 的章節號判斷要加 30;測試告警過期後會再收到 RESOLVED,所以收件匣裡可能混著前一個實驗的解除信(各實驗只比對自己的告警名稱);Control Center 的畫面若也改告警設定會寫同一個檔案。**沒測**:接真正的行內郵件伺服器(Exchange / Postfix 的驗證、relay 限制、SPF / DKIM)、簡訊與通訊軟體與工單 webhook、靜音與抑制、Alertmanager 高可用、通知失敗的備援。
 
+## 第 31 章(進階)Self-Balancing:自動搬分區(`./demo.sh 31`,需 HA 模式;約 40 分鐘,大部分是等指標視窗)
+
+**準備**:`scripts/ha.sh on --with-c3`(從全新環境)→ `scripts/sbc-setup.sh on`(`.env` 設 `SBC_ENABLE=true`,controller 與 broker 依序重建)。`scripts/sbc-lab.sh` 子命令:status、add、uneven、remove。還原:`scripts/sbc-setup.sh off`(`ha.sh` 重建時也會清掉 `SBC_ENABLE`)。
+
+| 項目 | 實測結果 |
+|---|---|
+| 啟用 | `confluent.balancer.enable=true` 設在每台 controller 與 broker(`docker-compose.yml` 的 `KAFKA_CONFLUENT_BALANCER_ENABLE: ${SBC_ENABLE:-false}`);controller 另需 `inter.broker.listener.name=INTERNAL`、`listener.security.protocol.map` 含 INTERNAL、INTERNAL 的 client 憑證(CN=kafka-internal,在 super.users);否則狀態 DISABLED 或 `IllegalArgumentException: Bootstrap server endpoint was not provided` |
+| 狀態 | `kafka-rebalance-cluster --status / --describe`:Balancer is running on brokers: [controller 的 id](KRaft 下跑在 active controller) |
+| 加 broker | `docker compose --profile sbc up -d broker4`(node id 14,SAN 補 broker4);約 15 到 20 分鐘後(日誌 `Insufficient metric windows… will attempt retry`,每 90 秒)自動搬副本;搬家期間 20000 筆 acks=all 寫入全成功 |
+| 負載不均 | 資料量低於官方觸發門檻(副本數與 >20% 磁碟用量):日誌 `did not detect any violated goals`,不搬;broker 有變動後偵測器暫停 `confluent.balancer.goal.violation.delay.on.new.brokers.ms`(預設 1800000,demo 設 180000) |
+| 移除 | `kafka-remove-brokers --broker-id 14 --delete`(約 2 分鐘):Broker Replica Exclusion → Partition Reassignment → Broker Shutdown;筆數不變;完成後 `kafka-cluster unregister --id 14`(官方) |
+
+**踩坑**:啟用時另一台 broker 在跑沒有一併重建 → balancer 指標視窗內部錯誤(日誌反覆 `Replica metrics have more windows than partition metrics`)、移除 broker 失敗(`Partition Reassignment: ERROR`);重建 controller 要等 controller 都 healthy 再看狀態;反覆刪除並重建同名 topic 會讓指標歷史混亂,實驗前用全新環境。
+
+## 第 32 章(進階)Tiered Storage 到 MinIO(`./demo.sh 32`,需 HA 模式;約 20 分鐘)
+
+**準備**:`scripts/ha.sh on` → `scripts/tier-setup.sh on`(MinIO + 專用帳號 + broker 依序重建;`docker-compose.tier.yml` 疊進 `COMPOSE_FILE`)。`scripts/tier-lab.sh` 子命令:produce、archive、evict、read、restart、security。還原:`scripts/tier-setup.sh off`。
+
+| 項目 | 實測結果 |
+|---|---|
+| 設定 | `confluent.tier.feature=true`、`.backend=S3`、`.s3.bucket=kafka-tier`、`.s3.region=us-east-1`、`.s3.aws.endpoint.override=https://minio:9000`、`.s3.force.path.style.access=true`、`.s3.ipv6.enabled=false`、`.s3.cred.file.path`;topic:`confluent.tier.enable=true`、`confluent.tier.local.hotset.ms=60000`、`segment.bytes=5242880` |
+| 專用帳號 | MinIO policy 只含 `s3:GetBucketLocation`、`s3:PutObject`、`s3:GetObject`、`s3:DeleteObject`,只限 kafka-tier;根帳號只給管理 |
+| 上傳 | 100000 筆(約 100 MB)寫入後 20 到 30 秒出現物件(每個 segment 對應 .segment、.offset-index、.producer-state、.epoch-state 等) |
+| 本機清理 | 本機實際占用從約 300 MB(3 副本)降到一半以下、數分鐘內續降到約 20 MB(下一輪保留檢查,預設 5 分鐘內);`kafka-log-dirs` 仍顯示邏輯大小 99 MB/副本,要量磁碟目錄 |
+| 讀取 | 新 consumer group 從頭讀到 100000 筆;broker1 重啟後仍讀到 100000 筆 |
+| 保護 | 匿名 GET 403;專用帳號建 bucket 被拒;明文 HTTP 400;密碼不在日誌、不在環境變數 |
+
+**踩坑**:`cred.file.path` 要 `accessKey=`、`secretKey=`(properties),給 AWS CLI 格式 broker 起不來;預設 SSE AES256 對沒有 KMS 的 MinIO 回 501,上傳無限重試(topic 正常、沒有物件);HTTPS 需 `-Djavax.net.ssl.trustStore`;MinIO 映像的健康檢查工具是 curl(沒有 `mc`);`kafka-log-dirs` 含已上傳資料,看本機占用要用 `du`。
+
 ## 對應到客戶 RHEL 9 VM 的位置與步驟(手動部署)
 | demo | RHEL 9 VM |
 |---|---|
 | docker-compose 的 `KAFKA_*` 環境變數 | `/etc/kafka/server.properties`(broker)、`controller.properties`;同名小寫句點(`KAFKA_LISTENER_NAME_CLIENT_...` → `listener.name.client....`) |
 | `certs/` | `/etc/kafka/secrets/`(權限 600、owner `cp-kafka`);AD CS 根憑證同時放系統信任(`update-ca-trust`)與 Java truststore |
 | 各元件 SCRAM 密碼 | Secret Protection / 檔案權限 600 + systemd 獨立使用者;Vault 為後續 |
-| `ensure-controller.sh`(`--add-scram`) | 每個 controller 節點首次啟動前:`kafka-storage format --cluster-id <id> -c controller.properties --add-scram '...'`(**順序錯誤需重新 format**) |
+| `ensure-controller.sh`(`--add-scram`) | 每個 controller 節點首次啟動前:`kafka-storage format --cluster-id <id> -c controller.properties --add-scram '...'`(**順序錯誤需重新 format**)。CP 8.3 的 `kafka-storage format` 另須指定 `--standalone`、`--initial-controllers` 或 `--no-initial-controllers` 其中之一(Rocky 9 實測) |
+| systemd(RPM 安裝) | unit `confluent-server`,預設讀 `/etc/kafka/server.properties`、`Restart=no`、`LimitNOFILE=1000000`;預設 `log.dirs` 在 `/tmp`,必須改到 `/var/lib/kafka/...`(見 DESIGN-BASIS 2026-10-11 RHEL 9 手動安裝實測) |
 | `.env`(audit router) | `server.properties`:`confluent.security.event.router.config=<JSON 單行>` |
 | 防火牆 | 9092(INTERNAL)、9093(CONTROLLER)只開放給 broker/controller 節點;Prometheus(9090)、Alertmanager(9093,另一台主機時)只開放給 C3 與必要的監控來源,除非已啟用其 TLS + Basic 認證;8091 為 MDS 與 Admin REST 共用,需對使用者與元件開放,保護靠第 14 章的安全擴充 |
 

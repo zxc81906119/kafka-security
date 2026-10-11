@@ -124,7 +124,7 @@ lab_evolve() {
 
 lab_modes() {
   say "三種改法 × 三種模式:X=加有預設值的欄位、Y=刪掉欄位 amount、Z=加必填欄位。每個模式用獨立的 subject 檢查(不實際註冊)"
-  local mode s x y z table="" all_ok=1
+  local mode s x y z all_ok=1
   declare -A want=( [BACKWARD]="true true false" [FORWARD]="true false true" [FULL]="true false false" )   # X Y Z 的預期
   for mode in BACKWARD FORWARD FULL; do
     s=sch.modes.$mode
