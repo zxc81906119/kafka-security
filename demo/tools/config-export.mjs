@@ -54,6 +54,24 @@ function placeholder(key, v) {
   return s;
 }
 
+// 從 compose 原始檔收集每個環境變數的註解(行尾 # 與緊鄰上方的註解行):這些是實測或查證時寫下的理由與漏設症狀
+function collectNotes(file) {
+  const notes = {}; let pending = [];
+  for (const line of fs.readFileSync(file, 'utf8').split(/\r?\n/)) {
+    const c = line.match(/^\s+#\s?(.*)$/);
+    if (c) { pending.push(c[1].trim()); continue; }
+    const m = line.match(/^\s+([A-Z][A-Z0-9_]+):\s*(.*)$/);
+    if (m) {
+      const inline = (m[2].match(/\s#\s?(.*)$/) || [])[1];
+      const text = [...pending, inline].filter(Boolean).join(' ');
+      if (text && !notes[m[1]]) notes[m[1]] = text;
+    }
+    pending = [];
+  }
+  return notes;
+}
+const NOTES = collectNotes(path.join(DEMO, 'docker-compose.yml'));
+
 const cfg = JSON.parse(execFileSync('docker', ['compose', '--profile', 'full', '--profile', 'connect', 'config', '--format', 'json'],
   { cwd: DEMO, encoding: 'utf8', maxBuffer: 64 << 20 }));
 
@@ -62,18 +80,21 @@ const all = {};
 for (const c of COMPONENTS) {
   const env = cfg.services[c.svc]?.environment || {};
   const props = [];
-  for (const [k, v] of Object.entries(env).sort()) {
+  for (let [k, v] of Object.entries(env).sort()) {
     if (DOCKER_ONLY.test(k) || v === '' || v == null) continue;
     let key = null;
     const extra = Object.entries(c.extra || {}).find(([p]) => k.startsWith(p));
     if (k.startsWith(c.prefix)) key = (c.to || '') + toKey(k.slice(c.prefix.length));
     else if (extra) key = extra[1] + toKey(k.slice(extra[0].length));
     if (!key) continue;
-    props.push({ key, value: placeholder(key, v), env: k });
+    // cp 映像專用:*_FILENAME 是 /etc/kafka/secrets 下的檔名、*_CREDENTIALS 是放密碼的檔名;手動安裝要寫回標準的 location / password
+    if (/\.(keystore|truststore)\.filename$/.test(key)) { key = key.replace(/\.filename$/, '.location'); v = `/etc/kafka/secrets/${v}`; }
+    else if (/\.(keystore|key|truststore)\.credentials$/.test(key)) key = key.replace(/\.credentials$/, '.password');
+    props.push({ key, value: placeholder(key, v), env: k, note: NOTES[k] || '' });
   }
   all[c.name] = { file: c.file, source: c.svc, props };
   const body = [`# ${c.file} — 由 tools/config-export.mjs 從已驗證的 demo 設定(${c.svc})產生;<…> 為依環境填入的值`,
-    ...props.map(p => `${p.key}=${p.value}`)].join('\n') + '\n';
+    ...props.flatMap(p => [...(p.note ? [`# ${p.note}`] : []), `${p.key}=${p.value}`])].join('\n') + '\n';
   fs.writeFileSync(path.join(OUT, `${c.name}.properties`), body);
   console.log(`${c.name.padEnd(16)} ${String(props.length).padStart(3)} 項 → ${path.relative(DEMO, path.join(OUT, c.name + '.properties'))}`);
 }

@@ -10,6 +10,6 @@
 # ============================================================================
 export MSYS_NO_PATHCONV=1
 p="$1"; s="${2:-60}"
-for b in broker1 broker2; do
+for b in broker1 broker2 broker3 broker4; do   # 元件會向 4 台 MDS 中的任一台呼叫,要看全部
   docker logs "$b" --since "${s}s" 2>&1 | grep -E "> (GET|POST|PUT|DELETE) https://[^ ]+ -- [0-9]+ > User Principal: $p\$"
 done | sed -E 's#.*> (GET|POST|PUT|DELETE) https://[^/]+(/[^ ?]+).*User Principal: (.*)#\3 \1 \2#' | sort | uniq -c | sort -rn

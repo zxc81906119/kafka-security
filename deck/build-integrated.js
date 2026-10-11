@@ -438,7 +438,9 @@ add({ title: '要向客戶確認的事項', sub: '答案會決定幾個分支的
     ['變更管理', '變更核准方式;維運作業項目清單;現有 OP menu 樣貌', 'OP menu 的核准檢查與項目'],
     ['憑證', 'CA 由誰簽(AD CS 或 Certificate Manager);有效期政策', '憑證生命週期'],
     ['資料保護', '是否需要欄位級加密(CSFLE);取得加購授權的方式;地端 KMS 或 HSM 的型號與是否有 Java 驅動;重新認證間隔、連線上限與配額的政策', 'CSFLE 能否導入、金鑰放哪'],
-  ], { rowH: 0.66, hdrH: 0.44, sz: 12, col: HUM }), rowCols: [HUM, PLT, RISK, PLT, MDS, PLT, RISK] },
+    ['機房與 DR', 'VM 分在幾個機架、有無反親和規則;第二資料中心時程、RPO / RTO、演練要求', '是否設 broker.rack;DR 連線方向與演練機制'],
+    ['監控', '行內既有企業監控平台、是否 24 小時值班、能否收 webhook 或心跳', '看門狗的最後一關接哪裡'],
+  ], { rowH: 0.52, hdrH: 0.4, sz: 11, col: HUM }), rowCols: [HUM, PLT, RISK, PLT, MDS, PLT, RISK, RISK, PLT] },
 ] });
 
 add({ title: '未驗證與限制(如實說明)', sub: '已實測的以外,這些尚未在客戶環境驗證', items: [

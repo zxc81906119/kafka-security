@@ -8,7 +8,8 @@ Created topic zdt.test.
    判定:資料金鑰已輪替——所有值重新加密、主金鑰不變、Conjur 不用動,broker2 重啟後正常
 ② 等 producer 寫完…
    producer 的警告(重試、換 leader、斷線重連,屬正常)前幾種:
-           1 WARN [Producer clientId=perf-producer-client] Received invalid metadata error in produce request on partition zdt.test-1
-           1 WARN [Producer clientId=perf-producer-client] Got error produce response with correlation id 382 on topic-partition zdt.
-   producer 回報送出 1200 筆;topic 實際 1200 筆;送出失敗 0 筆;警告行 2
+           1 WARN [Producer clientId=perf-producer-client] Received invalid metadata error in produce request on partition zdt.test-0
+           1 WARN [Producer clientId=perf-producer-client] Got error produce response with correlation id 672 on topic-partition zdt.
+           1 WARN [Producer clientId=perf-producer-client] Got error produce response with correlation id 311 on topic-partition zdt.
+   producer 回報送出 1200 筆;topic 實際 1200 筆;送出失敗 0 筆;警告行 14
 判定:滾動重啟期間 producer 零送出失敗、零遺失(送出 1200 筆 = topic 1200 筆)

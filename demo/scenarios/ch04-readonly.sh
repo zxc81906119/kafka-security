@@ -41,7 +41,7 @@ step ming-write "ming(唯讀)寫入 → 被拒" \
 
 step ming-create "ming(唯讀)想建立 topic → 被拒" \
   "kafka-topics --command-config ming.properties --create --topic ming-test" \
-  'K kafka-topics --bootstrap-server $BOOT --command-config /clients/plain-ming.properties --create --topic ming-test --partitions 1 --replication-factor 2' 'not authorized|Not authorized|Authorization failed|TopicAuthorization'
+  'K kafka-topics --bootstrap-server $BOOT --command-config /clients/plain-ming.properties --create --topic ming-test --partitions 1 --replication-factor 3' 'not authorized|Not authorized|Authorization failed|TopicAuthorization'
 
 step yujie-unaffected "yujie 仍在 orders-write,不受影響:可寫入" \
   "echo still-ok | kafka-console-producer --command-config yujie.properties --topic orders.events" \

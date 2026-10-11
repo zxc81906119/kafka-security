@@ -1,9 +1,9 @@
 # 【45 查詢 audit】最近 4 小時被拒絕(DENIED)的事件,依主體與資源列出
 $ ./opmenu.sh --run 45 240 '' DENIED
-最近 240 分鐘符合 112 筆(結果 DENIED);顯示最後 50 筆:
-2026-10-11T09:25:18 User:GARY        mds.Authorize        All            All                        DENIED
-2026-10-11T09:25:32 User:GARY        mds.Authorize        All            All                        DENIED
-2026-10-11T09:45:08 User:legacy-orders kafka.Metadata       Describe       orders.events              DENIED
-2026-10-11T09:45:08 User:legacy-orders kafka.Metadata       Describe       payments.events            DENIED
-2026-10-11T09:45:14 User:legacy-other kafka.Metadata       Describe       orders.events              DENIED
-2026-10-11T09:46:15 User:svc-orders  kafka.Metadata       Describe       orders.events              DENIED
+最近 240 分鐘符合 82 筆(結果 DENIED);顯示最後 50 筆:
+2026-10-11T13:29:06 User:MING        kafka.Produce        Write          orders.events              DENIED
+2026-10-11T13:29:07 User:YUJIE       mds.Authorize        AlterAccess    payments.                  DENIED
+2026-10-11T13:29:26 User:MING        kafka.Produce        Write          orders.events              DENIED
+2026-10-11T13:30:34 User:svc-orders  kafka.Metadata       Describe       orders.events              DENIED
+2026-10-11T13:31:16 User:svc-orders  kafka.Metadata       Describe       payments.events            DENIED
+2026-10-11T13:47:23 User:legacy-other kafka.Metadata       Describe       orders.events              DENIED

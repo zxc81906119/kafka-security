@@ -19,7 +19,7 @@
 #   舊連線實驗:已建立的連線不會被踢;只停用 SCRAM 憑證擋不住已連著的人(SCRAM 只在建立連線時驗證),解除角色才會切斷(後續見第 19 章)
 #   Secret Protection:主金鑰存 Conjur,生效設定只有佔位符;summon 版 PID 1 是 summon、取不到秘密就不執行,systemd 只需 ExecStart 一行(ExecStartPre 的環境變數不會傳給 ExecStart);兩台 broker 共用同一把主金鑰與同一份 security.properties
 #   主金鑰輪替要檔與 Conjur 的金鑰成對才解得開,不成對 broker 重啟失敗(Failed to unwrap the data key),多台主機每台都要檔加金鑰一起換;資料金鑰輪替 Conjur 不用動
-#   滾動重啟期間 producer 零送出失敗(副本數 2、min.insync.replicas=1,正式環境建議副本 3、min.isr 2)
+#   滾動重啟 4 台期間 producer 零送出失敗(副本 3、min.insync.replicas 2,與正式環境相同)
 #   Conjur 稽核記錄誰取了什麼,rogue-app 被拒可查
 # ============================================================================
 source "$(dirname "$0")/../scripts/lib-ev.sh"
@@ -127,12 +127,12 @@ step sp-apply-summon "【broker 啟動 ②】同一件事改用 CyberArk 官方�
   "summon -p summon-conjur -f /conjur/secrets.yml /etc/confluent/docker/run(docker-compose.cyberark-summon.yml)" \
   'bash "$DEMO_ROOT/scripts/secret-protection.sh" summon-setup | tail -1; bash "$DEMO_ROOT/scripts/secret-protection.sh" apply-summon 2>&1 | grep -v "^ Container"; docker exec broker2 ps -eo pid,ppid,comm | head -3; bash "$DEMO_ROOT/scripts/secret-protection.sh" show; code=$(bash "$DEMO_ROOT/scripts/dcurl.sh" -o /dev/null -u gary:gary-pw https://broker2:8092/security/1.0/authenticate | tail -1); echo "gary 經 broker2 登入 → $code"; [ "$code" = "[HTTP 200]" ] && echo "判定:summon 注入主金鑰,broker 仍能查 AD" || echo "判定:不符合"' '判定:summon 注入主金鑰,broker 仍能查 AD'
 
-step sp-join-broker1 "【多台共用】broker1 也改用 summon + 加密設定:兩台 broker 取同一把主金鑰(Conjur 的 broker/master-key)、讀同一份 security.properties——這才是叢集的實際樣子,不是每台各一組" \
-  "scripts/secret-protection.sh join-broker1   # broker1 套用 docker-compose.cyberark-summon.yml" \
-  'bash "$DEMO_ROOT/scripts/secret-protection.sh" join-broker1 2>&1 | grep -v "^ Container"' '判定:broker1 與 broker2 共用同一把主金鑰'
+step sp-join-broker1 "【多台共用】broker2 試行通過後,其餘 3 台(broker1、broker3、broker4)逐台改用 summon + 加密設定,每台驗證通過才做下一台:4 台 broker 取同一把主金鑰(Conjur 的 broker/master-key)、讀同一份 security.properties——這才是叢集的實際樣子,不是每台各一組" \
+  "scripts/secret-protection.sh join-others   # broker1、broker3、broker4 逐台套用 docker-compose.cyberark-summon.yml" \
+  'bash "$DEMO_ROOT/scripts/secret-protection.sh" join-others 2>&1 | grep -v "^ Container"' '判定:4 台 broker 共用同一把主金鑰'
 
-step sp-rotate-master "【輪替 ①:主金鑰】新 passphrase → 只重包資料金鑰(值的密文不變)→ 新檔 + Conjur 的新主金鑰「成對」才解得開 → 換檔、更新 Conjur → 重啟 broker2。輪替要用「目前的 passphrase」,所以 passphrase 也存在 Conjur(只有管理員能讀,broker 不能)" \
-  "confluent secret file rotate --master-key --passphrase <目前> --passphrase-new <新>;conjur variable set kafka/broker/master-key;換 security.properties;重啟 broker2" \
+step sp-rotate-master "【輪替 ①:主金鑰】新 passphrase → 只重包資料金鑰(值的密文不變)→ 新檔 + Conjur 的新主金鑰「成對」才解得開 → 換檔、更新 Conjur → 4 台依序滾動重啟。輪替要用「目前的 passphrase」,所以 passphrase 也存在 Conjur(只有管理員能讀,broker 不能)" \
+  "confluent secret file rotate --master-key --passphrase <目前> --passphrase-new <新>;conjur variable set kafka/broker/master-key;換 security.properties;4 台依序重啟" \
   'bash "$DEMO_ROOT/scripts/secret-protection.sh" rotate-master 2>&1' '判定:主金鑰已輪替'
 
 step sp-mismatch "【輪替 ②:順序做錯會怎樣】檔與主金鑰不成對(換回輪替前的舊檔、Conjur 已是新主金鑰)→ broker2 重啟失敗(Failed to unwrap the data key);換回成對的檔就恢復。多台主機時,每一台都要「檔 + 金鑰」一起換" \
@@ -140,12 +140,12 @@ step sp-mismatch "【輪替 ②:順序做錯會怎樣】檔與主金鑰不成對
   'bash "$DEMO_ROOT/scripts/secret-protection.sh" mismatch-demo 2>&1' '判定:檔與主金鑰不成對時'
 
 step sp-rotate-data "【輪替 ③:資料金鑰】只需要目前的 passphrase;所有值的密文都重新加密;主金鑰不變 → Conjur 完全不用動,但 security.properties 要換、要重啟" \
-  "confluent secret file rotate --data-key --passphrase <目前>;換 security.properties;重啟 broker2" \
+  "confluent secret file rotate --data-key --passphrase <目前>;換 security.properties;4 台依序重啟" \
   'bash "$DEMO_ROOT/scripts/secret-protection.sh" rotate-data 2>&1' '判定:資料金鑰已輪替'
 
-step sp-rolling "【輪替 ④:滾動重啟期間 producer 受影響嗎】背景持續寫入(acks=all、冪等、每秒 5 筆),同時輪替資料金鑰並依序重啟 broker1 → broker2;比對送出筆數與 topic 實際筆數。條件:副本數 2、min.insync.replicas=1(demo 只有 2 台 broker;正式環境建議副本 3、min.isr 2)" \
-  "scripts/rolling-rotate-test.sh   # 約 4 分鐘" \
-  'bash "$DEMO_ROOT/scripts/rolling-rotate-test.sh" 1200 2>&1' '判定:滾動重啟期間 producer 零送出失敗'
+step sp-rolling "【輪替 ④:滾動重啟期間 producer 受影響嗎】背景持續寫入(acks=all、冪等、每秒 5 筆),同時輪替資料金鑰並依序重啟 broker1 → broker4;比對送出筆數與 topic 實際筆數。條件:副本 3、min.insync.replicas 2(與正式環境相同;一次只重啟一台,仍有 2 份同步副本)" \
+  "scripts/rolling-rotate-test.sh   # 約 8 分鐘" \
+  'bash "$DEMO_ROOT/scripts/rolling-rotate-test.sh" 2400 2>&1' '判定:滾動重啟期間 producer 零送出失敗'
 
 step sp-revert "【還原】broker2 回到原本設定(其他章節不依賴 Conjur)" \
   "docker compose up -d broker2" \

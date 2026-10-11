@@ -15,6 +15,6 @@ cd "$(dirname "$0")/.."
 ./scripts/rp.sh yujie:yujie-pw GET /topics >/dev/null
 ./scripts/rp-cert.sh legacy-orders GET /topics >/dev/null
 sleep 3
-for b in broker1 broker2; do
+for b in broker1 broker2 broker3 broker4; do   # REST Proxy 會向 4 台 MDS 中的任一台換 token,要看全部
   docker logs "$b" --since 25s 2>&1 | grep -E "> (GET|POST) https://[^ ]+/security/1.0/(authenticate|impersonate)"
 done | sed -E 's#.*> (GET|POST) https://[^/]+(/[^ ]+) .*User Principal: (.*)#\1 \2   MDS 看到的主體: \3#' | sort -u

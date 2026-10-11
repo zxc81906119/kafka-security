@@ -1,6 +1,6 @@
 # 【OP menu】維護模式的 Alertmanager 帳密改成執行時向 Conjur 取(OPMENU_ALERTMANAGER_AUTH_CMD),跳板機上不再放帳密檔;沒被授權的身分取不到就開不了
 $ OPMENU_ALERTMANAGER_AUTH_CMD='scripts/conjur.sh get-as opmenu opmenu/alertmanager-auth' ./opmenu.sh --run 25 broker1 2 → --run 26 <id>
-維護模式已開始:broker1,到 2026-10-11T09:51:12Z(UTC);silence id=2e9f4a5c-2e60-4233-9977-31eb9a33bb27(用項目 26 提前結束)
-維護模式已結束:2e9f4a5c-2e60-4233-9977-31eb9a33bb27
+維護模式已開始:broker1,到 2026-10-11T14:07:09Z(UTC);silence id=7973bcf9-ebaa-4fd2-b502-12c88978f291(用項目 26 提前結束)
+維護模式已結束:7973bcf9-ebaa-4fd2-b502-12c88978f291
 -- 沒被授權的身分(rogue-app)取帳密:
 建立 silence 失敗:Unauthorized

@@ -1,16 +1,16 @@
 # 【11 cluster 與身分鏈健康】partition、broker、MDS 各台、token 剩餘時間、controller quorum 一次看完
 $ ./opmenu.sh --run 11
--- under-replicated partition(應為空):
--- offline partition(應為空):
 -- broker 在線清單:
 broker1:9094 (id: 11
 broker2:9094 (id: 12
+broker3:9094 (id: 13
+broker4:9094 (id: 14
 -- MDS(OPMENU_MDS_URL,逐台):
-  https://broker1:8091                     正常(0.020190s)
--- 你的 MDS token:已用 14s,剩約 3586s
--- broker 在線:2 / 2(設定的 broker 數)
+  https://broker1:8091                     正常(0.018965s)
+-- 你的 MDS token:已用 17s,剩約 3583s
+-- broker 在線:4 / 4(設定的 broker 數)
 -- controller quorum(需要 ClusterAdmin):
-  LeaderId:               1
-  HighWatermark:          11163
-  CurrentVoters:          [{"id": 1, "endpoints": ["CONTROLLER://controller1:9093"]}]
+  LeaderId:               2
+  HighWatermark:          4141
+  CurrentVoters:          [{"id": 1, "directoryId": "hakFaGfNbL7uvJSEFoyrsw", "endpoints": ["CONTROLLER://controller1:9093"]}, {"id": 2, "directoryId": "NEbDIbDQIiecrTGu-P5MUQ", "endpoints": ["CONTROL
 -- AD:登入時已通過 MDS 驗證,代表當時 MDS 到 AD 這段可用;之後若要重新確認請重新登入

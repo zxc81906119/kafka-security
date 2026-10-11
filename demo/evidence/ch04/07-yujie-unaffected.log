@@ -1,3 +1,0 @@
-# yujie 仍在 orders-write,不受影響:可寫入
-$ echo still-ok | kafka-console-producer --command-config yujie.properties --topic orders.events
-→ 結果:成功

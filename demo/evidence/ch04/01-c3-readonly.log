@@ -1,4 +1,0 @@
-# 【C3 操作】gary 建立唯讀權限:AD 群組 orders-read → DeveloperRead(只有 Read,沒有 Write / Manage)
-$ (瀏覽器)C3 → Manage role assignments → Add role assignment(Group / orders-read / DeveloperRead)
-  📸 ch04/c3-1-readonly-form.png — C3:Add role assignment — Group orders-read / DeveloperRead / orders.
-  📸 ch04/c3-1-readonly-saved.png — C3:指派完成後的 Topic 範圍列表

@@ -2,4 +2,4 @@
 $ ./opmenu.sh --run 25 broker1 30
   對指定 node 靜音告警一段時間(最長 OPMENU_MAINT_MAX_MIN 分鐘),重啟或維護前使用;記錄是誰、哪張 ticket
 [33m將執行:靜音 broker1 的告警 30 分鐘(ticket CHG-2026-0001)[0m
-維護模式已開始:broker1,到 2026-10-11T10:43:14Z(UTC);silence id=a8172dc4-0fa6-4a16-9268-abdeb03bc9f3(用項目 26 提前結束)
+維護模式已開始:broker1,到 2026-10-11T14:16:13Z(UTC);silence id=791708d3-d1ad-4cb6-a72e-9bd06d7c64cc(用項目 26 提前結束)

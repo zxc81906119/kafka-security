@@ -57,7 +57,7 @@ step ming-daily "【日常】ming(orders-read)可讀資料" \
 
 step yujie-before "【日常】yujie 想建立 infra.ops-demo topic → 被拒(他是開發者,不是 topic 管理)" \
   "kafka-topics --command-config yujie.properties --create --topic infra.ops-demo" \
-  'K kafka-topics --bootstrap-server $BOOT --command-config /clients/plain-yujie.properties --create --topic infra.ops-demo --partitions 1 --replication-factor 2' "$DENY"
+  'K kafka-topics --bootstrap-server $BOOT --command-config /clients/plain-yujie.properties --create --topic infra.ops-demo --partitions 1 --replication-factor 3' "$DENY"
 
 # ---- 第一種提權:ops(Operator)——看得到叢集,但什麼都改不了 ----
 step grant-ops "【臨時提權 1】經核准,AD 管理員把 yujie 加進 ops(Kafka 端零變更)" \
@@ -67,7 +67,7 @@ echo "    (等 MDS 讀取 LDAP 變更 …)"; sleep 10
 
 step ops-limits "【分權重點】ops(Operator)能看叢集,但不能建 topic:yujie 建立 infra.ops-demo → 仍被拒" \
   "kafka-topics --command-config yujie.properties --create --topic infra.ops-demo" \
-  'K kafka-topics --bootstrap-server $BOOT --command-config /clients/plain-yujie.properties --create --topic infra.ops-demo --partitions 1 --replication-factor 2' "$DENY"
+  'K kafka-topics --bootstrap-server $BOOT --command-config /clients/plain-yujie.properties --create --topic infra.ops-demo --partitions 1 --replication-factor 3' "$DENY"
 
 step ops-noacl "【分權重點】ops 也不能改授權:yujie 嘗試給 orders-write 開 infra.* 讀取權 → 403" \
   "POST /security/1.0/principals/Group:orders-write/roles/DeveloperRead/bindings   # yujie" \
@@ -86,7 +86,7 @@ echo "    (等 MDS 讀取 LDAP 變更 …)"; sleep 10
 
 step topic-create "【topic 管理】yujie(topic-admin)建立 infra.ops-demo → 成功" \
   "kafka-topics --command-config yujie.properties --create --topic infra.ops-demo" \
-  'K kafka-topics --bootstrap-server $BOOT --command-config /clients/plain-yujie.properties --create --topic infra.ops-demo --partitions 1 --replication-factor 2' 'Created topic infra.ops-demo'
+  'K kafka-topics --bootstrap-server $BOOT --command-config /clients/plain-yujie.properties --create --topic infra.ops-demo --partitions 1 --replication-factor 3' 'Created topic infra.ops-demo'
 
 # 先由 gary 放一筆資料,讓「讀得到」可以被看見
 echo "ops-secret-1" | K kafka-console-producer --bootstrap-server $BOOT --command-config /clients/plain-gary.properties --topic infra.ops-demo >/dev/null 2>&1
@@ -116,7 +116,7 @@ step rbac-bind "【授權管理】ming(rbac-admin)可以調整授權:替 orders-
 
 step rbac-nodata "【分權重點】授權管理者不能管 topic:ming 建立 topic → 被拒(rbac-admin 只管授權)" \
   "kafka-topics --command-config ming.properties --create --topic infra.ming-test" \
-  'K kafka-topics --bootstrap-server $BOOT --command-config /clients/plain-ming.properties --create --topic infra.ming-test --partitions 1 --replication-factor 2' "$DENY"
+  'K kafka-topics --bootstrap-server $BOOT --command-config /clients/plain-ming.properties --create --topic infra.ming-test --partitions 1 --replication-factor 3' "$DENY"
 
 sleep 6
 step dev-effect "授權生效:yujie(開發者)現在讀得到 infra.ops-demo" \
@@ -130,7 +130,7 @@ echo "    (等 MDS 讀取 LDAP 變更 …)"; sleep 10
 
 step topic-revoked "收回後:yujie 再建立 topic → 又被拒(回到日常開發者狀態)" \
   "kafka-topics --command-config yujie.properties --create --topic infra.ops-demo2" \
-  'K kafka-topics --bootstrap-server $BOOT --command-config /clients/plain-yujie.properties --create --topic infra.ops-demo2 --partitions 1 --replication-factor 2' "$DENY"
+  'K kafka-topics --bootstrap-server $BOOT --command-config /clients/plain-yujie.properties --create --topic infra.ops-demo2 --partitions 1 --replication-factor 3' "$DENY"
 
 step rbac-revoked "收回後:ming 再改授權 → 403" \
   "POST .../roles/DeveloperRead/bindings   # ming" \

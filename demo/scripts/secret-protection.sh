@@ -11,23 +11,24 @@
 #   scripts/secret-protection.sh apply     以加密設定重建 broker2(docker-compose.cyberark.yml 覆蓋;啟動前向 Conjur 取主金鑰)
 #   scripts/secret-protection.sh summon-setup   準備 CyberArk 官方工具 summon + summon-conjur(下載到 config/conjur/bin、校驗 SHA256)與 broker 的 /etc/conjur.identity
 #   scripts/secret-protection.sh apply-summon   同 apply,但取主金鑰改用 summon(正式環境的 systemd ExecStart 一行:summon -p summon-conjur -f secrets.yml kafka-server-start …)
-#   scripts/secret-protection.sh rotate-master   輪替主金鑰(新 passphrase → 重包資料金鑰 → 換檔 + 更新 Conjur → 重啟 broker2);舊的存在 broker/master-key-previous 以便退回
+#   scripts/secret-protection.sh rotate-master   輪替主金鑰(新 passphrase → 重包資料金鑰 → 換檔 + 更新 Conjur → 已套用的 broker 依序滾動重啟);舊的存在 broker/master-key-previous 以便退回
 #   scripts/secret-protection.sh rotate-master-rollback   退回輪替前的檔與主金鑰
-#   scripts/secret-protection.sh rotate-data     輪替資料金鑰(所有值重新加密;主金鑰不變 → Conjur 不用動)→ 換檔 → 重啟 broker2
+#   scripts/secret-protection.sh rotate-data     輪替資料金鑰(所有值重新加密;主金鑰不變 → Conjur 不用動)→ 換檔 → 已套用的 broker 依序滾動重啟
 #   scripts/secret-protection.sh mismatch-demo  故意讓「檔」與「主金鑰」不成對(換回輪替前的舊檔)重啟 broker2 → 起不來;再換回成對的檔 → 恢復
 #   scripts/secret-protection.sh check           檢查 certs/security.properties 與 Conjur 的主金鑰是不是一對(解得開)
-#   scripts/secret-protection.sh join-broker1  讓 broker1 也套用(與 broker2 共用同一把主金鑰、同一份檔)→ 之後輪替會「滾動」重啟兩台
-#   scripts/secret-protection.sh revert    broker2 回到原本的明文設定(程式實際上 broker1、broker2 都用原本設定重建)
+#   scripts/secret-protection.sh join-others   broker2 試行通過後,其餘 3 台(broker1、broker3、broker4)逐台套用(共用同一把主金鑰、同一份檔)
+#                                             → 之後輪替會「滾動」重啟 4 台(舊名稱 join-broker1 仍可用,效果相同)
+#   scripts/secret-protection.sh revert    4 台 broker 依序回到原本的明文設定
 #   scripts/secret-protection.sh show      看 broker2 生效的設定裡那個值長什麼樣(佔位符,不是密碼)
 # 主金鑰只存在 Conjur 與 broker 程序的環境變數,不寫入任何檔案。
 # 會改動什麼:
 #   setup / rotate-*  寫入或換掉 certs/security.properties(輪替時會留 .old、.before-data 備份)、改寫 Conjur 的
 #     kafka/broker/master-key、master-key-passphrase、master-key-previous
-#   apply / apply-summon / join-broker1 / rotate-* / mismatch-demo / revert  重建或重啟 broker1 / broker2
+#   apply / apply-summon / join-others / rotate-* / mismatch-demo / revert  重建或重啟 broker(一次一台)
 #   summon-setup  下載 summon 與 summon-conjur 到 config/conjur/bin、寫 config/conjur/identity-broker/conjur.identity(不進版本庫)
 #   check / show  只查詢,什麼都不改
 #   還原用 revert(回到明文設定);mismatch-demo 結束時會自動換回成對的檔。
-# 怎麼判斷成功:各子命令多半以「判定:…」結尾(rotate-master、rotate-data、mismatch-demo、join-broker1);
+# 怎麼判斷成功:各子命令多半以「判定:…」結尾(rotate-master、rotate-data、mismatch-demo、join-others);
 #   check 印「是一對(解得開)」;印「不成對」或「起不來」表示失敗,結束碼非 0。
 # 常見失敗:「先執行 scripts/conjur.sh up」→ 沒有 Conjur 的 broker 身分金鑰 → 先啟動 Conjur;
 #   「輪替失敗(取不到新主金鑰)」→ confluent CLI 輪替沒有輸出新主金鑰 → 確認 setup 已執行、Conjur 內的主金鑰與 passphrase 是目前的;
@@ -57,14 +58,14 @@ can_decrypt() { # can_decrypt <secrets檔名> <主金鑰>
   echo "$out" | grep -iE 'error' | head -1 | sed 's/^/   /'; rm -rf "$t"; return 1
 }
 in_summon() { docker inspect -f '{{join .Config.Cmd " "}}' "$1" 2>/dev/null | grep -q summon; }
-mds_port() { [ "$1" = broker1 ] && echo 8091 || echo 8092; }
+mds_port() { echo $((8090 + ${1#broker})); }    # broker1~4 的 MDS 埠是 8091~8094
 restart_one() { # restart_one <broker>:重啟並等健康;起不來回傳 1(不自動清資料)
   docker restart "$1" >/dev/null 2>&1
   local st i; for i in $(seq 1 28); do sleep 5; st=$(docker ps -a --format '{{.Status}}' -f name=^$1$); case "$st" in *"(healthy)"*) return 0;; Exited*) return 1;; esac; done; return 1
 }
 restart_check() { # 滾動重啟:所有用 summon 的 broker 依序一台一台重啟,每台健康後才做下一台,並用 gary 經該台登入驗證
   local b code rc=0
-  for b in broker1 broker2; do
+  for b in broker1 broker2 broker3 broker4; do
     in_summon "$b" || continue
     if restart_one "$b"; then
       code=$(bash scripts/dcurl.sh -o /dev/null -u gary:gary-pw https://$b:$(mds_port $b)/security/1.0/authenticate | tail -1)
@@ -141,13 +142,13 @@ rotate-master)
   can_decrypt security.properties.new "$NEWMK" && echo "   新檔 + 新主金鑰 → 解得開" || echo "   新檔 + 新主金鑰 → 解不開(異常)"
   can_decrypt security.properties.new "$OLDMK" && echo "   新檔 + 舊主金鑰 → 解得開(異常)" || echo "   新檔 + 舊主金鑰 → 解不開(預期)"
   can_decrypt security.properties.old "$NEWMK" && echo "   舊檔 + 新主金鑰 → 解得開(異常)" || echo "   舊檔 + 新主金鑰 → 解不開(預期)"
-  echo "[secret-protection] ③ 切換:先保存舊主金鑰(退回用)→ 換檔 → 更新 Conjur 的主金鑰與 passphrase → 重啟 broker2"
+  echo "[secret-protection] ③ 切換:先保存舊主金鑰(退回用)→ 換檔 → 更新 Conjur 的主金鑰與 passphrase → 已套用的 broker 依序滾動重啟"
   bash scripts/conjur.sh set broker/master-key-previous "$OLDMK" >/dev/null
   mv certs/security.properties.new certs/security.properties
   bash scripts/conjur.sh set broker/master-key "$NEWMK" >/dev/null
   bash scripts/conjur.sh set broker/master-key-passphrase "$NEWPW" >/dev/null
   unset OLDMK NEWMK OLDPW NEWPW
-  restart_check && echo "判定:主金鑰已輪替——檔與新主金鑰成對,broker2 重啟後正常(值的密文沒變,只有資料金鑰被重包)"
+  restart_check && echo "判定:主金鑰已輪替——檔與新主金鑰成對,各台依序重啟後正常(值的密文沒變,只有資料金鑰被重包)"
   ;;
 rotate-master-rollback)
   PREV=$(adm_get broker/master-key-previous)
@@ -167,7 +168,7 @@ rotate-data)
   { diff certs/security.properties.before-data certs/security.properties || true; } | grep -c '^>' | sed 's/^/   新檔變動行數:/'
   can_decrypt security.properties "$MK" && echo "   新檔 + 原本的主金鑰 → 解得開" || echo "   新檔 + 原本的主金鑰 → 解不開(異常)"
   unset MK PW
-  restart_check && echo "判定:資料金鑰已輪替——所有值重新加密、主金鑰不變、Conjur 不用動,broker2 重啟後正常"
+  restart_check && echo "判定:資料金鑰已輪替——所有值重新加密、主金鑰不變、Conjur 不用動,各台依序重啟後正常"
   ;;
 mismatch-demo)
   [ -f certs/security.properties.old ] || { echo "先執行 rotate-master(才有輪替前的舊檔)"; exit 1; }
@@ -179,7 +180,7 @@ mismatch-demo)
   echo "   broker2 狀態:$st"
   { docker logs broker2 2>&1 | grep -m1 'Failed to unwrap the data key' || true; } | sed 's/^\[[^]]*\] //' | cut -c1-150 | sed 's/^/   /'
   cp certs/security.properties.good certs/security.properties; rm -f certs/security.properties.good
-  echo "[secret-protection] 換回成對的檔(新檔 + 新主金鑰)後重啟 broker2:"
+  echo "[secret-protection] 換回成對的檔(新檔 + 新主金鑰)後,已套用的 broker 依序重啟:"
   if restart_check; then
     case "$st" in
       Exited*) echo "判定:檔與主金鑰不成對時 broker2 起不來(Failed to unwrap the data key);換回成對的檔就恢復" ;;
@@ -195,17 +196,23 @@ check)
     echo "[secret-protection] 檔與主金鑰不成對:broker 重啟會起不來"; exit 1
   fi
   ;;
-join-broker1)   # broker1 也改用 summon + 加密設定(與 broker2 共用同一把主金鑰、同一份 security.properties)
-  recreate_broker broker1 docker-compose.cyberark-summon.yml
-  code=$(bash scripts/dcurl.sh -o /dev/null -u gary:gary-pw https://broker1:8091/security/1.0/authenticate | tail -1)
-  echo "[secret-protection] broker1 已用加密設定重啟(與 broker2 同一把主金鑰、同一份檔);gary 經 broker1 登入 → $code"
-  [ "$code" = "[HTTP 200]" ] && echo "判定:broker1 與 broker2 共用同一把主金鑰、同一份 security.properties"
+join-others|join-broker1)   # broker2 試行通過後,其餘 3 台逐台改用 summon + 加密設定(共用同一把主金鑰、同一份 security.properties)
+  ok=0
+  for b in broker1 broker3 broker4; do
+    in_summon "$b" && { echo "[secret-protection] $b 已套用,略過"; ok=$((ok+1)); continue; }
+    recreate_broker "$b" docker-compose.cyberark-summon.yml
+    code=$(bash scripts/dcurl.sh -o /dev/null -u gary:gary-pw https://$b:$(mds_port $b)/security/1.0/authenticate | tail -1)
+    echo "[secret-protection] $b 已用加密設定重啟;gary 經 $b 登入 → $code"
+    [ "$code" = "[HTTP 200]" ] && ok=$((ok+1)) || { echo "[secret-protection] $b 驗證失敗,停止(其餘未套用)"; break; }
+  done
+  [ "$ok" = 3 ] && echo "判定:4 台 broker 共用同一把主金鑰、同一份 security.properties(逐台套用,每台驗證後才做下一台)"
   ;;
-revert)
-  if docker compose up -d --wait --wait-timeout 240 broker1 broker2 >/dev/null \
-     || { bash scripts/broker-heal.sh broker1; bash scripts/broker-heal.sh broker2; }; then
-    echo "[secret-protection] broker1、broker2 已回到原本設定"
-  fi
+revert)   # 依序一台一台回到原本設定(滾動,不同時停多台)
+  rc=0
+  for b in broker1 broker2 broker3 broker4; do
+    docker compose up -d --wait --wait-timeout 240 "$b" >/dev/null || bash scripts/broker-heal.sh "$b" || rc=1
+  done
+  [ "$rc" = 0 ] && echo "[secret-protection] broker1~4 已回到原本設定"
   ;;
 show)
   echo "broker2 的 /etc/kafka/kafka.properties 裡 AD 查詢密碼那一行:"; docker exec broker2 grep '^ldap.java.naming.security.credentials' /etc/kafka/kafka.properties

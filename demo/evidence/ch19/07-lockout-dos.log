@@ -5,5 +5,5 @@ $ scripts/ad-lockout.sh on;  curl -u gary:<錯密碼> ×6;  curl -u gary:<對的
 GARY 用對的密碼 → [HTTP 401]
 GARY:已鎖定(4 秒前鎖定,56 秒後自動解除;或由管理員解鎖)
 Kafka 上 GARY(PLAIN)→ 4 個認證失敗
-緊急路徑(bootstrap 憑證)→ 13 個 topic 可列出
+緊急路徑(bootstrap 憑證)→ 20 個 topic 可列出
 判定:GARY 被鎖定,緊急路徑不受影響
