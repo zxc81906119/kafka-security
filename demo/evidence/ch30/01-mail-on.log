@@ -1,0 +1,4 @@
+# 【啟動】備妥郵件伺服器的帳密、啟動 mailpit(SMTP 強制 STARTTLS 並要帳密)、把 Alertmanager 換成郵件版設定(密碼從檔案讀、依嚴重度分流、同類合併)
+$ scripts/mail-setup.sh on
+▶ 把 Alertmanager 的設定換成郵件版(原檔備份成 config/c3/alertmanager-generated.yml.orig),重啟 alertmanager
+   [mail] 完成:收件匣網頁 https://localhost:8025(帳號 ops,密碼在 config/mail/ui.pw)

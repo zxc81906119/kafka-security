@@ -1,0 +1,8 @@
+▶ 送一個 warning 測試告警給 Alertmanager;依設定等 group_wait(10 秒)後寄出,收件匣應該收到一封
+送出測試告警:[HTTP 200]
+   15 秒後:收到主旨含 MailTest 的信
+收件匣:
+  [Kafka][FIRING] KafkaBrokerFenced(warning) | kafka-ops@corp.demo | 1 alert for alertname=KafkaBrokerFenced severity=warning View in Alertmanager [1
+  [Kafka][RESOLVED] KafkaUnderReplicatedPartitions(warning) | kafka-ops@corp.demo | 1 alert for alertname=KafkaUnderReplicatedPartitions severity=warning View in Al
+  [Kafka][FIRING] MailTest(warning) | kafka-ops@corp.demo | 1 alert for alertname=MailTest severity=warning View in Alertmanager [1] Firing 
+判定:告警變成信:主旨「[Kafka][FIRING] MailTest(warning)」,寄給維運群組信箱 kafka-ops@corp.demo

@@ -326,6 +326,7 @@ C.push(H1('第 4 章  維運'),
   B('{測} 補上 Lab 22 缺的兩類指標:**node_exporter**(Prometheus 官方,磁碟用量等主機指標,mTLS 保護)與 **kafka_exporter**(社群專案 danielqsj,consumer lag;自己的網頁走 mTLS,連 Kafka 用專屬 SCRAM 帳號加只有 Describe 的 ACL——實測看得到 topic、group、offset,讀訊息被拒)。consumer 落後 4000 筆時 lag 告警約 3 分鐘觸發、追上後解除;告警門檻是範例值。磁碟告警只驗證規則已載入,沒有實際塞滿磁碟觸發。{社}'),
   B('{測} **日誌與追蹤經 Kafka(Lab 27)**:平台日誌與應用程式 trace 先寫進 Kafka(otel-logs、otel-traces),再由 Grafana Alloy 讀出送進 Loki 與 Tempo(兩者皆 mTLS)。實測:Loki 停機約 1 分鐘,容器日誌 980 行 = Loki 980 行,一筆不少——Kafka 當緩衝讓下游可以維護,保留期(本案 6 小時,範例值)是可停機的上限,Alloy 的 consumer lag 要監控;OpenTelemetry Java agent 不改程式碼,trace context 隨訊息標頭傳遞,一個 trace 串起 producer 與 consumer(agent 在 `java 檔名.java` 方式下要明確啟用);稽核 topic 也進 Loki 供同一處查詢。寫與讀用不同的 SCRAM 帳號、各自最小 ACL。**未驗證**:Loki / Tempo 高可用與物件儲存、取樣與脫敏、Loki 的存取控制與不可竄改(Loki 本身沒有 RBAC)、Alloy 高可用。'),
   B('**日誌與追蹤**(Loki、Tempo、OpenTelemetry Collector 並以 Kafka 當傳輸緩衝)規劃於 Lab 27,尚未驗證。'),
+  B('{測} **告警寄成信(Lab 30)**:Alertmanager 以 SMTP 寄到行內自架的郵件伺服器(demo 用 Mailpit 代替)。設計:依嚴重度分流(critical 寄值班信箱、warning 寄維運群組信箱)、`group_by [alertname, severity]` 合併同類告警避免洗版、`send_resolved` 寄解除通知;SMTP 強制 STARTTLS 並要帳密,密碼用 `smtp_auth_password_file`,並以行內 CA 驗證郵件伺服器憑證。實測:測試告警約 15 秒收到信;停 1 台 broker 約 30 秒收到 FIRING、恢復後約 40 秒收到 RESOLVED;3 個實例的同類告警合併成 1 封。Control Center 也讀 `alertmanager-generated.yml`,告警設定要統一一處管理。**未驗證**:接真正的行內郵件伺服器(驗證方式、relay 限制、SPF / DKIM)、簡訊 / 通訊軟體 / 工單 webhook、靜音與抑制規則、Alertmanager 高可用、通知失敗的備援。'),
   B('本案測試環境以 Prometheus 規則實作「認證失敗暴增」告警;telemetry 的 `metrics.include` 必須列明確的指標名稱並排除 delta 類型,否則 Prometheus 會整批拒收。{測}'),
   H2('4.2 日常作業'),
   T(['作業', '頻率', '重點'], [

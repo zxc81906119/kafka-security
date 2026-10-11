@@ -1,0 +1,6 @@
+▶ 同一種告警(GroupTest)同時在 3 個實例發生:依 group_by 合併成一封信,而不是三封
+   8 秒後:收到 GroupTest 的信
+收到 GroupTest 的信 1 封
+  [Kafka][RESOLVED] KafkaBrokerFenced(warning) | kafka-ops@corp.demo | 1 alert for alertname=KafkaBrokerFenced severity=warning View in Alertmanager [1
+  [Kafka][FIRING] GroupTest(warning) | kafka-ops@corp.demo | 3 alerts for alertname=GroupTest severity=warning View in Alertmanager [3] Firin
+判定:3 個實例的同一種告警合併成 1 封信(group_by alertname、severity);一次壞多台不會洗版

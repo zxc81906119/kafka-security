@@ -1,0 +1,7 @@
+▶ 郵件伺服器的保護:不用 STARTTLS 寄、有 STARTTLS 但沒帳密、錯密碼,都被拒;正確帳密才收
+不用 TLS、沒帳密:curl: (55) MAIL failed: 530
+STARTTLS、沒帳密:curl: (55) MAIL failed: 530
+STARTTLS、錯密碼:curl: (67) Login denied
+STARTTLS、正確帳密:已接受
+Alertmanager 的設定:密碼來源 smtp_auth_password_file: '/mnt/config/smtp.pw'(設定檔裡沒有密碼本身)
+判定:郵件伺服器強制 STARTTLS 並要帳密(無 TLS、無帳密、錯密碼都被拒);Alertmanager 的密碼從檔案讀,設定檔裡沒有密碼

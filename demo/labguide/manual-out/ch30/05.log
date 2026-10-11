@@ -1,0 +1,13 @@
+▶ 真的停 broker3:JMX 告警 KafkaJmxUnderReplicatedPartitions(warning)觸發 → 寄出 FIRING;恢復後告警解除 → 寄出 RESOLVED
+停 broker3
+   15 秒後:收到 FIRING 信(最多 4 分鐘)
+恢復 broker3
+   35 秒後:收到 RESOLVED 信(最多 6 分鐘)
+收件匣:
+  [Kafka][RESOLVED] KafkaJmxUnderReplicatedPartitions(warning) | kafka-ops@corp.demo | 1 alert for alertname=KafkaJmxUnderReplicatedPartitions severity=warning View in
+  [Kafka][RESOLVED] RouteWarn(warning) | kafka-ops@corp.demo | 1 alert for alertname=RouteWarn severity=warning View in Alertmanager [1] Resolv
+  [Kafka][CRITICAL][RESOLVED] RouteCrit | kafka-oncall@corp.demo | 1 alert for alertname=RouteCrit severity=critical View in Alertmanager [1] Resol
+  [Kafka][RESOLVED] MailTest(warning) | kafka-ops@corp.demo | 1 alert for alertname=MailTest severity=warning View in Alertmanager [1] Resolve
+  [Kafka][RESOLVED] KafkaJmxScrapeDown(warning) | kafka-ops@corp.demo | 1 alert for alertname=KafkaJmxScrapeDown severity=warning View in Alertmanager [
+  [Kafka][FIRING] KafkaJmxUnderReplicatedPartitions(warning) | kafka-ops@corp.demo | 1 alert for alertname=KafkaJmxUnderReplicatedPartitions severity=warning View in
+判定:真實故障走完整條路徑:停 1 台 broker → Prometheus 規則 → Alertmanager → 郵件(FIRING),恢復後收到 RESOLVED

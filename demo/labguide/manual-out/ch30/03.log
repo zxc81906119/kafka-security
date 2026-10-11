@@ -1,0 +1,7 @@
+▶ 同時送 critical 與 warning 兩個告警:依嚴重度分流,critical 寄給值班信箱,warning 寄給維運群組信箱
+critical:[HTTP 200];warning:[HTTP 200]
+   16 秒後:兩封信都到
+收件匣:
+  [Kafka][FIRING] RouteWarn(warning) | kafka-ops@corp.demo | 1 alert for alertname=RouteWarn severity=warning View in Alertmanager [1] Firing
+  [Kafka][CRITICAL][FIRING] RouteCrit | kafka-oncall@corp.demo | 1 alert for alertname=RouteCrit severity=critical View in Alertmanager [1] Firin
+判定:依嚴重度分流:critical 只寄給值班信箱 kafka-oncall@corp.demo,warning 寄給維運群組信箱 kafka-ops@corp.demo

@@ -449,6 +449,30 @@ services:
       retries: 12
       start_period: 10s
 
+  # 第 30 章:測試用的郵件伺服器(收告警信、有網頁可看)。正式環境是行內自架的郵件伺服器;這裡用 Mailpit 代替,
+  # SMTP 啟用 STARTTLS 並強制、要帳密;網頁與 API 走 HTTPS + Basic。用 scripts/mail-setup.sh on 啟動。
+  mailpit:
+    image: axllent/mailpit:latest                      # 測試版本 1.31.4
+    container_name: mailpit
+    hostname: mailpit
+    profiles: ["mail"]
+    ports: ["8025:8025"]
+    environment:
+      MP_SMTP_BIND_ADDR: 0.0.0.0:1025
+      MP_SMTP_TLS_CERT: /etc/tls/server.pem
+      MP_SMTP_TLS_KEY: /etc/tls/server.key
+      MP_SMTP_REQUIRE_STARTTLS: "true"
+      MP_SMTP_AUTH_FILE: /etc/mail/smtp-auth
+      MP_UI_BIND_ADDR: 0.0.0.0:8025
+      MP_UI_TLS_CERT: /etc/tls/server.pem
+      MP_UI_TLS_KEY: /etc/tls/server.key
+      MP_UI_AUTH_FILE: /etc/mail/ui-auth
+      MP_MAX_MESSAGES: "500"
+    volumes:
+      - ./certs:/etc/tls:ro
+      - ./config/mail:/etc/mail:ro
+    mem_limit: 128m
+
   alertmanager:
     image: confluentinc/cp-enterprise-alertmanager:2.6.1
     container_name: alertmanager

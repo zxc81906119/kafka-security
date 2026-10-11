@@ -52,6 +52,8 @@ export const ACTS = [
     scene: ['前三週都在精簡環境裡做。主管問了一句很現實的話:「如果半夜壞一台,會怎樣?壞兩台呢?」Ming 決定不憑印象回答,切到 3 台 controller、3 台 broker 的環境,一台一台停給大家看。'] }
   ,{ id: 'week5', title: '第五週:資料契約與應用協作', when: '第五週', labs: [28, 29],
     scene: ['平台穩了、看得見了,接下來的麻煩變成人與人之間:訂單團隊和對帳團隊各自改程式、各自上線。Ming 要把『欄位怎麼改才不會互相弄壞』變成機器擋得住的規矩,而不是靠開會。'] }
+  ,{ id: 'week6', title: '第六週:告警送到人', when: '第六週', labs: [30],
+    scene: ['儀表板、日誌、追蹤、資料契約都有了。主管最後問的是最樸素的問題:「半夜壞了,誰會知道?」'] }
 ];
 
 // 每個 Lab 的故事:scene 情境、mission 任務、recap 小結(學到的事 + 對應的規矩)
@@ -163,6 +165,11 @@ export const LAB_STORY = {
       '接著補上 node_exporter 與 kafka_exporter。他給 kafka_exporter 一個只有 Describe 權限的帳號,證明它看得到 lag、卻讀不到任何訊息;然後故意讓一個 consumer 落後 4000 筆,看告警響、追上後解除。最後 Grafana 的登入也接上 AD,不另建帳號:Gary 是 Admin,其他人只能看。'],
     mission: ['把 Grafana 接上 Prometheus,匯入官方儀表板並檢查它們真的有資料。', '補上主機磁碟與 consumer lag 的監控與告警。', '讓 Grafana 與兩個 exporter 和其他元件一樣受保護:HTTPS、AD 登入、mTLS、最小權限帳號。'],
     recap: ['匯入成功不等於用得起來:官方儀表板的標籤與指標名稱要和抓取設定對得上(job 名稱、env 標籤、exporter 版本)。', '不改官方儀表板內容;對不上的記下來,或另外寫補充的儀表板。', 'node_exporter 補磁碟、kafka_exporter 補 consumer lag;兩個都用 mTLS 保護,Kafka 帳號只給 Describe。', 'Grafana 的使用者與群組以 AD 為準,本機 admin 只留給 break-glass;告警統一走 Prometheus 與 Alertmanager。', 'kafka_exporter 是社群專案,上線前評估維護狀況;磁碟告警的門檻與 lag 門檻都是範例值。'] },
+  30: { scene: ['值班表上寫著「看 Grafana」,Ming 看了一眼,默默把它劃掉:半夜三點,沒有人會盯著儀表板。告警目前只亮在 Alertmanager 的畫面上,他得讓它「找上人」。',
+      '行內本來就有自架的郵件伺服器,所以他選了最不需要新東西的通道:Alertmanager 寄信。但寄信本身有幾個陷阱,他一個一個試:不分輕重的話,輕微的告警也會把值班的人叫醒,所以 critical 與 warning 要寄給不同的人;一台壞掉常常同時觸發一串告警,不合併的話信箱會被灌爆;最後他停掉一台 broker,真的在信箱收到 FIRING,恢復後又收到 RESOLVED。',
+      '最後是郵件伺服器自己:告警信裡有主機名稱與錯誤訊息。他確認伺服器強制 STARTTLS、要帳密,Alertmanager 的密碼從檔案讀、不在設定裡。他在報告裡寫明:信件只是通道之一,簡訊、通訊軟體與靜音、抑制、Alertmanager 高可用都還沒做。'],
+    mission: ['讓告警變成信寄給人,並依嚴重度分流給不同的人。', '同類告警合併,避免洗版。', '用真實故障驗證 FIRING 與 RESOLVED 兩封信。', '確認郵件伺服器與 Alertmanager 的寄信設定受保護。'],
+    recap: ['通知的設計比通道重要:依嚴重度分流、同類合併、解除也要通知。', 'critical 叫醒值班的人、warning 白天處理;主旨用範本寫清楚狀態、名稱、嚴重度。', 'SMTP 強制 STARTTLS 並要帳密;Alertmanager 的密碼用 password_file,並用行內 CA 驗證郵件伺服器憑證。', 'demo 的時間參數是縮短過的,正式環境建議 group_wait 30s、group_interval 5m、repeat_interval 4h。', '沒測:真正的行內郵件伺服器、其他通道、靜音與抑制、Alertmanager 高可用、通知失敗的備援。'] },
   29: { scene: ['對帳團隊想把訂單資料自動搬到別的系統,問 Ming:「用 Kafka Connect 可以嗎?」Ming 的第一反應是:連接器是長期在背景跑的程式,而且手上通常握著別的系統的帳密——這是一個要先想清楚安全再開放的元件。',
       '他先處理「誰能管連接器」:連接器也納入 AD 群組授權,訂單團隊只能管名稱以 orders- 開頭的,其他人連清單都看不到。接著處理「連接器用誰的身分」:不讓所有連接器共用 worker 的大權限,每個連接器用自己的 AD 服務帳號,只能讀自己的 topic;他故意讓一個連接器去讀沒授權的 topic,果然被擋。',
       '最後兩個現實問題:壞資料。沒設容錯的連接器遇到第一筆就停了;加上容錯與 DLQ 之後,好的照寫、壞的進 DLQ 還附上原因。以及密碼:他在 connect-configs topic 裡真的找到了明文密碼,改用 config provider 之後只剩一個引用。他在報告裡提醒:DLQ 要有告警,否則整批壞資料也會悄悄通過。'],

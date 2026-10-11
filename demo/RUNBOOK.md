@@ -377,6 +377,20 @@ gary 在 C3 指派 `orders-read` → DeveloperRead;LDAP 介面把 ming 從 devel
 
 **踩坑**:server 憑證 SAN 缺 connect → `curl` HTTP 000;連接器 task 讀 topic 的歷史壞資料而 FAILED(實驗前要重建 topic);手動試過的舊連接器也寫同一個 DLQ(數字會多);FileStreamSink 的輸出檔留在容器內(實驗前先清)。**沒測**:多 worker 與故障轉移、source 連接器、Avro / SR 轉換器、密碼輪替生效方式、SecurePass provider、外掛供應鏈驗證。
 
+## 第 30 章(進階)告警寄成信:Alertmanager 到自架郵件伺服器(`./demo.sh 30`,需 HA 模式與 Prometheus;約 6 分鐘)
+
+**準備**:`scripts/ha.sh on --with-c3` → `docker compose --profile c3 up -d prometheus alertmanager blackbox-exporter` → `scripts/mail-setup.sh on`。`scripts/mail-lab.sh` 子命令:send、route、group、real、security。
+
+| 項目 | 實測結果 |
+|---|---|
+| 郵件伺服器 | demo 用 `axllent/mailpit` 1.31.4(行內郵件伺服器的替身);SMTP 1025 `MP_SMTP_REQUIRE_STARTTLS`、`MP_SMTP_AUTH_FILE`(bcrypt 雜湊);網頁與 API 8025 HTTPS + Basic(`MP_UI_AUTH_FILE`);server 憑證 SAN 加 `mailpit` |
+| Alertmanager 設定 | `config/mail/alertmanager-mail.yml` 複製成 `config/c3/alertmanager-generated.yml`(Control Center 也讀這個檔;原檔備份 `.orig`、off 還原):`smtp_smarthost`、`smtp_require_tls: true`、`smtp_auth_password_file`、`email_configs[].tls_config.ca_file`、`send_resolved: true` |
+| 通知設計 | route:預設 → ops-mail(kafka-ops@corp.demo);`severity="critical"` → oncall-critical(kafka-oncall@corp.demo,主旨加 [CRITICAL]);`group_by [alertname, severity]`,demo 用 group_wait 10s / group_interval 1m / repeat_interval 4h |
+| 實測 | 測試告警 15 秒收到信;critical 與 warning 分別寄不同信箱;3 個實例合併成 1 封(內文 3 alerts);停 broker3 約 27 秒 FIRING、恢復後約 40 秒 RESOLVED |
+| 保護 | 無 STARTTLS、無帳密 → `MAIL failed: 530`;錯密碼 → `Login denied`;正確帳密 → 接受;設定檔只有 `smtp_auth_password_file` 路徑 |
+
+**踩坑**:`demo.sh` 的章節號判斷要加 30;測試告警過期後會再收到 RESOLVED,所以收件匣裡可能混著前一個實驗的解除信(各實驗只比對自己的告警名稱);Control Center 的畫面若也改告警設定會寫同一個檔案。**沒測**:接真正的行內郵件伺服器(Exchange / Postfix 的驗證、relay 限制、SPF / DKIM)、簡訊與通訊軟體與工單 webhook、靜音與抑制、Alertmanager 高可用、通知失敗的備援。
+
 ## 對應到客戶 RHEL 9 VM 的位置與步驟(手動部署)
 | demo | RHEL 9 VM |
 |---|---|

@@ -1,0 +1,9 @@
+# 【告警變成信】送一個測試告警,收件匣收到一封:主旨、收件人、內文正確
+$ POST /api/v2/alerts(Alertmanager);GET /api/v1/messages(郵件伺服器)
+▶ 送一個 warning 測試告警給 Alertmanager;依設定等 group_wait(10 秒)後寄出,收件匣應該收到一封
+送出測試告警:[HTTP 200]
+   16 秒後:收到主旨含 MailTest 的信
+收件匣:
+  [Kafka][FIRING] MailTest(warning) | kafka-ops@corp.demo | 1 alert for alertname=MailTest severity=warning View in Alertmanager [1] Firing 
+  [Kafka][FIRING] KafkaBrokerFenced(warning) | kafka-ops@corp.demo | 1 alert for alertname=KafkaBrokerFenced severity=warning View in Alertmanager [1
+判定:告警變成信:主旨「[Kafka][FIRING] MailTest(warning)」,寄給維運群組信箱 kafka-ops@corp.demo
