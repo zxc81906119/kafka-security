@@ -21,6 +21,32 @@ scrape_configs:
     static_configs:
       - targets: ['controller1:7778', 'controller2:7778', 'controller3:7778']
         labels: { role: controller, env: demo }
+  # 生態系元件:job 名稱與標籤照官方 jmx-monitoring-stacks 的 prometheus.yml(schema-registry、kafka-connect、rest-proxy;
+  #   Connect 另帶 kafka_connect_cluster_id),官方 Grafana 的 Schema Registry、Connect、REST Proxy 面板才查得到
+  - job_name: schema-registry
+    scrape_interval: 15s
+    scheme: https
+    basic_auth: { username: Prometheus, password_file: /mnt/config/jmx_exporter.pw }
+    tls_config: { ca_file: /etc/tls/ca.pem }
+    static_configs:
+      - targets: ['schema-registry1:7778', 'schema-registry2:7778']
+        labels: { role: schema-registry, env: demo }
+  - job_name: kafka-connect
+    scrape_interval: 15s
+    scheme: https
+    basic_auth: { username: Prometheus, password_file: /mnt/config/jmx_exporter.pw }
+    tls_config: { ca_file: /etc/tls/ca.pem }
+    static_configs:
+      - targets: ['connect1:7778', 'connect2:7778']
+        labels: { role: connect, env: demo, kafka_connect_cluster_id: connect-cluster }
+  - job_name: rest-proxy
+    scrape_interval: 15s
+    scheme: https
+    basic_auth: { username: Prometheus, password_file: /mnt/config/jmx_exporter.pw }
+    tls_config: { ca_file: /etc/tls/ca.pem }
+    static_configs:
+      - targets: ['restproxy1:7778', 'restproxy2:7778']
+        labels: { role: rest-proxy, env: demo }
   # 憑證到期:用 blackbox exporter 探測各 TLS 端點「實際送出的憑證」;Prometheus 以 mTLS 呼叫 blackbox
   - job_name: tls-expiry
     metrics_path: /probe

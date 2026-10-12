@@ -41,6 +41,10 @@ DASHBOARDS=(
   "kraft.json df3a991a4916da6086dd5540d3d9429039788b36af82c5ff477f738bee4d760f"
   "confluent-platform-kraft.json 3edcece0052b9f678c8e4f3bf737d41b36ec1adb611baa821ba90244e4787b87"
   "confluent-rbac.json fe1145473ccf5f1ecf6a5f7bb2ddb33bed598b6732433af2dd60264ee6d21340"
+  # 生態系元件(job schema-registry、kafka-connect、rest-proxy,由各元件的 JMX exporter 提供)
+  "schema-registry-cluster.json 65c45eef4a52f6713154cdfa4988e844e2a5b8027fbdb457e4ca427dbfde682e"
+  "kafka-connect-cluster.json b93fc882cc413c00198ca684818d1db4db4bdef60b377161a8530eefed61f16a"
+  "rest-proxy.json 432c8bae7d0bc9717778fa71ec6ad3c5b6465cbf875b10c09628cfa8628fd464"
 )
 
 # 產生一個隨機密碼寫進檔案(檔案已存在就保留)。用法:make_secret <檔案>
