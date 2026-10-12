@@ -23,7 +23,7 @@ step grafana-on "【啟動】備妥密碼、官方儀表板(固定 commit、校�
   "scripts/grafana.sh on" \
   'bash "$GS" on 2>&1 | tail -3' '\[grafana\] 完成'
 
-step grafana-stack "【Grafana 就緒】只收 HTTPS;資料來源 Prometheus(帳號 grafana)連得通;5 個官方儀表板與 1 個自製儀表板都載入" \
+step grafana-stack "【Grafana 就緒】只收 HTTPS;資料來源 Prometheus(帳號 grafana)連得通;8 個官方儀表板(含 Schema Registry、Connect、REST Proxy)與 1 個自製儀表板都載入" \
   "curl https://grafana:3000/api/health;/api/datasources/uid/Prometheus/health;/api/search" \
   'bash "$GL" stack 2>&1' '判定:Grafana 只收 HTTPS'
 

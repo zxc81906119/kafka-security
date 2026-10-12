@@ -505,7 +505,10 @@ services:
       start_period: 20s
     volumes:
       - ./certs:/etc/kafka/secrets:ro
+      - ./config/jmx:/opt/jmx:ro
     environment:
+      # JMX exporter(官方 jmx-monitoring-stacks 的 confluent_rest.yml + HTTPS + Basic;scripts/jmx-setup.sh 產生),7778 埠供 Prometheus 抓取
+      KAFKAREST_OPTS: "-javaagent:/opt/jmx/jmx_prometheus_javaagent.jar=7778:/opt/jmx/confluent_rest_tls.yml"
       KAFKA_REST_HOST_NAME: restproxy1
       KAFKA_REST_ID: restproxy1                # 官方:多實例每台 id 必須唯一(預設空值在多台時不安全)
       KAFKA_REST_LISTENERS: https://0.0.0.0:8086
@@ -602,9 +605,12 @@ services:
       start_period: 20s
     volumes:
       - ./certs:/etc/kafka/secrets:ro
+      - ./config/jmx:/opt/jmx:ro
     ports:
       - "${HOST_PORT_SR:-8085}:8081"       # 主機 8081 已被 phpLDAPadmin 使用
     environment:
+      # JMX exporter(官方 jmx-monitoring-stacks 的 confluent_schemaregistry.yml + HTTPS + Basic;scripts/jmx-setup.sh 產生),7778 埠供 Prometheus 抓取
+      SCHEMA_REGISTRY_OPTS: "-javaagent:/opt/jmx/jmx_prometheus_javaagent.jar=7778:/opt/jmx/confluent_schemaregistry_tls.yml"
       SCHEMA_REGISTRY_HOST_NAME: schema-registry1
       SCHEMA_REGISTRY_LISTENERS: https://0.0.0.0:8081
       SCHEMA_REGISTRY_INTER_INSTANCE_PROTOCOL: https      # 只開 HTTPS 時必設,否則啟動失敗:No listener configured with requested scheme http
@@ -1083,9 +1089,12 @@ services:
     mem_limit: 1280m
     volumes:
       - ./certs:/etc/kafka/secrets:ro
+      - ./config/jmx:/opt/jmx:ro
       - ./config/connect/plugins:/plugins:ro                    # 外掛(connect-file,由 connect-setup.sh 從 Maven Central 下載並校驗 SHA-1)
       - ./config/connect/secrets:/etc/connect-secrets:ro        # 連接器的密碼檔(config provider 讀這裡;正式環境由 CyberArk 提供)
     environment:
+      # JMX exporter(官方 jmx-monitoring-stacks 的 kafka_connect.yml + HTTPS + Basic;scripts/jmx-setup.sh 產生),7778 埠供 Prometheus 抓取
+      KAFKA_OPTS: "-javaagent:/opt/jmx/jmx_prometheus_javaagent.jar=7778:/opt/jmx/kafka_connect_tls.yml"
       # 堆積要小於容器上限:映像預設 -Xmx2G 大於 mem_limit 1280m,堆積長大時容器被 OOM 終止(實測 connect2 exit 137、OOMKilled=true)。
       #   官方建議 Connect 堆積 0.5 到 4 GB;堆積之外還要留 metaspace、執行緒與直接記憶體,所以取約上限的六成
       KAFKA_HEAP_OPTS: "-Xms512M -Xmx768M"

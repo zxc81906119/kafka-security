@@ -51,6 +51,7 @@ demo/config/c3/jmx_scrape.yml
 demo/config/jmx/kafka_*.yml
 demo/config/c3/jmx_exporter.pw
 demo/config/jmx/kafka_*_tls.yml
+demo/config/jmx/confluent_*.yml
 demo/config/grafana/secrets/
 # 官方儀表板與複製過去的自製儀表板都不進版本庫(自製的原檔在 demo/config/grafana/own/)
 demo/config/grafana/dashboards/*.json

@@ -34,6 +34,10 @@ OFFICIAL_COMMIT=f376263fc6d7270185ab6abab9a8c379079e2a92
 OFFICIAL_URL="https://raw.githubusercontent.com/confluentinc/jmx-monitoring-stacks/$OFFICIAL_COMMIT/shared-assets/jmx-exporter"
 BROKER_YML_SHA256=23a478e7af3ab5ca42581b78fe4f7cb5b15dc89c99119676534e9d1b52c17bc0
 CONTROLLER_YML_SHA256=46ff997447842970a5d152b7fcee7b1e53c3c7047912ddfca4d80785ad6848c6
+# 生態系元件(Schema Registry、Connect、REST Proxy):同一個 commit 的官方檔,job 名稱照官方 prometheus.yml(schema-registry、kafka-connect、rest-proxy)
+SR_YML_SHA256=b3f02cd957e9ed3f87409550f6525575d719e26060e23ba2942efa3b7e109e87
+CONNECT_YML_SHA256=0eeb25a65af4e12513edbe5804884c48ba02dd027645862f0ab5f7aca629b75a
+REST_YML_SHA256=98c0e895056b6b02c9c979a3138155b8f527d721dbb6798e9e154c1f26beeba4
 PASSWORD_FILE=config/c3/jmx_exporter.pw
 
 # 1. agent jar:從 Maven Central 下載,和 Maven 官方一併發佈的 .sha1 比對。
@@ -78,11 +82,14 @@ make_tls_configs() {
     note "[jmx] 產生 exporter 的 Basic 密碼 → $PASSWORD_FILE(不進版本庫)"
   fi
   node "$LIB_DIR/jmx-tls-config.mjs" "$PASSWORD_FILE" config/jmx
-  note "[jmx] kafka_broker_tls.yml、kafka_controller_tls.yml:官方設定 + HTTPS + Basic 帳密(Prometheus)"
+  note "[jmx] kafka_broker、kafka_controller、confluent_schemaregistry、kafka_connect、confluent_rest 的 _tls.yml:官方設定 + HTTPS + Basic 帳密(Prometheus)"
 }
 
 mkdir -p config/jmx
 download_agent
 fetch_official kafka_broker.yml "$BROKER_YML_SHA256"
 fetch_official kafka_controller.yml "$CONTROLLER_YML_SHA256"
+fetch_official confluent_schemaregistry.yml "$SR_YML_SHA256"
+fetch_official kafka_connect.yml "$CONNECT_YML_SHA256"
+fetch_official confluent_rest.yml "$REST_YML_SHA256"
 make_tls_configs

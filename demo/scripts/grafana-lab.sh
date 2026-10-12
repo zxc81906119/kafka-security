@@ -50,8 +50,8 @@ lab_stack() {
   titles=$(gcurl "$GRAFANA_URL/api/search?type=dash-db" 2>/dev/null | grep -o '"title":"[^"]*"' | sed 's/"title"://; s/"//g')
   n=$(echo "$titles" | grep -c .)
   echo "已載入的儀表板($n 個):"; echo "$titles" | sed 's/^/  /'
-  [ "$health" = 1 ] && [ "$plain" != "[HTTP 200]" ] && echo "$ds" | grep -q OK && [ "$n" -ge 6 ] \
-    && verdict "Grafana 只收 HTTPS(明文請求被拒)、資料來源健康、$n 個儀表板已載入(5 個官方、1 個自製)"
+  [ "$health" = 1 ] && [ "$plain" != "[HTTP 200]" ] && echo "$ds" | grep -q OK && [ "$n" -ge 9 ] \
+    && verdict "Grafana 只收 HTTPS(明文請求被拒)、資料來源健康、$n 個儀表板已載入(8 個官方、1 個自製)"
 }
 
 # 給 wait_until 用:Grafana 經資料來源代理查 Prometheus,4 台 broker 的 kafka_server_replicamanager_leadercount 都有資料就回傳 0
@@ -73,8 +73,14 @@ lab_dashboards() {
   total=$(echo "$out" | sed -E 's/.*查詢 ([0-9]+) 個,有資料 ([0-9]+) 個.*/\1/' | awk '{s+=$1} END {print s}')
   with_data=$(echo "$out" | sed -E 's/.*查詢 ([0-9]+) 個,有資料 ([0-9]+) 個.*/\2/' | awk '{s+=$1} END {print s}')
   echo "合計:查詢 $total 個,有資料 $with_data 個"
-  echo "$out" | grep -q "kafka-topics-kraft.json.*沒資料 0 個" && [ "$with_data" -ge $((total * 70 / 100)) ] \
-    && verdict "官方儀表板不改一個字就能用:$total 個查詢中 $with_data 個有資料;沒資料的是環境沒有的功能(Tiered Storage、Schema Registry、Connect)與少數指標名稱不符,見手冊"
+  # Connect 儀表板大多是連接器、task 層級的面板,沒有連接器在跑就沒資料(不是設定問題),所以另外判斷:worker 層級有資料即代表 exporter 接好;
+  #   其他儀表板合計至少七成有資料
+  local c_line c_q c_d
+  c_line=$(echo "$out" | grep "kafka-connect-cluster.json")
+  c_q=$(echo "$c_line" | sed -E 's/.*查詢 ([0-9]+) 個.*/\1/'); c_d=$(echo "$c_line" | sed -E 's/.*有資料 ([0-9]+) 個.*/\1/')
+  echo "$out" | grep -q "kafka-topics-kraft.json.*沒資料 0 個" && [ "${c_d:-0}" -ge 10 ] \
+    && [ $((with_data - ${c_d:-0})) -ge $(((total - ${c_q:-0}) * 70 / 100)) ] \
+    && verdict "官方儀表板不改一個字就能用:$total 個查詢中 $with_data 個有資料(Connect 以外 $((with_data - ${c_d:-0})) / $((total - ${c_q:-0})));Connect 儀表板的連接器與 task 面板要有連接器在跑才有資料;其餘沒資料的是 Tiered Storage(基線沒開)與少數指標名稱不符,見手冊"
 }
 
 lab_host() {

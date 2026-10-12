@@ -1,4 +1,4 @@
-// 產生「官方 JMX exporter 設定 + HTTPS + Basic 帳密」的設定檔(kafka_broker_tls.yml、kafka_controller_tls.yml)。
+// 產生「官方 JMX exporter 設定 + HTTPS + Basic 帳密」的設定檔(<元件>_tls.yml:broker、controller、Schema Registry、Connect、REST Proxy)。
 // 用法:node jmx-tls-config.mjs <密碼檔> <設定目錄>   例:node jmx-tls-config.mjs config/c3/jmx_exporter.pw config/jmx
 // 做法:在官方 yml 前面加一段 httpServer(HTTPS 用 server keystore,帳號 Prometheus,密碼存成 PBKDF2 雜湊)。
 // 雜湊與官方 utils/jmxexporter_hash_password_PBKDF2WithHmacSHA512.py 相同:PBKDF2-HMAC-SHA512、210000 次、輸出 128 位元組(hex)。
@@ -29,7 +29,7 @@ const httpServer = [
   '',
 ].join('\n');
 
-for (const name of ['kafka_broker', 'kafka_controller']) {
+for (const name of ['kafka_broker', 'kafka_controller', 'confluent_schemaregistry', 'kafka_connect', 'confluent_rest']) {
   const official = fs.readFileSync(`${dir}/${name}.yml`, 'utf8').replace(/^---\r?\n/, '');
   fs.writeFileSync(`${dir}/${name}_tls.yml`, '---\n' + httpServer + official);
 }
