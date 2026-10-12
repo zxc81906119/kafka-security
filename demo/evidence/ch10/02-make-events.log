@@ -1,0 +1,5 @@
+# 【本章自己製造事件】yujie 寫入 orders.events(允許)、ming 寫入 orders.events(被拒);改授權被拒的事件在最後一步由 yujie 自己製造
+$ kafka-console-producer(yujie / ming)
+→ 結果:成功
+→ 結果:被拒絕
+事件已產生

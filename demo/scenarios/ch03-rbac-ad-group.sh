@@ -4,7 +4,8 @@
 # ----------------------------------------------------------------------------
 # 白話:授權不是一個一個人設,而是在 C3 把「AD 群組 orders-write」綁上 orders.* 的寫入角色。
 #       之後只要在 AD 把人加進或移出該群組,Kafka 端什麼都不用改,幾秒內就跟著生效。
-# 前置條件:建議先跑過第 1 章(從 reset 後的狀態開始);需要 e2e/ 的 Playwright(操作 C3 與 phpLDAPadmin 的網頁)
+# 前置條件:環境已建好(scripts/up.sh);需要 e2e/ 的 Playwright(操作 C3 與 phpLDAPadmin 的網頁)
+# 冪等:是。第一步 scripts/chapter-start.sh 把環境收斂到本章起點(不必先跑前面的章節),重跑結果相同。
 # 用法:
 #   ./demo.sh 3                          經由講解控制台跑這一章
 #   ./scenarios/ch03-rbac-ad-group.sh    直接跑(DEMO_PAUSE=0 不暫停)
@@ -21,11 +22,9 @@
 source "$(dirname "$0")/../scripts/lib-ev.sh"
 ch_begin ch03 "RBAC 與 AD 群組:授權跟著群組走"
 source "$DEMO_ROOT/scripts/rbac-lib.sh"
-# 本章要示範「授權前被拒 → 授權後成功」,起點必須是 orders-write 沒有 orders. 的示範綁定;不依賴前面章節是否跑過 reset.sh
-for r in DeveloperRead DeveloperWrite; do rbac_unbind cert bootstrap Group:orders-write $r Topic orders. PREFIXED >/dev/null 2>&1; done
-# 同理:本章的對照組是「ming 不在任何群組」(第 4 章會把 ming 放進群組);先移出,並等 MDS 的群組快取更新
-for g in orders-read orders-write ops topic-admin cluster-admin rbac-admin security breakglass; do "$DEMO_ROOT/scripts/ldap-group.sh" remove ming $g >/dev/null 2>&1 || true; done
-wait_group_effect
+step prepare "【起點準備】orders-write 還沒有 orders. 的授權、yujie 在 orders-write、ming 不在任何群組(冪等:已正確的不動;可單獨從這一章開始,也可重跑)" \
+  "scripts/chapter-start.sh ch03" \
+  'bash "$DEMO_ROOT/scripts/chapter-start.sh" ch03 2>&1' '\[起點\] ch03 就緒'
 UI() { (cd "$DEMO_ROOT/e2e" && node ch03-ui.mjs "$1" 2>&1 | grep -v '^$'); }
 
 step before "【授權前】yujie 屬於 AD 群組 orders-write,但還沒有任何 role → 寫入被拒" \

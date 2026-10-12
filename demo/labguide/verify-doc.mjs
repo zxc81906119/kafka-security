@@ -50,7 +50,8 @@ for (const lab of LABS) {
   const pre = lab.id === 'ch16' ? 'cd opmenu; ' : '';   // Lab 16 的指令要在 demo/opmenu 目錄執行
   const outDir = path.join(here, 'manual-out', lab.id);
   if (!EVIDENCE_ONLY) { fs.rmSync(outDir, { recursive: true, force: true }); fs.mkdirSync(outDir, { recursive: true }); }
-  if (!EVIDENCE_ONLY) for (const c of lab.pre_cmd || []) run(pre + c);
+  // 起點:與手冊「從這裡開始時先執行」相同(冪等),所以每個 Lab 都能單獨驗證
+  if (!EVIDENCE_ONLY && lab.n >= 1) run(`bash scripts/chapter-start.sh ${lab.id}`);
   lab.steps.forEach((s, i) => {
     const row = { lab: lab.id, step: s.t, M: '-', A: '-', E: '-' };
     const cmds = [...(s.uiEq || []), ...(s.manual || [])];

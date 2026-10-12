@@ -22,7 +22,7 @@ ok=0; bad=0
 chk() { if eval "$2" >/dev/null 2>&1; then echo "  ✔ $1"; ok=$((ok+1)); else echo "  ✘ $1"; bad=$((bad+1)); fi; }
 echo "── 容器 ──"
 for c in openldap ldapadmin controller1 controller2 controller3 broker1 broker2 broker3 broker4 restproxy1 restproxy2 restproxy \
-         schema-registry1 schema-registry2 connect1 connect2 control-center prometheus alertmanager; do
+         schema-registry1 schema-registry2 connect1 connect2 control-center prometheus alertmanager blackbox-exporter; do
   chk "$c 執行中" "[ \"\$(docker inspect -f '{{.State.Running}}' $c)\" = true ]"
 done
 echo "── 端點與登入 ──"

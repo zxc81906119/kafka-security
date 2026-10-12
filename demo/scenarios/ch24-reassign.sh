@@ -4,6 +4,7 @@
 # ----------------------------------------------------------------------------
 # 白話:新增 broker 或資料不均時要把分區搬家。這一章實測完整流程:造出不均、存回退檔、限速搬家且寫入不中斷、取消搬到一半的搬家、忘了收尾的後果。
 # 前置條件:叢集已啟動(scripts/up.sh)
+# 冪等:是。第一步 scripts/chapter-start.sh 確認起點(本章不需要前面的章節),重跑結果相同。
 # 用法:
 #   ./demo.sh 24                  經由講解控制台跑這一章(DEMO_PAUSE=0 不暫停)
 #   ./scenarios/ch24-reassign.sh    直接跑
@@ -18,6 +19,10 @@
 source "$(dirname "$0")/../scripts/lib-ev.sh"
 ch_begin ch24 "容量與再平衡:分區重新指派加限速"
 RL="$DEMO_ROOT/scripts/reassign-lab.sh"
+
+step prepare "【起點準備】這一章不需要額外準備,確認環境可直接開始(冪等:可單獨從這一章開始,也可重跑)" \
+  "scripts/chapter-start.sh ch24" \
+  'bash "$DEMO_ROOT/scripts/chapter-start.sh" ch24 2>&1' '\[起點\] ch24 就緒'
 
 step reassign-skew "【造出不均】6 分區、副本 3 的 topic,所有副本只放在 broker1~3,寫入約 200 MB;broker4 是空的(新增 broker 之後就是這種狀態)" \
   "kafka-topics --create --replica-assignment …;kafka-producer-perf-test;kafka-log-dirs --describe" \

@@ -1,0 +1,9 @@
+# 【45 查詢 audit】最近 4 小時被拒絕(DENIED)的事件,依主體與資源列出
+$ ./opmenu.sh --run 45 240 '' DENIED
+最近 240 分鐘符合 154 筆(結果 DENIED);顯示最後 50 筆:
+2026-10-12T01:55:31 User:MING        mds.Authorize        All            All                        DENIED
+2026-10-12T01:55:36 User:MING        kafka.CreateTopics   Create         f0d77fa6-a38e-474d-8901-74a9d0f704a3 DENIED
+2026-10-12T01:55:36 User:MING        kafka.CreateTopics   Create         f0d77fa6-a38e-474d-8901-74a9d0f704a3 DENIED
+2026-10-12T01:58:25 User:MING        mds.Authorize        Read           ControlCenterBrokerMetrics DENIED
+2026-10-12T01:58:25 User:MING        mds.Authorize        Write          ControlCenterAlerts        DENIED
+2026-10-12T01:58:25 User:MING        mds.Authorize        All            All                        DENIED

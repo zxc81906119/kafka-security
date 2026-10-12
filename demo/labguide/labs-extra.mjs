@@ -16,7 +16,7 @@ export const LABS_EXTRA = [
   {
     id: 'ch15', n: 15, title: '(進階)人員異動:AD 收回群組,已發出的 token 立刻失去權限', time: '10 分',
     goal: '證明:人員調動或離職時只要改 AD。Kafka 端不用動,連已經發出、還沒到期的 MDS token 都會在 AD 收回群組的當下失去權限(授權依「現在的群組」判斷)。',
-    pre: ['Lab 3 完成(AD 群組 orders-write 與 orders.* 的授權概念)。', '起點狀態:yujie 在 orders-write,且該群組有 orders.* 的讀寫 role(見下方指令)。'],
+    pre: ['環境已建好;觀念上接續 Lab 3(授權綁 AD 群組)。', '起點(yujie 在 orders-write,群組有 orders.* 的讀寫 role)由起點準備確保。'],
     pre_cmd: [
       ldapMod('add', 'yujie', 'orders-write') + ' 2>&1 | tail -1',
       bindGroup('DeveloperWrite'),
@@ -73,7 +73,7 @@ echo "token 前 20 字元:${'$'}{T:0:20}…(JWT,效期 1 小時)"`],
       { t: '16.10 並行鎖:別人正在變更時,我的變更被擋', why: '需要核准的項目同一時間只允許一個人執行,避免兩個人同時重啟或改授權。鎖只在同一台跳板機有效;持有者的行程不在了就視為過期。這裡手動放一個「別人持有」的鎖來示範。',
         manual: [`mkdir -p log/opmenu.lock.d; sleep 120 & HP=$!; echo "$HP gary 27 滾動重啟所有 broker | $(date '+%F %T')" > log/opmenu.lock.d/info`, `${OPENV} ./opmenu.sh --run 25 broker1 5`, 'kill $HP; rm -rf log/opmenu.lock.d'],
         ev: 'lock', re: /其他變更作業進行中/, expect: '目前有其他變更作業進行中(誰、做什麼、什麼時候)。' },
-      { t: '16.11 滾動重啟所有 broker(項目 27,會真的依序重啟 4 台;第 16 章整章實測約 11.5 分鐘,大部分是這一項)', why: '一次一台。每台重啟後先等 45 秒,再連續兩次確認「全部 broker 在線、under-replicated 與 offline 都是 0」才換下一台;任何一步失敗就停止。這個等待不能省:剛重啟的頭幾秒,舊 broker 還在叢集清單、ISR 也還沒縮減,under-replicated 看起來是 0,其實是假象(實測踩過)。',
+      { t: '16.11 滾動重啟所有 broker(項目 27,會真的依序重啟 4 台;第 16 章整章實測約 11.5 分鐘,大部分是這一項)', why: '滾動重啟的正式教材在 Lab 21.7;這裡是用 OP menu 做同樣的流程(一次一台、等叢集恢復才換下一台、每步留紀錄)。一次一台。每台重啟後先等 45 秒,再連續兩次確認「全部 broker 在線、under-replicated 與 offline 都是 0」才換下一台;任何一步失敗就停止。這個等待不能省:剛重啟的頭幾秒,舊 broker 還在叢集清單、ISR 也還沒縮減,under-replicated 看起來是 0,其實是假象(實測踩過)。',
         manual: [`${OPENV} ./opmenu.sh --run 27`], ev: 'rolling', re: /完成滾動重啟/, expect: '4 台依序完成(每台等叢集恢復才換下一台),最後「全部 4 台 broker 已完成滾動重啟」。', warn: '滾動重啟不含 controller(controller 的服務名與重啟順序尚未在真實 CP 節點驗證)。實測遇過一次:叢集連續跑了一整天、metadata 累積到約 13000 筆後,broker1 重啟時因 SCRAM 憑證還沒載入、authorizer 連自己失敗而啟動退出(推測原因,未確認)。這時滾動重啟會等到逾時就停止,不會動後面的 broker;處理方式是看 docker logs / journalctl 找原因,再決定重啟或重建。', tip: '這正是「一次一台、每台確認恢復才換下一台」的價值:第一台出問題時,第二台還在服務,不會造成中斷。' },
     ],
   },
@@ -171,7 +171,7 @@ kc kafka-topics --bootstrap-server $BOOT --command-config /clients/scram-svc-ord
         ev: 'rotate', re: /成功寫入[\s\S]*(Authentication failed|認證失敗)/, expect: 'Completed updating config → 已寫入 → 結果:成功寫入 → 舊設定檔 Authentication failed。' },
       { t: '18.8 還原密碼(Kafka 與 Conjur 都改回),讓其他 Lab 不受影響', manual: [R`kc kafka-configs --bootstrap-server $BOOT --command-config /clients/token-bootstrap.properties --alter --add-config 'SCRAM-SHA-512=[password=orders-secret-v1]' --entity-type users --entity-name svc-orders
 bash scripts/conjur.sh set-cred svc-orders svc-orders orders-secret-v1`], ev: 'restore', re: /Completed[\s\S]*已寫入/, expect: 'Completed updating config;已寫入。' },
-      { t: '18.9 零中斷輪替 ⓪:先看安全網——舊帳號沒有任何角色時,腳本拒絕往下做', why: '輪替腳本最怕「做到一半留下半成品」。所以它先確認舊帳號有角色可複製;沒有就中止,什麼都不動(Conjur 也不動)。',
+      { t: '18.9 零中斷輪替 ⓪:先看安全網——舊帳號沒有任何角色時,腳本拒絕往下做', why: '輪替的原理(建新帳號 → 新舊並行 → 停舊)同 Lab 9.1 到 9.4;這裡多的是 CyberArk(Conjur)保管與發放、隔離舊帳號與用 audit 確認沒人在用。輪替腳本最怕「做到一半留下半成品」。所以它先確認舊帳號有角色可複製;沒有就中止,什麼都不動(Conjur 也不動)。',
         manual: ['bash scripts/rotate-with-conjur.sh start nobody svc-x 2>&1 | tail -1', 'bash scripts/app-with-conjur.sh svc-orders orders.events abort-check | tail -1   # 確認應用照常拿得到帳密'],
         ev: 'rotate2-abort', re: /沒有任何角色[\s\S]*成功寫入/, expect: '✘ 舊帳號 nobody 沒有任何角色…中止(沒有改任何東西);應用仍成功寫入。' },
       { t: '18.10 零中斷輪替 ①:建新帳號、複製角色、驗證新帳號,才把新帳密一次寫進 Conjur', why: 'Kafka 的 SCRAM 一個帳號只有一組密碼,零中斷只能靠兩個帳號並行(Lab 9)。腳本的順序是:建 svc-orders-v2(密碼隨機)→ 複製舊帳號的全部角色並逐筆檢查 → 驗證新帳號真的連得上、看到的 topic 和舊帳號一模一樣 → 才把新帳密寫進 Conjur。任何一步失敗就回滾新帳號,Conjur 完全沒動,舊帳號照常。',
@@ -235,7 +235,7 @@ hc -o /dev/null -u gary:gary-pw https://broker2:8092/security/1.0/authenticate`]
       { t: '18.24 輪替 ③:資料金鑰(Data key)', why: '資料金鑰輪替只需要「目前的 passphrase」;所有值的密文都用新的資料金鑰重新加密,主金鑰不變。所以 Conjur 完全不用動,但 security.properties 要換到每一台並重啟。',
         manual: ['bash scripts/secret-protection.sh rotate-data'],
         ev: 'sp-rotate-data', re: /變動行數[\s\S]*解得開[\s\S]*HTTP 200/, expect: '新檔變動行數:4(值的密文與資料金鑰);新檔 + 原本的主金鑰 解得開;4 台依序重啟,每台 gary 登入 [HTTP 200];判定:資料金鑰已輪替…。' },
-      { t: '18.25 滾動輪替期間,寫入的應用受影響嗎', why: '輪替後一定要重啟,所以問題是:能不能不中斷服務?做法是一台一台重啟(滾動),每台健康後才做下一台。實驗:背景 producer 持續寫入(acks=all、冪等、每秒 5 筆共 2400 筆),同時輪替資料金鑰並依序重啟 broker1 → broker4(4 台都套用 Secret Protection),最後比對 producer 回報送出的筆數與 topic 實際筆數。實驗 topic 用副本 3、min.insync.replicas 2(與正式環境相同;一次只重啟一台,仍有 2 份同步副本)。',
+      { t: '18.25 滾動輪替期間,寫入的應用受影響嗎', why: '滾動重啟的正式教材在 Lab 21.7;這裡只看 Secret Protection 換檔與主金鑰的差異。輪替後一定要重啟,所以問題是:能不能不中斷服務?做法是一台一台重啟(滾動),每台健康後才做下一台。實驗:背景 producer 持續寫入(acks=all、冪等、每秒 5 筆共 2400 筆),同時輪替資料金鑰並依序重啟 broker1 → broker4(4 台都套用 Secret Protection),最後比對 producer 回報送出的筆數與 topic 實際筆數。實驗 topic 用副本 3、min.insync.replicas 2(與正式環境相同;一次只重啟一台,仍有 2 份同步副本)。',
         manual: ['bash scripts/rolling-rotate-test.sh'],
         ev: 'sp-rolling', re: /判定:滾動重啟期間 producer 零送出失敗/, expect: '依序重啟 broker1 → broker4,每台健康且 gary 經該台登入 [HTTP 200] 才做下一台;producer 回報送出 2400 筆 = topic 2400 筆;送出失敗 0 筆(會有十幾行換 leader 的警告,屬正常重試);判定:零送出失敗、零遺失。約 8 分鐘。',
         warn: '只證明這個條件下的結果:依序重啟 2 台 broker、實驗 topic 副本 2。正式 topic 用副本 3、min.isr 2,一次重啟一台時仍可寫入(滾動重啟全部 broker 與 controller 見 Lab 21.7);controller 也要一台一台重啟以保持多數決。client 要開 acks=all 與重試(預設即可),且不要把 delivery.timeout.ms 設得比一台 broker 重啟的時間短。' },
@@ -309,7 +309,7 @@ bash scripts/ad-lockout.sh status GARY`],
   {
     id: 'ch20', n: 20, title: '(進階)Schema Registry 與欄位級加密(CSFLE):同一套授權,與授權限制', time: '15 分',
     goal: '前面的 Lab 管 Kafka 的 topic 與資料;這個 Lab 把 Schema Registry(schema 與資料合約)納入同一套身分與授權,並檢查欄位級加密(CSFLE)能不能在這個環境驗證。證明四件事:① Schema Registry 的 REST 要帳密,授權由 MDS 依 AD 群組判斷(不另外維護一套帳號);② subject 的權限跟群組走:orders-write 只能碰 orders. 開頭的 subject;③ 加密金鑰(KEK)的管理權限只給 security 群組,一般開發者只能讀、沒有 role 的人連讀都不行;④ 欄位級加密本身需要企業版加上 CSFLE 加購授權——試用授權註冊帶加密規則的 schema 會被拒(402),所以加密與解密在這個環境「沒有驗證」。',
-    pre: ['Lab 0 完成;Lab 3 的 AD 群組(orders-write 有 yujie,topic-admin、security 有 gary)。', 'Schema Registry 是 profile sr 的一個容器(約 768 MB 記憶體),本 Lab 第一步會啟動;它用 client 憑證(CN=schema-registry)向 MDS 換 token 連 Kafka,與 REST Proxy 同一種做法。SR 需要的授權(_schemas、_dek_registry 開頭的 topic、SR 叢集範圍的 SecurityAdmin 等)由 scripts/sr-setup.sh 一次補齊。'],
+    pre: ['環境已建好(基線的 AD 群組:orders-write 有 yujie,topic-admin、security 有 gary)。', 'Schema Registry 兩台(schema-registry1、2,各約 768 MB 記憶體)已在基線裡,由 scripts/up.sh 先建好授權再啟動;本 Lab 第一步的 scripts/sr-setup.sh 只確認並補齊(冪等);它用 client 憑證(CN=schema-registry)向 MDS 換 token 連 Kafka,與 REST Proxy 同一種做法。SR 需要的授權(_schemas、_dek_registry 開頭的 topic、SR 叢集範圍的 SecurityAdmin 等)由 scripts/sr-setup.sh 一次補齊。'],
     autoAll: ['./demo.sh 20', './scenarios/ch20-schema-registry.sh'],
     steps: [
       { t: '20.1 啟動 Schema Registry 並完成授權', why: '兩件事:讓 SR 自己能存取 Kafka(它的身分是憑證 CN=schema-registry,不是 AD 帳號),以及依 AD 群組給人授權。SR 在 compose 裡要開三個 resource extension:安全(RBAC)、DEK Registry(KEK / DEK 管理)、RuleSet(資料合約的規則)。少一個就會有不同的問題,見下面的警告。',
@@ -388,8 +388,8 @@ hc -u gary:gary-pw -X POST -H "$J" -d "$ORDER_ENC_BODY" https://schema-registry:
   },
   {
     id: 'ch22', n: 22, title: '(進階)平台監控與告警:URP、離線分區、active controller 的告警實際觸發', time: '45 分',
-    goal: '前面的 Lab 只有「認證失敗」一條告警。這個 Lab 把官方列為必設的平台告警——UnderReplicatedPartitions、OfflinePartitionsCount、ActiveControllerCount——真的觸發一次:停 broker、停 controller,看 Prometheus 規則 firing、Alertmanager 收到、恢復後解除。指標收集有兩條路徑,各測一次並比較:A:Confluent 的 telemetry reporter 送到 Prometheus(為 Control Center 設計);B:Prometheus 官方的 JMX exporter(業界通用,不依賴 C3)。實測偵測時間 A 約 150 到 250 秒、B 約 35 秒;**銀行有自己的監控平台時建議走 B**:告警不依賴 C3 是否存活、與現成的告警規則與 Grafana 面板相容、每 15 秒抓取偵測更快;代價是每個節點多一個 agent 要維護。telemetry 仍是 C3 的資料來源,不能拿掉,但不應該是告警的唯一來源。',
-    pre: ['叢集已啟動(scripts/up.sh:3 controller、4 broker;JMX exporter 的 agent 會自動從 Maven Central 下載並校驗 SHA-1)。', '啟動 Prometheus 與 Alertmanager:docker compose --profile c3 up -d prometheus alertmanager(不用開 Control Center)。', '整章約 45 分鐘,因為每個實驗要等告警出現與解除。'],
+    goal: '這個 Lab 把官方列為必設的平台告警——UnderReplicatedPartitions、OfflinePartitionsCount、ActiveControllerCount——真的觸發一次:停 broker、停 controller,看 Prometheus 規則 firing、Alertmanager 收到、恢復後解除。指標收集有兩條路徑,各測一次並比較:A:Confluent 的 telemetry reporter 送到 Prometheus(為 Control Center 設計);B:Prometheus 官方的 JMX exporter(業界通用,不依賴 C3)。實測偵測時間 A 約 150 到 250 秒、B 約 35 秒;**銀行有自己的監控平台時建議走 B**:告警不依賴 C3 是否存活、與現成的告警規則與 Grafana 面板相容、每 15 秒抓取偵測更快;代價是每個節點多一個 agent 要維護。telemetry 仍是 C3 的資料來源,不能拿掉,但不應該是告警的唯一來源。',
+    pre: ['叢集已啟動(scripts/up.sh:3 controller、4 broker;JMX exporter 的 agent 會自動從 Maven Central 下載並校驗 SHA-1)。', 'Prometheus 與 Alertmanager 已在基線裡(scripts/up.sh 會啟動)。', '整章約 45 分鐘,因為每個實驗要等告警出現與解除。'],
     autoAll: ['./demo.sh 22', './scenarios/ch22-monitoring.sh'],
     steps: [
       { t: '22.1 路徑 A(telemetry):規則已載入,基準沒有告警', why: '7 條平台告警規則在 config/c3/ops_rules.yml:KafkaUnderReplicatedPartitions、KafkaUnderMinIsrPartitions、KafkaOfflinePartitions、KafkaActiveControllerCountNotOne、KafkaControllerMissing、KafkaUncleanLeaderElection、KafkaBrokerFenced。指標來自 broker 與 controller 的 telemetry reporter(KRaft 下 ActiveControllerCount 與離線分區只有 controller 才有,所以 controller 也要開 reporter)。門檻是範例值,正式環境依 controller 數與副本數調整。',
@@ -423,7 +423,7 @@ hc -u gary:gary-pw -X POST -H "$J" -d "$ORDER_ENC_BODY" https://schema-registry:
         manual: ['SRC=jmx bash scripts/monitor-lab.sh controller'],
         ev: 'mon-controller-jmx', re: /判定:controller 掉線觸發/, expect: 'KafkaJmxControllerMissing 約 37 秒觸發 → KafkaJmxActiveControllerCountNotOne 約 24 秒觸發 → 恢復後都解除;判定:…(來源:jmx)。',
         warn: '本 Lab 沒有觸發的告警:KafkaUncleanLeaderElection(官方要求此值恆為 0,正常操作不會觸發;要製造需要刻意開 unclean election 並讓所有同步副本掉線,風險高,沒有做)。磁碟用量與憑證到期:telemetry 與 JMX 的這組 MBean 都沒有磁碟百分比,要另外用 node_exporter;憑證到期見 Lab 23。' },
-      { t: '22.10 監控端點的保護:exporter(HTTPS + Basic)、blackbox(HTTPS + mTLS)', why: '做法依 Prometheus 官方安全文件與一般企業的原則(沒有找到金融業專屬的公開規範,PCI DSS 的對應是通用解讀:傳輸加密、認證):(1) 每個端點都用 TLS,而且 Prometheus **驗證憑證鏈**(不跳過驗證);(2) 能 mTLS 就 mTLS,不行才用 Basic 帳密,且 Basic 只能跑在 TLS 上;(3) 密碼不寫在設定檔,Prometheus 用 password_file 讀;(4) 網路層只開給 Prometheus(防火牆,本環境沒有模擬);(5) 負面測試——沒有憑證或帳密的請求要被拒。JMX exporter 1.0.1 只支援 HTTPS + Basic(密碼 PBKDF2-HMAC-SHA512 雜湊,參數同官方 jmx-monitoring-stacks 的 hash 腳本),**不支援 mTLS**(實測 agent 內沒有相關設定),所以每個 controller 與 broker 都用這個,密碼隨機產生。blackbox exporter 要更嚴:它依網址的 ?target= 參數替人連任何端點,而且探測模組帶有 client 憑證,Prometheus 官方安全文件特別警告這類 exporter,所以用 HTTPS + mTLS,只有行內 CA 簽發的 monitor client 憑證才能呼叫。**Prometheus 與 Alertmanager 本身維持 HTTPS + Basic**(Confluent 的 telemetry reporter 與 Control Center 官方記載的認證方式就是 TLS + Basic,沒有 client 憑證選項,強制 mTLS 會讓它們失效),但**帳號依用途分開**:Prometheus 有 c3(Control Center)、telemetry(broker 與 controller 推送指標)、ops(維運與腳本);Alertmanager 有 c3、prometheus(送告警)、opmenu(OP menu 維護模式)、ops。好處是出事時可以單獨撤銷、稽核看得出是誰。',
+      { t: '22.10 監控端點的保護:exporter(HTTPS + Basic)、blackbox(HTTPS + mTLS)', why: '做法同 Lab 17.4、17.5(HTTPS + Basic);這裡擴到 13 個 JMX exporter 與要求 mTLS 的 blackbox。做法依 Prometheus 官方安全文件與一般企業的原則(沒有找到金融業專屬的公開規範,PCI DSS 的對應是通用解讀:傳輸加密、認證):(1) 每個端點都用 TLS,而且 Prometheus **驗證憑證鏈**(不跳過驗證);(2) 能 mTLS 就 mTLS,不行才用 Basic 帳密,且 Basic 只能跑在 TLS 上;(3) 密碼不寫在設定檔,Prometheus 用 password_file 讀;(4) 網路層只開給 Prometheus(防火牆,本環境沒有模擬);(5) 負面測試——沒有憑證或帳密的請求要被拒。JMX exporter 1.0.1 只支援 HTTPS + Basic(密碼 PBKDF2-HMAC-SHA512 雜湊,參數同官方 jmx-monitoring-stacks 的 hash 腳本),**不支援 mTLS**(實測 agent 內沒有相關設定),所以每個 controller 與 broker 都用這個,密碼隨機產生。blackbox exporter 要更嚴:它依網址的 ?target= 參數替人連任何端點,而且探測模組帶有 client 憑證,Prometheus 官方安全文件特別警告這類 exporter,所以用 HTTPS + mTLS,只有行內 CA 簽發的 monitor client 憑證才能呼叫。**Prometheus 與 Alertmanager 本身維持 HTTPS + Basic**(Confluent 的 telemetry reporter 與 Control Center 官方記載的認證方式就是 TLS + Basic,沒有 client 憑證選項,強制 mTLS 會讓它們失效),但**帳號依用途分開**:Prometheus 有 c3(Control Center)、telemetry(broker 與 controller 推送指標)、ops(維運與腳本);Alertmanager 有 c3、prometheus(送告警)、opmenu(OP menu 維護模式)、ops。好處是出事時可以單獨撤銷、稽核看得出是誰。',
         manual: ['bash scripts/monitor-lab.sh protect'],
         ev: 'mon-protect', re: /判定:監控端點全部受保護/, expect: '13 個 exporter(broker 4、controller 3、Schema Registry 2、Connect 2、REST Proxy 2):不帶帳密 [HTTP 401]、錯密碼 [HTTP 401]、正確 [HTTP 200]、明文 http [HTTP 000];blackbox:不帶 client 憑證 [HTTP 000]、不是行內 CA 簽的 client 憑證 [HTTP 000]、monitor 憑證 [HTTP 200] 且 probe_success 1;Prometheus 目標 up=1 有 35 個(JMX 13 + TLS 探測 22)、up=0 有 0 個;判定:監控端點全部受保護…。',
         warn: '帳號分開只解決「單獨撤銷」與「稽核看得出是誰」,**不是最小權限**:Prometheus 的 Basic 帳號沒有逐帳號授權,telemetry 帳號也能查詢(要限制就需要在前面加反向代理依路徑授權)。密碼是測試值,正式環境由 CyberArk 產生、保管與輪替。沒有測的部分:網路層限制(防火牆只允許 Prometheus 連 7778 與 9115);exporter 密碼的輪替(正式環境由 CyberArk 產生與保管,輪替要同步更新 exporter 設定與 Prometheus 的 password_file,並重啟 broker 才會載入新的 exporter 設定);用 client_allowed_sans 進一步限制 blackbox 的呼叫者;JMX exporter 較新版本是否支援 mTLS。' }
@@ -432,13 +432,13 @@ hc -u gary:gary-pw -X POST -H "$J" -d "$ORDER_ENC_BODY" https://schema-registry:
   {
     id: 'ch23', n: 23, title: '(進階)憑證到期監控與不停機換憑證', time: '30 分',
     goal: '監控上線後的第一個事件:憑證快到期。這個 Lab 解決兩件事。① 怎麼「知道」憑證快到期:比較四種做法並採用最好的組合(blackbox 探測實際送出的憑證,加上 OP menu 的檔案巡檢補 client 憑證與 CA);② 怎麼「不停機」換:動態 keystore 重載,並實測安全流程(預檢、金絲雀、帶外回退)與幾種會出事的情境。**不是「能換」就好,而是換的過程不能把自己鎖在門外。**',
-    pre: ['叢集已啟動(scripts/up.sh),並有 Lab 22 的 Prometheus、Alertmanager;另外啟動 blackbox exporter:docker compose --profile c3 up -d prometheus alertmanager blackbox-exporter(Prometheus 官方專案,官方映像)。', '整章約 15 分鐘。每個實驗結束都會把環境回到靜態檔的憑證。'],
+    pre: ['叢集已啟動(scripts/up.sh;Prometheus、Alertmanager 與 blackbox exporter 都在基線裡,blackbox 是 Prometheus 官方專案的官方映像)。', '整章約 15 分鐘。每個實驗結束都會把環境回到靜態檔的憑證。'],
     autoAll: ['./demo.sh 23', './scenarios/ch23-cert-rotation.sh'],
     steps: [
       { t: '23.1 現況:實際送出的憑證 vs 磁碟檔案', why: '原本的做法是 OP menu 第 17 項:對憑證目錄的每個 .pem 跑 openssl x509 -enddate,列出到期日。它有三個限制:看的是磁碟檔案,不是 broker 實際在用的那張;只列日期、不分級;不會主動告警。這一步先看兩者是否一致(用 openssl s_client 讀 TLS 握手收到的憑證序號),並展示 OP menu 第 17 項改良後會顯示剩餘時間分級(已過期、不到 7 天、不到 30 天、不到 90 天)。',
         manual: ['bash scripts/cert-lab.sh baseline'],
         ev: 'cert-baseline', re: /判定:現況各端點送出的憑證與磁碟檔案是同一張/, expect: '4 台 broker 的 9094 與 MDS 的 8091 送出的序號與 certs/server.pem 相同;OP menu 列出各 .pem 的到期日與「90 天以上」;判定:現況各端點送出的憑證與磁碟檔案是同一張…。' },
-      { t: '23.2 到期監控:blackbox 探測 12 個端點', why: '四種做法比較:(1) OP menu 檔案巡檢——看磁碟、不告警,保留給 client 憑證與 CA;(2) Kafka telemetry 的 mtls_earliest_cert_expiration_ms——**實測所有 controller 回報 9.22e18(Long.MAX_VALUE),沒有填值,不能用**;(3) JMX exporter——官方 jmx-monitoring-stacks 的設定檔裡沒有任何憑證到期指標;(4) **blackbox exporter 探測(採用)**——Prometheus 官方專案,從外面對每個 TLS 端點做一次真實握手,回報 probe_ssl_earliest_cert_expiry 與 probe_success,看到的就是 client 會看到的。內部 mTLS 埠(INTERNAL 9092、CONTROLLER 9093)要 client 憑證才能握手,探測用一張**沒有任何授權的** client 憑證——不能把 super user 的內部憑證私鑰放進探測容器,那等於給監控元件叢集管理員權限。為什麼不是 Prometheus 直接抓?因為 Prometheus 只會對「回傳指標的 HTTP 網址」發 GET,Kafka 的服務埠講的是 Kafka 協定。',
+      { t: '23.2 到期監控:blackbox 探測 22 個端點', why: '四種做法比較:(1) OP menu 檔案巡檢——看磁碟、不告警,保留給 client 憑證與 CA;(2) Kafka telemetry 的 mtls_earliest_cert_expiration_ms——**實測所有 controller 回報 9.22e18(Long.MAX_VALUE),沒有填值,不能用**;(3) JMX exporter——官方 jmx-monitoring-stacks 的設定檔裡沒有任何憑證到期指標;(4) **blackbox exporter 探測(採用)**——Prometheus 官方專案,從外面對每個 TLS 端點做一次真實握手,回報 probe_ssl_earliest_cert_expiry 與 probe_success,看到的就是 client 會看到的。內部 mTLS 埠(INTERNAL 9092、CONTROLLER 9093)要 client 憑證才能握手,探測用一張**沒有任何授權的** client 憑證——不能把 super user 的內部憑證私鑰放進探測容器,那等於給監控元件叢集管理員權限。為什麼不是 Prometheus 直接抓?因為 Prometheus 只會對「回傳指標的 HTTP 網址」發 GET,Kafka 的服務埠講的是 Kafka 協定。',
         manual: ['bash scripts/cert-lab.sh monitor'],
         ev: 'cert-monitor', re: /判定:22 個 TLS 端點/, expect: '對外 15 個端點(9094 ×4、MDS 8091 到 8094、REST Proxy ×2、Schema Registry ×2、Connect ×2、Control Center)與內部 mTLS 7 個端點(9092 ×4、9093 ×3)各顯示「剩 N 天」(約 825);目前 firing 的憑證告警:-;判定:22 個 TLS 端點(15 個對外、7 個內部 mTLS)的探測都成功…。',
         warn: '探測看不到 client 憑證(對外連線的應用憑證)與 CA 的到期,這兩類要靠 OP menu 第 17 項的檔案巡檢。blackbox 本身已啟用 HTTPS + mTLS(只有行內 CA 簽發的 monitor client 憑證能呼叫,見 22.10);它帶有探測用的 client 憑證且能替人連任何位址,所以保護要比一般 exporter 更嚴。' },
@@ -520,7 +520,7 @@ hc -u gary:gary-pw -X POST -H "$J" -d "$ORDER_ENC_BODY" https://schema-registry:
   {
     id: 'ch26', n: 26, title: '(進階)Grafana 全元件監控:官方儀表板、主機指標、consumer lag', time: '35 分',
     goal: 'Control Center 只看得到 broker 與 controller。要看「全部」——Kafka、主機的磁碟與 CPU、consumer 落後多少——需要 Grafana。這個 Lab 把 Grafana 接上 Prometheus,匯入 Confluent 官方儀表板,補上 Lab 22 缺的磁碟(node_exporter)與 consumer lag(kafka_exporter),並且和其他元件一樣受保護:HTTPS、AD 登入、exporter 走 mTLS、每個元件用自己的最小權限帳號。**重點不是「儀表板匯進去」,而是「儀表板真的有資料」與「監控元件自己的安全」**。',
-    pre: ['叢集已啟動(scripts/up.sh),並有 Lab 22 的 Prometheus、Alertmanager、blackbox exporter:docker compose --profile c3 up -d prometheus alertmanager blackbox-exporter。', '第一次會下載 node_exporter 映像(約 13 MB,Prometheus 官方);Grafana 映像(測試版本 13.2.3)與 kafka_exporter(社群專案 danielqsj,測試版本 1.10.0)若本機沒有也會下載。官方儀表板由 scripts/grafana.sh 依固定 commit 下載並校驗 SHA-256。', '整章約 12 分鐘(consumer lag 告警要等 3 到 4 分鐘)。'],
+    pre: ['叢集已啟動(scripts/up.sh;Prometheus、Alertmanager、blackbox exporter 都在基線裡)。', '第一次會下載 node_exporter 映像(約 13 MB,Prometheus 官方);Grafana 映像(測試版本 13.2.3)與 kafka_exporter(社群專案 danielqsj,測試版本 1.10.0)若本機沒有也會下載。官方儀表板由 scripts/grafana.sh 依固定 commit 下載並校驗 SHA-256。', '整章約 12 分鐘(consumer lag 告警要等 3 到 4 分鐘)。'],
     autoAll: ['./demo.sh 26', './scenarios/ch26-grafana.sh'],
     steps: [
       { t: '26.1 啟動:備妥密碼、帳號、儀表板,再起三個容器', why: 'scripts/grafana.sh on 一次做完:密碼檔隨機產生(不進版本庫,正式環境由 CyberArk 提供);在模擬 AD 新增 Grafana 專用的唯讀查詢帳號 svc-grafana-ldap(和 broker 用的分開,出事時可單獨停用);在 Kafka 建立 kafka_exporter 專用的 SCRAM 帳號,只授予 Describe 與 DescribeConfigs 的 ACL(看得到 topic、group、offset,讀不到訊息);下載官方儀表板並校驗雜湊;讓 Prometheus 載入新的抓取設定與告警規則。為了讓官方儀表板不改一個字就能用,Lab 22 的抓取 job 改成官方的慣例名稱 kafka-broker、kafka-controller 並加 env 標籤。',
@@ -529,12 +529,12 @@ hc -u gary:gary-pw -X POST -H "$J" -d "$ORDER_ENC_BODY" https://schema-registry:
         warn: '重跑是安全的(已存在的密碼、帳號、儀表板會保留)。Kafka 的 SCRAM 帳號 off 時不刪除(KAFKA-20774:刪除 SCRAM 憑證可能讓 broker 重啟失敗)。' },
       { t: '26.2 Grafana 就緒:只收 HTTPS,資料來源與儀表板載入', why: 'Grafana 用共用 server 憑證提供 HTTPS(明文請求回 400)。資料來源 Prometheus 用只讀的 grafana 帳號連線(Prometheus 的帳號依用途分開:c3、telemetry、ops、grafana),密碼從檔案讀、用行內 CA 驗證 Prometheus 的憑證。儀表板由檔案載入(provisioning),使用者不能在畫面上改,避免「畫面上改了、重建後消失」。',
         manual: ['bash scripts/grafana-lab.sh stack'],
-        ev: 'grafana-stack', re: /判定:Grafana 只收 HTTPS/, expect: 'HTTPS /api/health:ok;明文 http 回 [HTTP 400];資料來源健康檢查 "status":"OK";列出 6 個儀表板(Confluent Platform overview、Confluent RBAC、Kafka cluster、Kafka Topics、KRaft、主機與 consumer lag);判定:Grafana 只收 HTTPS…。' },
+        ev: 'grafana-stack', re: /判定:Grafana 只收 HTTPS/, expect: 'HTTPS /api/health:ok;明文 http 回 [HTTP 400];資料來源健康檢查 "status":"OK";列出 9 個儀表板(官方 8 個:Confluent Platform overview、Confluent RBAC、Kafka cluster、Kafka Topics、KRaft、Schema Registry、Kafka Connect、REST Proxy;自製 1 個:主機與 consumer lag);判定:Grafana 只收 HTTPS…。' },
       { t: '26.3 官方儀表板用得起來嗎:逐個查詢檢查', why: '「匯入成功」不等於「有資料」:官方儀表板的查詢寫死了標籤(job="kafka-broker"、env)和指標名稱,對不上就是一片空白。這一步把每個面板的 PromQL 都經 Grafana 跑一次,數有幾個回傳資料。實測 245 個查詢中 171 個有資料:Kafka Topics 14 個全有、RBAC 10 個全有、Kafka cluster 85 個中 77 個、KRaft 18 個中 17 個、Schema Registry 13 個中 12 個、REST Proxy 11 個中 10 個、Connect 71 個中 19 個(連接器與 task 層級的面板要有連接器在跑才有資料)。Schema Registry、Connect、REST Proxy 也掛了同一套 JMX exporter(官方設定檔 + HTTPS + Basic),Prometheus 用官方的 job 名稱(schema-registry、kafka-connect、rest-proxy)抓取,官方儀表板才查得到;沒掛之前這幾個面板一片空白。其餘沒資料的分幾類——不在基線的功能(Tiered Storage 只在第 32 章啟用;ksqlDB 不在範圍);KRaft 下 offline partitions 在 controller 上而儀表板查 broker;JMX exporter 1.0.1 的指標命名與儀表板不同(例如 jvm_memory_bytes_max 在 1.x 是 jvm_memory_max_bytes);指標沒有變成 JMX MBean:Kafka 4.x 明確設了 metric.reporters(本專案只列 TelemetryReporter 給 Control Center)就不再自動帶 JmxReporter,raft、socket-server、auth-store 這類指標不會出現在 JMX exporter。補上 org.apache.kafka.common.metrics.JmxReporter 後有資料的查詢從 108 增加到 126。',
         manual: ['bash scripts/grafana-lab.sh dashboards'],
         ev: 'grafana-dash', re: /判定:官方儀表板不改一個字就能用/, expect: '每個儀表板一行「查詢 N 個,有資料 M 個」;kafka-topics-kraft 沒資料 0 個;合計查詢 245 個、有資料 171 個,Connect 以外 152 / 174(2026-10-12 全 HA 環境實測;Grafana 剛啟動時查詢會出錯,腳本會先等資料來源就緒);判定:官方儀表板不改一個字就能用…。',
         warn: '不要為了讓面板有資料就去改官方儀表板的 JSON——升級時會被覆蓋。正確做法:對得上就用、對不上的記下來(本 Lab 的結論),或自己寫補充的儀表板(本 Lab 的「主機與 consumer lag」)。raft 指標對 controller 健康度很重要:要出現在 JMX exporter,metric.reporters 必須明確列出 JmxReporter(本專案 compose 已設);導入時用 curl exporter 的 /metrics 確認 kafka_server_raft_metrics_* 存在。仍沒資料的 24 個查詢是環境沒有的功能(Tiered Storage、Schema Registry、Connect)、controller 與 broker 標籤差異,以及 auth-store 的指標前綴(官方規則輸出 kafka_server_confluent_auth_store_metrics_*,儀表板查 confluent_auth_store_metrics_*)。' },
-      { t: '26.4 主機指標:node_exporter 走 mTLS,補上磁碟告警', why: 'Lab 22 留下的缺口:telemetry 與 JMX 都沒有磁碟用量,而 broker 資料目錄寫滿就會當掉。node_exporter 是 Prometheus 官方專案,這裡用 mTLS 保護(沒有 client 憑證或憑證不是行內 CA 簽的,TLS 握手就被拒),比 Basic 帳密好:沒有密碼可洩漏。磁碟告警規則依裝置(ext4 / xfs)計算,門檻 80% 是範例值。',
+      { t: '26.4 主機指標:node_exporter 走 mTLS,補上磁碟告警', why: '監控端點保護的做法同 Lab 17、22.10;這裡多的是 node_exporter 要求 mTLS。Lab 22 留下的缺口:telemetry 與 JMX 都沒有磁碟用量,而 broker 資料目錄寫滿就會當掉。node_exporter 是 Prometheus 官方專案,這裡用 mTLS 保護(沒有 client 憑證或憑證不是行內 CA 簽的,TLS 握手就被拒),比 Basic 帳密好:沒有密碼可洩漏。磁碟告警規則依裝置(ext4 / xfs)計算,門檻 80% 是範例值。',
         manual: ['bash scripts/grafana-lab.sh host'],
         ev: 'grafana-host', re: /判定:node_exporter 要求 mTLS/, expect: '不帶 client 憑證 [HTTP 000];外來憑證 [HTTP 000];monitor 憑證 [HTTP 200];Prometheus 看到 N 個 ext4 / xfs 裝置與最高用量;NodeDiskUsageHigh、NodeExporterDown 規則 ok、inactive;判定:node_exporter 要求 mTLS…。',
         warn: '容器環境的 node_exporter 看到的是 Docker 主機(VM)的磁碟,不是 broker 容器各自的;正式環境每台 RHEL VM 各裝一個,並注意 broker 資料目錄所在的檔案系統。磁碟告警在本 Lab 只驗證規則已載入,沒有實際把磁碟塞滿去觸發。' },
@@ -555,7 +555,7 @@ hc -u gary:gary-pw -X POST -H "$J" -d "$ORDER_ENC_BODY" https://schema-registry:
   {
     id: 'ch27', n: 27, title: '(進階)日誌與追蹤:經過 Kafka 進 Loki 與 Tempo', time: '30 分',
     goal: 'Lab 26 的 Grafana 有了指標,接著補日誌與追蹤,而且用 Kafka 當傳輸緩衝:日誌與 trace 先寫進 Kafka,再由另一段讀出送進 Loki(日誌)與 Tempo(trace)。好處是 Loki 或 Tempo 掛掉、升級時資料留在 Kafka,恢復後補上。這個 Lab 驗證五件事:資料真的流過去、停機不掉資料、一個 trace 能跨過 Kafka 串起寫入端與讀取端(應用程式碼不改)、稽核事件也進 Loki、Kafka 帳號的權限最小。搬運用 Grafana Alloy。',
-    pre: ['Lab 26 的 Grafana 已啟動(scripts/grafana.sh on)。記憶體吃緊(Docker 11 GB 左右)時先停 Control Center:docker stop control-center。', '第一次會下載 Loki(約 210 MB)、Tempo(約 170 MB)、Alloy(約 950 MB)映像,以及 OpenTelemetry Java agent(約 26 MB,校驗 GitHub release 的 checksums.txt);Lab 25 的 JDK 映像要已存在。', '整章約 12 分鐘。測試版本:Loki 3.7.8、Tempo 3.0.0、Alloy 1.20.1、OpenTelemetry Java agent 2.32.0。'],
+    pre: ['叢集已啟動。起點準備(scripts/chapter-start.sh ch27)會確保 Grafana 在跑、應用程式用的 JDK 映像與 Kafka jar 已備妥,不必先做 Lab 25、26。記憶體吃緊(Docker 11 GB 左右)時先停 Control Center:docker stop control-center。', '第一次會下載 Loki(約 210 MB)、Tempo(約 170 MB)、Alloy(約 950 MB)映像,以及 OpenTelemetry Java agent(約 26 MB,校驗 GitHub release 的 checksums.txt);JDK 映像(eclipse-temurin:21-jdk,約 740 MB)沒有時由起點準備下載。', '整章約 12 分鐘。測試版本:Loki 3.7.8、Tempo 3.0.0、Alloy 1.20.1、OpenTelemetry Java agent 2.32.0。'],
     autoAll: ['./demo.sh 27', './scenarios/ch27-observability.sh'],
     steps: [
       { t: '27.1 啟動:Kafka 這一側先備妥,再起三個容器', why: 'scripts/observability.sh on:建立兩個專用的 SCRAM 帳號(alloy-producer 只能寫、alloy-consumer 只能讀,不共用一個大權限帳號)、兩個 topic(otel-logs、otel-traces,副本 3、min.isr 2、保留 6 小時——長期保存是 Loki / Tempo 的事)、最小權限的 ACL;下載 OpenTelemetry Java agent 並校驗雜湊;啟動 Loki、Tempo、Alloy;讓 Grafana 載入 Loki 與 Tempo 資料來源。Loki 與 Tempo 的網頁入口要 mTLS(只有行內 CA 簽發的 client 憑證能連,Alloy 寫入、Grafana 查詢各帶憑證)。',
@@ -568,7 +568,7 @@ hc -u gary:gary-pw -X POST -H "$J" -d "$ORDER_ENC_BODY" https://schema-registry:
         warn: 'Loki 裡的每一行是 OTLP 轉換後的 JSON({"body":"原始日誌"}),查詢時用 | json 取出;若要保留原始格式與標籤,需要在 Alloy 加處理步驟(本 Lab 沒做)。日誌可能含敏感資料(帳號、IP),Loki 的保留期與存取權限要依規定訂(本 Lab 保留 7 天是範例值)。' },
       { t: '27.3 Kafka 當緩衝:Loki 停機,資料不掉', why: '為什麼中間放 Kafka:下游(Loki / Tempo)掛掉或維護時,資料留在 Kafka。實驗:停掉 Loki,期間建 5 個 topic(broker 會留下含該 topic 名稱的日誌),恢復 Loki 後比對『容器實際的日誌行數』與『Loki 收到的行數』:980 = 980,一筆不少。代價是多一段(延遲、Kafka 容量、要維運兩個帳號與兩個 topic);Kafka 的保留期(本 Lab 6 小時)就是下游可以停機的上限。',
         manual: ['bash scripts/observe-lab.sh buffer'],
-        ev: 'obs-buffer', re: /判定:Loki 停機期間產生的日誌/, expect: '容器實際的日誌(含標記)980 行;Loki 恢復後收到 980 行;判定:Loki 停機期間產生的日誌,恢復後補齊(980 行 = 980 行,一筆不少)…。',
+        ev: 'obs-buffer', re: /判定:Loki 停機期間產生的日誌/, expect: '容器實際的日誌(含標記)1000 行;Loki 恢復後收到 1000 行;判定:Loki 停機期間產生的日誌,恢復後補齊(1000 行 = 1000 行,一筆不少;行數隨環境略有不同,重點是兩邊相等)…。',
         warn: '本實驗只停 Loki 約 1 分鐘。停機超過 Kafka 的保留期(6 小時)資料就真的掉了;也要監控 Alloy 的 consumer lag(用 Lab 26 的 kafka_exporter:group alloy-logs、alloy-traces),lag 持續增加代表下游卡住。' },
       { t: '27.4 trace 跨過 Kafka', why: '分散式追蹤最常見的盲點是訊息佇列:producer 與 consumer 是兩個程式,trace 到 Kafka 就斷了。OpenTelemetry 的 Kafka 儀器化把 trace context 放進訊息標頭(W3C traceparent),consumer 讀到時接上。實驗:第 25 章的 Producer 與 AtLeastOnce 程式**不改一行**,只在啟動時加 -javaagent(並加 -Dotel.javaagent.enabled=true:用 java 檔名.java 方式執行時 agent 預設會判斷成 JDK 工具而停用)。結果一個 trace 底下有 orders-producer 的 publish 與 orders-consumer 的 process 兩個 span。trace 本身再經 Alloy → Kafka(otel-traces)→ Tempo。',
         manual: ['bash scripts/observe-lab.sh trace'],
@@ -642,7 +642,7 @@ hc -u gary:gary-pw -X POST -H "$J" -d "$ORDER_ENC_BODY" https://schema-registry:
   {
     id: 'ch30', n: 30, title: '(進階)告警寄成信:Alertmanager 到自架郵件伺服器', time: '20 分',
     goal: '前面的 Lab 讓告警在 Prometheus 與 Alertmanager 裡「亮燈」,但半夜值班的人不會看著畫面。這個 Lab 把告警變成信,寄到行內自架的郵件伺服器(demo 用 Mailpit 代替),並驗證四件事:告警真的變成信、依嚴重度分流給不同的人、同類告警合併成一封不洗版、真實故障有「發生」與「解除」兩封。另外要確認郵件伺服器本身有被保護(強制 STARTTLS、要帳密),Alertmanager 的密碼不寫在設定裡。**重點是通知的設計(分流、合併、解除),不是「能寄信」**。',
-    pre: ['叢集已啟動(scripts/up.sh,預設含 Control Center / Prometheus / Alertmanager),再 docker compose --profile c3 up -d prometheus alertmanager blackbox-exporter。', 'Mailpit 映像(axllent/mailpit,約 60 MB,測試版本 1.31.4);它只是行內郵件伺服器的替身,設定的形狀(位址、埠、STARTTLS、帳密、寄件人與收件人)與接到行內伺服器相同。', '整章約 6 分鐘。Control Center 也讀 Alertmanager 的設定檔(alertmanager-generated.yml);scripts/mail-setup.sh 會備份原檔、off 時還原,要改告警設定請走這支腳本,不要同時在 C3 畫面改。'],
+    pre: ['叢集已啟動(scripts/up.sh;Control Center、Prometheus、Alertmanager、blackbox exporter 都在基線裡)。', 'Mailpit 映像(axllent/mailpit,約 60 MB,測試版本 1.31.4);它只是行內郵件伺服器的替身,設定的形狀(位址、埠、STARTTLS、帳密、寄件人與收件人)與接到行內伺服器相同。', '整章約 6 分鐘。Control Center 也讀 Alertmanager 的設定檔(alertmanager-generated.yml);scripts/mail-setup.sh 會備份原檔、off 時還原,要改告警設定請走這支腳本,不要同時在 C3 畫面改。'],
     autoAll: ['./demo.sh 30', './scenarios/ch30-alert-mail.sh'],
     steps: [
       { t: '30.1 啟動:郵件伺服器與 Alertmanager 的郵件設定', why: 'scripts/mail-setup.sh on 備妥:郵件伺服器的帳密檔(寄信帳號 alertmanager、網頁帳號 ops,密碼隨機產生、bcrypt 雜湊,不進版本庫)、mailpit(SMTP 強制 STARTTLS 並要帳密,網頁與 API 走 HTTPS + Basic)、Alertmanager 的郵件版設定:smtp_smarthost、smtp_require_tls: true、smtp_auth_password_file(密碼從檔案讀)、email_configs 的 tls_config.ca_file(用行內 CA 驗證郵件伺服器的憑證,不跳過驗證)、依嚴重度分流的 route、group_by 合併、send_resolved。server 憑證 SAN 要加 mailpit。',
@@ -658,7 +658,7 @@ hc -u gary:gary-pw -X POST -H "$J" -d "$ORDER_ENC_BODY" https://schema-registry:
       { t: '30.4 同類合併:不洗版', why: '一台機器的網路掛了,可能同時觸發幾十個告警;每個都寄一封,值班的人信箱被灌爆,反而漏看重點。group_by [alertname, severity] 把同名同嚴重度的合併成一封,信裡列出所有實例。實驗:同一種告警在 3 個實例發生,只收到 1 封,內文寫「3 alerts」。',
         manual: ['bash scripts/mail-lab.sh group'],
         ev: 'mail-group', re: /判定:3 個實例的同一種告警合併成 1 封信/, expect: '收到 GroupTest 的信 1 封,內文「3 alerts for alertname=GroupTest」;判定:3 個實例的同一種告警合併成 1 封信…。' },
-      { t: '30.5 真實故障:發生與解除', why: '從故障到信的完整路徑:停 broker3 → JMX 的 URP 指標 → Prometheus 規則 KafkaJmxUnderReplicatedPartitions(warning)→ Alertmanager → 郵件。實測約 30 秒收到 [FIRING];恢復 broker3 後約 40 秒收到 [RESOLVED](send_resolved)。解除通知很重要:值班的人要知道「已經好了」,不必再去查。',
+      { t: '30.5 真實故障:發生與解除', why: '告警規則同 Lab 22.7(停 broker → URP);這裡看的是一路寄到信箱、解除也通知。從故障到信的完整路徑:停 broker3 → JMX 的 URP 指標 → Prometheus 規則 KafkaJmxUnderReplicatedPartitions(warning)→ Alertmanager → 郵件。實測約 30 秒收到 [FIRING];恢復 broker3 後約 40 秒收到 [RESOLVED](send_resolved)。解除通知很重要:值班的人要知道「已經好了」,不必再去查。',
         manual: ['bash scripts/mail-lab.sh real'],
         ev: 'mail-real', re: /判定:真實故障走完整條路徑/, expect: '約 30 秒收到 [FIRING] KafkaJmxUnderReplicatedPartitions(warning);恢復後約 40 秒收到 [RESOLVED];判定:真實故障走完整條路徑…。',
         warn: '收件匣裡會同時看到前面測試告警過期後的 [RESOLVED]——測試告警 2 分鐘後自動過期。telemetry 路徑的告警(名稱不含 Jmx)同樣會寄信,但比 JMX 路徑慢約 2 分鐘(Lab 22)。' },
@@ -671,7 +671,7 @@ hc -u gary:gary-pw -X POST -H "$J" -d "$ORDER_ENC_BODY" https://schema-registry:
   {
     id: 'ch31', n: 31, title: '(進階)Self-Balancing:自動搬分區(加 broker、負載不均、移除 broker)', time: '45 分',
     goal: 'Lab 24 是人工搬分區:自己算計畫、限速、收尾。Self-Balancing(SBC)是 Confluent 內建的自動版:新 broker 加進來它自己把副本搬過去;要下線一台 broker,一個指令它就把副本搬走再關機。這個 Lab 實測它在什麼情況會動、什麼情況不會動:啟用(KRaft 下它跑在 controller 上,controller 的設定一樣重要)、加入空 broker、負載不均、移除 broker。',
-    pre: ['從全新環境開始:scripts/ha.sh on(清除資料並依 scripts/up.sh 重建全部元件;這個 Lab 會依序重建 controller 與 broker)。', '記憶體:加入的第 5 台 broker(broker5,node id 15)約 1.2 GB,Docker 建議 12 GB 以上。', '耗時:大部分是等 Self-Balancing 蒐集指標(加 broker 後 15 到 20 分鐘才開始搬),不是機器慢。'],
+    pre: ['叢集已啟動(scripts/up.sh)。第一步 scripts/sbc-setup.sh on 依序重建 controller 與 broker,最後一步 off 還原成基線(重跑也可以)。', '記憶體:加入的第 5 台 broker(broker5,node id 15)約 1.2 GB,Docker 建議 12 GB 以上。', '耗時:大部分是等 Self-Balancing 蒐集指標(加 broker 後約 12 分鐘才開始搬(實測 726 秒)),不是機器慢。'],
     autoAll: ['./demo.sh 31', './scenarios/ch31-self-balancing.sh'],
     steps: [
       { t: '31.1 啟用:controller 與 broker 都要設', why: '官方文件:confluent.balancer.enable 要設在「每一台 broker 與每一台 controller」,KRaft 下還要在 controller 與 broker 都設 inter.broker.listener.name。原因是 KRaft 下 balancer 跑在 active controller 上,它要用 inter.broker.listener.name 找 broker 連線。實測兩個陷阱:① 只用 kafka-configs 動態把 broker 打開,狀態仍是 DISABLED(controller 的靜態設定是 false);② controller 沒設 inter.broker.listener.name,balancer 啟動時丟 IllegalArgumentException: Bootstrap server endpoint was not provided…(預設找 PLAINTEXT)。scripts/sbc-setup.sh on 做的事:.env 設 SBC_ENABLE=true,controller 與 broker 依序重建(一次一台、等 healthy)。',
@@ -693,6 +693,8 @@ hc -u gary:gary-pw -X POST -H "$J" -d "$ORDER_ENC_BODY" https://schema-registry:
         manual: ['bash scripts/sbc-lab.sh uneven'],
         ev: 'sbc-uneven', re: /判定:資料量低於官方觸發門檻/, expect: '日誌出現 GoalViolationDetector… did not detect any violated goals;cap.skew 仍是 broker1、broker2 各 198 MB;判定:資料量低於官方觸發門檻…。',
         warn: '沒有測:磁碟用量超過 20% 時它真的會搬(要把磁碟填到 20% 以上,docker 環境不合理);要靠它做負載不均自癒的叢集,監控還是要看各 broker 的磁碟用量(Lab 26 的 node_exporter),不要以為它會把小差距抹平。' },
+      { t: '31.6 還原:關閉 Self-Balancing', why: '回到基線(SBC_ENABLE=false,controller 與 broker 依序重建),讓之後的 Lab 不受影響;重跑本 Lab 時第一步會再啟用。',
+        manual: ['bash scripts/sbc-setup.sh off'], ev: 'sbc-off', re: /\[sbc\] 已關閉/, expect: '依序重建 controller1-3、broker1-4;[sbc] 已關閉。' },
     ],
   },
   {
@@ -733,7 +735,7 @@ hc -u gary:gary-pw -X POST -H "$J" -d "$ORDER_ENC_BODY" https://schema-registry:
   {
     id: 'ch33', n: 33, title: '(進階)動態 quorum:不停機汰換壞掉的 controller', time: '15 分',
     goal: '靜態 quorum 把 controller 名單寫在每台節點的設定檔(controller.quorum.voters),換一台壞掉的 controller 要改全部節點的設定並全部重啟,半夜出事時是個高風險動作。所以本環境與客戶正式環境一樣,一開始就用官方建議的動態 quorum:名單存進叢集 metadata,換 controller 只要「新的加進來、舊的移出去」兩個指令。這個 Lab 先確認現況是動態 quorum,再模擬一台 controller 主機損壞並汰換,全程驗證寫入與控制面。',
-    pre: ['全新環境:scripts/ha.sh on(這個 Lab 會永久改變 voter 名單,3 換成 4,做完用 scripts/ha.sh on 重建)。', '若曾啟動第 5 台 broker(Lab 31),先 scripts/sbc-setup.sh off。', '第 4 台 controller 用 docker compose 的 profile quorum 啟動(controller4)。'],
+    pre: ['叢集已啟動(一開始就是動態 quorum)。起點準備與最後一步都用 scripts/quorum-lab.sh reset 把 voter 名單收斂成 {1,2,3}(controller3 重新加入、controller4 移除),所以可以重跑;reset 失敗時才需要 scripts/ha.sh on 重建。', '若第 5 台 broker(Lab 31)還在,先 scripts/sbc-setup.sh off。', '第 4 台 controller 用 docker compose 的 profile quorum 啟動(controller4)。'],
     autoAll: ['./demo.sh 33', './scenarios/ch33-dynamic-quorum.sh'],
     steps: [
       { t: '33.1 現況:動態 quorum', why: 'kafka-features describe 看 kraft.version:0(或沒有)是靜態,1 以上是動態。kafka-metadata-quorum describe --status 的 CurrentVoters 在動態模式每個 voter 都有一個 directory id(移除 controller 時要用);靜態模式只有 id 與端點。本環境的 controller 在格式化時用相同的 --initial-controllers(固定 directory id)建立動態 quorum。',
@@ -744,6 +746,8 @@ hc -u gary:gary-pw -X POST -H "$J" -d "$ORDER_ENC_BODY" https://schema-registry:
         manual: ['bash scripts/quorum-lab.sh replace'],
         ev: 'quorum-replace', re: /判定:控制器汰換完成/, expect: 'Added controller 4 with directory id …;Removed KRaft controller 3 with directory id …;替換後 voter:1 2 4;停 controller1 後寫入 200 筆、建立 topic 成功;判定:控制器汰換完成…。',
         warn: '操作細節:① add-controller 要在「新節點」上、用它自己的設定檔執行(它從磁碟的 meta.properties 讀 directory id);在本環境的容器裡還要 -e KAFKA_OPTS= 關掉 JMX agent,否則工具啟動時 port 衝突。② 順序是先 add 再 remove:先移除會讓名單縮到 2 個、少一台就失去多數。③ 要先把 controller 加進來、追上資料後才 add;沒追上會被拒。④ 新 controller 的憑證 SAN 要包含它的主機名稱(demo 的 make-certs.sh 補了 controller4)。沒有測:controller.quorum.auto.join.enable 自動加入(官方說 8.2 起新叢集預設啟用,本環境沒設,實測沒有自動加入);同時壞兩台;跨資料中心的 quorum 佈局;5 台 controller。' },
+      { t: '33.3 還原:名單換回 {1,2,3}', why: '把汰換反過來做一次,順序同樣是先 add 再 remove:controller3 被移出名單後容器與資料目錄還在(directory id 不變),重新啟動後以 observer 身分回來,在它上面執行 add-controller 重新成為 voter;再 remove-controller 移除 controller4,並刪除 controller4 的容器(資料在容器內,一起清掉)。這樣本 Lab 可以重跑,也不必為了它重建整個環境。',
+        manual: ['bash scripts/quorum-lab.sh reset'], ev: 'quorum-reset', re: /判定:名單已還原/, expect: 'voter:1 2 3;判定:名單已還原成 {1,2,3}(controller3 重新加入、controller4 移除並刪除),可以再做一次汰換。' },
     ],
   },
   // ───────────────────────── Lab 34 ─────────────────────────

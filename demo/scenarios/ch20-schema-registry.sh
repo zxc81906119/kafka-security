@@ -5,6 +5,7 @@
 # 白話:Schema Registry(SR)的 REST 要認證,授權與 Kafka 一樣依 AD 群組走(subject 與 KEK 都是)。
 #   欄位級加密(CSFLE)需要額外授權,這個環境無法驗證加密與解密本身,只示範授權面與上線前的檢查習慣。
 # 前置條件:需要 profile sr(第一步 scripts/sr-setup.sh 會啟動 Schema Registry 並補角色);環境已建好
+# 冪等:是。第一步 scripts/chapter-start.sh 確認起點(本章不需要前面的章節),重跑結果相同。
 # 用法:
 #   ./demo.sh 20                  經由講解控制台跑這一章
 #   ./scenarios/ch20-schema-registry.sh      直接跑(DEMO_PAUSE=0 不暫停)
@@ -26,6 +27,10 @@ ORDER_BODY='{"schemaType":"AVRO","schema":"{\"type\":\"record\",\"name\":\"Order
 # 同一份 schema 加上 ENCRYPT 規則(資料合約的 domain rule):PII 標籤的欄位用 KEK orders-kek 加密
 ORDER_ENC_BODY='{"schemaType":"AVRO","schema":"{\"type\":\"record\",\"name\":\"Order\",\"namespace\":\"demo\",\"fields\":[{\"name\":\"id\",\"type\":\"string\"},{\"name\":\"amount\",\"type\":\"int\"},{\"name\":\"card_no\",\"type\":\"string\",\"confluent:tags\":[\"PII\"]}]}","ruleSet":{"domainRules":[{"name":"encryptPII","kind":"TRANSFORM","type":"ENCRYPT","mode":"WRITEREAD","tags":["PII"],"params":{"encrypt.kek.name":"orders-kek"},"onFailure":"ERROR,ERROR"}]}}'
 KEK_BODY='{"name":"orders-kek","kmsType":"local-kms","kmsKeyId":"demo-local-key","shared":false,"doc":"CSFLE demo (local-kms:僅測試用,正式環境接 KMS / HSM)"}'
+
+step prepare "【起點準備】這一章不需要額外準備,確認環境可直接開始(冪等:可單獨從這一章開始,也可重跑)" \
+  "scripts/chapter-start.sh ch20" \
+  'bash "$DEMO_ROOT/scripts/chapter-start.sh" ch20 2>&1' '\[起點\] ch20 就緒'
 
 step sr-setup "【建置】啟動 Schema Registry(profile sr):SR 用 client 憑證(CN=schema-registry)向 MDS 換 token 連 Kafka,人用 AD 帳密;授權依 AD 群組" \
   "scripts/sr-setup.sh   # 補 SR 自己的 role、SR 叢集範圍的群組 role,啟動並等授權生效" \

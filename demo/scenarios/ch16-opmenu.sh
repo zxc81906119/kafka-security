@@ -5,6 +5,7 @@
 # 白話:示範 demo/opmenu/ 的日常維運選單(docker 後端):選單分四層,編號第一位是層級。
 #   選單本身不判斷權限,一律交給 Kafka RBAC(沒權限的人用同一個選單會被拒);變更類項目還有變更時窗與並行鎖保護。
 # 前置條件:環境已建好;Alertmanager 已啟用(維護模式要建靜音)
+# 冪等:是。第一步 scripts/chapter-start.sh 把環境收斂到本章起點(不必先跑前面的章節),重跑結果相同。
 # 用法:
 #   ./demo.sh 16                  經由講解控制台跑這一章
 #   ./scenarios/ch16-opmenu.sh      直接跑(DEMO_PAUSE=0 不暫停)
@@ -26,8 +27,10 @@ OPDIR="$DEMO_ROOT/opmenu"
 opm() { ( cd "$OPDIR" && env OPMENU_YES=1 OPMENU_TICKET=CHG-2026-0001 OPMENU_REASON=demo "$@" ); }   # opm OPMENU_USER=... OPMENU_PASS=... ./opmenu.sh --run N ...
 G=(OPMENU_USER=gary OPMENU_PASS=gary-pw)
 LOCK="$OPDIR/log/opmenu.lock.d"; rm -rf "$LOCK"
-rm -f "$DEMO_ROOT/.maint.out"
 
+step prepare "【起點準備】OP menu 沒有殘留的鎖與上次維護模式的輸出(冪等:已正確的不動;可單獨從這一章開始,也可重跑)" \
+  "scripts/chapter-start.sh ch16" \
+  'bash "$DEMO_ROOT/scripts/chapter-start.sh" ch16 2>&1' '\[起點\] ch16 就緒'
 step list "【項目清單】選單分四層;編號第一位是層級" \
   "./opmenu.sh --list" \
   'opm "${G[@]}" ./opmenu.sh --list | cut -f1,2,5' '27'

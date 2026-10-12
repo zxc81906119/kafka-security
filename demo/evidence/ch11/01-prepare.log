@@ -1,0 +1,12 @@
+# 【起點準備】ming 只在 orders-read、yujie 只在 orders-write、三個維運群組都沒有人;上次的 infra 示範已清掉(冪等:已正確的不動;可單獨從這一章開始,也可重跑)
+$ scripts/chapter-start.sh ch11
+  topic orders.events:已確保存在
+  yujie 在 orders-write:已正確
+  ming 在 orders-read:已正確
+  綁定 Group:orders-read DeveloperRead Topic:orders.(PREFIXED):已確保
+  綁定 Group:orders-read DeveloperRead Group:demo-(PREFIXED):已確保
+  綁定 Group:orders-write DeveloperRead Group:demo-(PREFIXED):已確保
+  綁定 Group:orders-write DeveloperRead Topic:infra.(PREFIXED):已確保不存在
+  topic infra.ops-demo:已確保不存在
+  orders.events 有資料:已正確
+   [起點] ch11 就緒

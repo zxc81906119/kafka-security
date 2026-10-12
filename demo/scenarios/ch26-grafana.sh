@@ -4,6 +4,7 @@
 # ----------------------------------------------------------------------------
 # 白話:Control Center 只看得到 broker 與 controller。這一章接上 Grafana 看全部:官方儀表板、主機磁碟(node_exporter)、consumer lag(kafka_exporter),並讓這些元件自己也受保護(HTTPS、AD 登入、mTLS、最小權限帳號)。
 # 前置條件:需要 Prometheus、Alertmanager:docker compose --profile c3 up -d prometheus alertmanager blackbox-exporter
+# 冪等:是。第一步 scripts/chapter-start.sh 確認起點(本章不需要前面的章節),重跑結果相同。
 # 用法:
 #   ./demo.sh 26                  經由講解控制台跑這一章(DEMO_PAUSE=0 不暫停)
 #   ./scenarios/ch26-grafana.sh    直接跑
@@ -11,13 +12,17 @@
 # 怎麼判斷成功:每一步印「✔ 符合預期」,最後一行「第 26 章完成(失敗 0 項)」
 # 實測結果摘要:
 #   Grafana 只收 HTTPS、AD(LDAPS)登入並依群組對映角色;資料來源用只讀的 grafana 帳號連 Prometheus
-#   官方 jmx-monitoring-stacks 的 5 個 KRaft 儀表板不改一個字匯入(為此把抓取 job 改成官方慣例的 kafka-broker / kafka-controller + env 標籤):150 個查詢約 108 個有資料(107 到 108,隨環境略有出入)
+#   官方 jmx-monitoring-stacks 的 8 個儀表板(KRaft 5 個 + Schema Registry、Connect、REST Proxy)不改一個字匯入(抓取 job 用官方慣例的名稱與 env 標籤):245 個查詢 171 個有資料
 #   node_exporter、kafka_exporter 走 mTLS;kafka_exporter 的 Kafka 帳號只有 Describe(讀不到訊息);lag 告警實測觸發與解除
 # ============================================================================
 source "$(dirname "$0")/../scripts/lib-ev.sh"
 ch_begin ch26 "Grafana 全元件監控:官方儀表板、主機指標、consumer lag"
 GS="$DEMO_ROOT/scripts/grafana.sh"
 GL="$DEMO_ROOT/scripts/grafana-lab.sh"
+
+step prepare "【起點準備】這一章不需要額外準備,確認環境可直接開始(冪等:可單獨從這一章開始,也可重跑)" \
+  "scripts/chapter-start.sh ch26" \
+  'bash "$DEMO_ROOT/scripts/chapter-start.sh" ch26 2>&1' '\[起點\] ch26 就緒'
 
 step grafana-on "【啟動】備妥密碼、官方儀表板(固定 commit、校驗 SHA-256)、AD 的唯讀查詢帳號、kafka_exporter 專用的 Kafka 帳號(只有 Describe),啟動 Grafana、node_exporter、kafka_exporter" \
   "scripts/grafana.sh on" \

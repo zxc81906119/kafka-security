@@ -5,6 +5,7 @@
 # 白話:機器 / 應用程式不在 AD 裡,所以用 Kafka 內建的 SCRAM 帳號當服務身分(密碼放密碼庫)。
 #       授權仍然走同一套 RBAC,與 AD 群組並列在 C3 同一張表,而且只給最小權限。
 # 前置條件:環境已建好;需要 e2e/ 的 Playwright(操作 C3);scripts/create-service-account.sh、scripts/rbac-lib.sh
+# 冪等:是。第一步 scripts/chapter-start.sh 把環境收斂到本章起點(不必先跑前面的章節),重跑結果相同。
 # 用法:
 #   ./demo.sh 7                      經由講解控制台跑這一章
 #   ./scenarios/ch07-service.sh      直接跑(DEMO_PAUSE=0 不暫停)
@@ -23,9 +24,10 @@ source "$(dirname "$0")/../scripts/lib-ev.sh"
 ch_begin ch07 "機器怎麼辦(不在 AD):服務帳號 SCRAM + RBAC"
 source "$DEMO_ROOT/scripts/rbac-lib.sh"
 UI() { (cd "$DEMO_ROOT/e2e" && node ch07-ui.mjs "$1" 2>&1 | grep -v '^$'); }
-# 本章要示範「授權前被拒 → 授權後成功」,起點必須是 svc-orders 沒有任何示範綁定;不依賴前面章節是否跑過 reset.sh
-for r in DeveloperRead DeveloperWrite; do rbac_unbind cert bootstrap User:svc-orders $r Topic orders. PREFIXED >/dev/null 2>&1; done
 
+step prepare "【起點準備】svc-orders 還沒有任何示範綁定(冪等:已正確的不動;可單獨從這一章開始,也可重跑)" \
+  "scripts/chapter-start.sh ch07" \
+  'bash "$DEMO_ROOT/scripts/chapter-start.sh" ch07 2>&1' '\[起點\] ch07 就緒'
 step create-svc "【建立服務身分】AD 裡沒有這個帳號:在 Kafka 內建立 SCRAM 帳號 svc-orders(密碼存密碼庫,不是 AD)" \
   "kafka-configs --alter --add-config 'SCRAM-SHA-512=[password=***]' --entity-type users --entity-name svc-orders" \
   'bash "$DEMO_ROOT/scripts/create-service-account.sh" svc-orders orders-secret-v1' 'Completed updating config for user svc-orders'

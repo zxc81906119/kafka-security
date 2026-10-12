@@ -1,6 +1,6 @@
 // 每個 Lab 的「Lab 地圖」:一句話講這堂要證明什麼、動到哪些元件(打亮)、走哪幾條路(✔ 允許 / ✘ 拒絕)。
 // 產生 img-src/labmap-NN.html,再由 e2e/shot-img.mjs 轉成 img/labmap-NN.png(1280x480)。
-// 用法: node labmap.mjs && (cd ../e2e && node shot-img.mjs labmap-00 … labmap-17)
+// 用法: node labmap.mjs && (cd ../e2e && node shot-img.mjs labmap-00 … labmap-36)
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -10,10 +10,11 @@ const here = path.dirname(fileURLToPath(import.meta.url));
 const COMP = {
   browser: '瀏覽器', postman: 'Postman', cli: 'Kafka CLI / curl(kc、hc)', opmenu: 'OP menu', certs: '憑證',
   ad: '模擬 AD(openldap)', ldapadmin: 'phpLDAPadmin', controller: 'controller', broker: 'broker + MDS', rp: 'REST Proxy', c3: 'Control Center', prom: 'Prometheus', am: 'Alertmanager', legacy: 'legacy app', conjur: 'CyberArk(Conjur)', wd: '外部看門狗', dr: 'DR 站(Cluster Linking)',
+  sr: 'Schema Registry', connect: 'Connect', grafana: 'Grafana', obs: 'Loki / Tempo / Alloy', minio: 'MinIO(物件儲存)', mail: '郵件伺服器',
 };
 // 每個 Lab:prove 一句話;use 用到的元件;flows [誰 / 做什麼, 經過哪裡, 結果]
 export const MAPS = [
-  { n: 0, prove: '把零件立起來:憑證 → 模擬 AD → controller → broker(含 MDS)→ 第一批授權 → REST Proxy、Control Center', use: ['cli', 'certs', 'ad', 'ldapadmin', 'controller', 'broker', 'rp', 'c3', 'prom', 'am'],
+  { n: 0, prove: '把零件立起來:憑證 → 模擬 AD → controller → broker(含 MDS)→ 第一批授權 → REST Proxy、Schema Registry、Connect(各 2 台)、Control Center', use: ['cli', 'certs', 'ad', 'ldapadmin', 'controller', 'broker', 'rp', 'sr', 'connect', 'c3', 'prom', 'am'],
     flows: [['make-certs.sh', 'demo/certs', '✔ 一張共用 server 憑證 + client 憑證 + MDS token 金鑰'], ['up.sh(或逐步手動)', 'LDAP → controller → broker → bootstrap 授權 → 服務帳號、topic', '✔ preflight 33 / 33']] },
   { n: 1, prove: '預設全部拒絕:沒有身分、密碼錯、有身分但沒授權,三種都進不來', use: ['cli', 'rp', 'broker', 'ad'],
     flows: [['不帶帳密', 'REST Proxy', '✘ 401'], ['yujie 密碼錯', 'REST Proxy / broker(PLAIN)', '✘ 401 / 認證失敗'], ['ming 帳密正確、沒有 role', 'broker', '✘ 看不到任何業務 topic']] },
@@ -52,8 +53,8 @@ export const MAPS = [
   { n: 18, prove: '秘密不落地:應用、OP menu、broker 都以機器身分向 CyberArk(Conjur)取密碼;沒被授權的拿不到;輪替後應用自己跟上', use: ['conjur', 'cli', 'broker', 'opmenu', 'am', 'ad'],
     flows: [['svc-orders(API key → token)', 'Conjur 取 SCRAM 密碼 → 記憶體組設定 → 寫入 orders.events', '✔ 200;寫入成功'], ['rogue-app / 錯誤 API key', 'Conjur', '✘ 404 / 401'], ['輪替:改密碼,或新舊並行(建 v2 → 隔離舊帳號 → 看 audit → 才刪)', '應用重啟自動跟上 / 舊帳號', '✔ 零中斷 / ✘ 解除角色後被拒'], ['實驗:停用舊帳號時已連著的舊連線', '只停用 SCRAM 憑證 / 先解除角色', '✔ 只停用憑證擋不住 / ✘ 解除角色才切斷'], ['OP menu、broker2', '帳密與主金鑰執行時向 Conjur 取(自寫腳本或官方 summon)', '✔ 維護模式開關;設定檔只剩密文仍能查 AD']] },
   { n: 19, prove: '帳號被偷之後:停用的帳號舊連線會失效、認證失敗會告警、流量與連線數有上限;AD 鎖定是雙面刃', use: ['cli', 'broker', 'prom', 'am', 'ad'],
-    flows: [['停用「連著的」帳號(只停用 SCRAM 憑證)', 'broker 每 60 秒重新認證', '✔ 約 60 秒內舊連線被切斷(第 18 章預設是切不斷)'], ['連續 5 次錯誤登入', 'broker → Prometheus 規則 → Alertmanager', '✔ KafkaAuthFailuresBurst firing,告警送達'], ['弱 TLS 套件 / 同來源 4 條連線 / 超額流量', 'broker(套件限定、連線上限、quota)', '✘ 弱套件被拒、超額連線被拒、吞吐量 1/16'], ['對 GARY 亂試 6 次', 'MDS / Kafka → AD(鎖定原則)', '✘ GARY 被鎖(連對密碼也進不去);✔ 緊急路徑與機器帳號不受影響;管理員解鎖後恢復'], ['刪除 SCRAM 帳號 → 重啟 broker(KAFKA-20774)', 'broker 重放 metadata', '✘ 所有 SCRAM 登入失敗 → ✔ 重建被刪帳號再重啟即恢復;所以停用一律覆寫密碼不刪除']] },
-  { n: 20, prove: 'Schema Registry 納入同一套授權:subject 與 KEK 的權限跟 AD 群組走;欄位級加密(CSFLE)需要加購授權,這個環境無法驗證加密', use: ['cli', 'broker', 'ad', 'certs'],
+    flows: [['停用「連著的」帳號(只停用 SCRAM 憑證)', 'broker 每 60 秒重新認證', '✔ 約 60 秒內舊連線被切斷(第 18 章預設是切不斷)'], ['連續 5 次錯誤登入', 'broker → Prometheus 規則 → Alertmanager', '✔ KafkaAuthFailuresBurst firing,告警送達'], ['弱 TLS 套件 / 同來源 4 條連線 / 超額流量', 'broker(套件限定、連線上限、quota)', '✘ 弱套件被拒、超額連線被拒、吞吐量約 1/7(1160 → 163 筆)'], ['對 GARY 亂試 6 次', 'MDS / Kafka → AD(鎖定原則)', '✘ GARY 被鎖(連對密碼也進不去);✔ 緊急路徑與機器帳號不受影響;管理員解鎖後恢復'], ['刪除 SCRAM 帳號 → 重啟 broker(KAFKA-20774)', 'broker 重放 metadata', '✘ 所有 SCRAM 登入失敗 → ✔ 重建被刪帳號再重啟即恢復;所以停用一律覆寫密碼不刪除']] },
+  { n: 20, prove: 'Schema Registry 納入同一套授權:subject 與 KEK 的權限跟 AD 群組走;欄位級加密(CSFLE)需要加購授權,這個環境無法驗證加密', use: ['cli', 'broker', 'sr', 'ad', 'certs'],
     flows: [['無帳密 / 密碼錯', 'Schema Registry(交 MDS 驗證)', '✘ 401'], ['yujie 註冊 orders. / payments. 的 schema', 'SR → MDS 授權(subject role)', '✔ orders. 200 → ✘ payments. 403;列表只看到自己有權限的'], ['gary / yujie / ming 對 KEK', 'SR → MDS 授權(Kek:<名稱> role)', '✔ security 群組可建 → yujie 只能讀 → ✘ ming 無 role 403'], ['註冊帶 ENCRYPT 規則的 schema', 'Schema Registry 授權檢查', '✘ 402 需要企業版 + CSFLE 加購授權(加密與解密未驗證)'], ['讀 topic 原始位元組', 'kafka-console-consumer', '✘ 卡號是明文 → 上線前一定要這樣檢查']] },
   { n: 21, prove: 'HA 叢集(3 controller、4 broker、副本 3、min.isr 2):少 1 台不影響,同一分區少 2 個副本時 acks=all 被擋、acks=1 讀不到;controller 失去多數時控制面停擺;滾動重啟零遺失', use: ['cli', 'broker', 'controller'],
     flows: [['停 1 台 broker(broker3)', 'ISR 剩 2 ≥ min.isr 2', '✔ acks=all 寫入不中斷;URP>0 要告警'], ['停 broker2、broker3', 'ha.test 的 3 個副本只剩 broker1:ISR 1 < min.isr 2', '✘ acks=all 被拒;acks=1 回報成功卻讀不到'], ['停 1 台 controller', '剩 2/3 仍有多數', '✔ 建 topic、寫入正常'], ['停 2 台 controller', '失去多數', '✘ 建 topic 與 describe 沒回應 → ✔ 既有 topic 讀寫仍可'], ['滾動重啟 4 broker + 3 controller', 'URP=0 才做下一台;active controller 最後', '✔ 背景寫入 2400 = 2400,零失敗']] },
@@ -64,31 +65,31 @@ export const MAPS = [
     flows: [['blackbox 探測 22 個端點(對外 15、內部 7)', '實際 TLS 握手(內部 mTLS 用無權限 client 憑證)', '✔ 剩餘天數 → < 30 天告警'], ['動態換 CLIENT 埠憑證', '預檢 → 金絲雀 → 其餘', '✔ 不重啟、寫入零失敗;✘ MDS 不在範圍,要重啟'], ['SAN 不同的憑證', 'broker 驗證 DN / SAN', '✘ 拒絕'], ['別的 CA 簽的憑證', 'broker 不檢查鏈是否被信任', '✘ client 全失敗 → 帶外路徑回退'], ['重啟後', '動態設定存在 metadata', '✔ 仍是新憑證 → 靜態設定要同步']] },
 
   { n: 24, prove: '分區搬家要先存回退檔、用審過的計畫、限速、以 --verify 收尾;取消會回到搬家前;沒收尾的限速設定會殘留', use: ['cli', 'broker'],
-    flows: [['資料全擠在兩台', 'kafka-log-dirs 看每台資料量', '✘ broker3、broker4 是空的'], ['限速搬家(4 MB/s)', 'reassign --execute --throttle → --verify', '✔ 背景寫入零失敗;完成後限速自動移除'], ['搬到一半 --cancel', '回到搬家前的副本配置', '✔ 限速一併清除'], ['搬完不跑 --verify', 'broker 與 topic 的 throttled.* 設定殘留', '✘ 之後的複製流量被默默限速 → ✔ --verify 清除']] },
+    flows: [['資料全擠在三台', 'kafka-log-dirs 看每台資料量', '✘ broker4 是空的(像剛加入的新 broker)'], ['限速搬家(4 MB/s)', 'reassign --execute --throttle → --verify', '✔ 背景寫入零失敗;完成後限速自動移除'], ['搬到一半 --cancel', '回到搬家前的副本配置', '✔ 限速一併清除'], ['搬完不跑 --verify', 'broker 與 topic 的 throttled.* 設定殘留', '✘ 之後的複製流量被默默限速 → ✔ --verify 清除']] },
   { n: 25, prove: '應用程式端的可靠性:冪等擋掉重送重複、手動提交是 at-least-once、cooperative 與靜態成員降低 rebalance 影響、交易 abort 要用 read_committed 才看不到', use: ['cli', 'broker'],
     flows: [['broker 凍結 5 秒,producer 逾時重送', '關閉冪等 → broker 收到兩份', '✘ 1500 筆變 1505 → ✔ 開冪等 0 重複'], ['consumer 處理後、提交前當機', 'offset 沒提交 → 重啟從上次位置再讀', '✘ 同一批 100 筆處理兩次(at-least-once)'], ['新成員加入群組', 'eager 全收 / cooperative 只收要換的', '✘ 6 個分區全停 → ✔ 只動 3 個'], ['成員滾動重啟', '動態成員每次觸發 rebalance / 靜態成員不觸發', '✘ 多 2 次 → ✔ 0 次'], ['交易 abort', 'abort 的訊息仍在 log', '✔ read_committed 看不到 → ✘ read_uncommitted 看得到']] },
-  { n: 26, prove: 'Grafana 全元件監控:官方儀表板要檢查「真的有資料」;主機磁碟與 consumer lag 用 node_exporter / kafka_exporter 補上;監控元件自己也要 HTTPS、AD 登入、mTLS、最小權限', use: ['cli', 'broker', 'prom', 'am', 'ad', 'certs', 'browser'],
-    flows: [['匯入官方儀表板', '查詢標籤對不對得上抓取設定', '✔ 150 個查詢約 108 個有資料(107 到 108,隨環境略有出入);✘ 其餘是環境沒有的功能或名稱不符'], ['node_exporter / kafka_exporter', 'mTLS(client 憑證)', '✘ 無憑證與外來憑證握手被拒 → ✔ monitor 憑證 200'], ['kafka_exporter 的 Kafka 帳號', 'ACL 只有 Describe', '✔ 看得到 offset 與 lag → ✘ 讀訊息被拒'], ['consumer 落後 4000 筆', 'kafka_consumergroup_lag → Prometheus 規則', '✔ KafkaConsumerLagHigh 觸發 → 追上後解除'], ['AD 帳號登入 Grafana', 'LDAPS + 群組對映角色', '✔ GARY Admin;YUJIE、MING Viewer;✘ 錯密碼 / 匿名 401']] },
-  { n: 27, prove: '日誌與 trace 經 Kafka 當緩衝進 Loki / Tempo:下游停機資料不掉;trace 跨過 Kafka 串起 producer 與 consumer;稽核事件也進 Loki;觀測管線的 Kafka 帳號寫讀分開', use: ['cli', 'broker', 'prom', 'certs', 'browser'],
-    flows: [['平台容器日誌', 'Alloy → Kafka(otel-logs)→ Alloy → Loki(mTLS)', '✔ 7 個節點都進 Loki'], ['Loki 停機 1 分鐘', '日誌留在 Kafka', '✔ 恢復後 980 行 = 980 行'], ['Java 程式掛 OpenTelemetry agent', 'trace context 放進訊息標頭', '✔ 一個 trace 串起 publish 與 process'], ['YUJIE 讀沒有權限的 topic', '稽核事件 → Kafka → Loki', '✘ 被拒 → ✔ Loki 查得到 granted false'], ['alloy-producer / alloy-consumer', 'ACL 寫讀分開', '✔ 各做各的 → ✘ 越權被拒']] },
-  { n: 28, prove: 'schema 演進要靠相容性模式把關:選哪個模式取決於誰先上線;TRANSITIVE 擋住舊資料重播的問題;授權(403)與相容性(409)是兩道獨立的關卡;RecordNameStrategy 讓前綴授權失效;資料契約規則只在 client 端執行', use: ['cli', 'broker', 'ad', 'certs'],
+  { n: 26, prove: 'Grafana 全元件監控:官方儀表板要檢查「真的有資料」;主機磁碟與 consumer lag 用 node_exporter / kafka_exporter 補上;監控元件自己也要 HTTPS、AD 登入、mTLS、最小權限', use: ['cli', 'broker', 'prom', 'am', 'grafana', 'ad', 'certs', 'browser'],
+    flows: [['匯入官方儀表板', '查詢標籤對不對得上抓取設定', '✔ 8 個官方儀表板 245 個查詢 171 個有資料;✘ 其餘是 Tiered Storage、要連接器在跑的 Connect 面板與名稱不符'], ['node_exporter / kafka_exporter', 'mTLS(client 憑證)', '✘ 無憑證與外來憑證握手被拒 → ✔ monitor 憑證 200'], ['kafka_exporter 的 Kafka 帳號', 'ACL 只有 Describe', '✔ 看得到 offset 與 lag → ✘ 讀訊息被拒'], ['consumer 落後 4000 筆', 'kafka_consumergroup_lag → Prometheus 規則', '✔ KafkaConsumerLagHigh 觸發 → 追上後解除'], ['AD 帳號登入 Grafana', 'LDAPS + 群組對映角色', '✔ GARY Admin;YUJIE、MING Viewer;✘ 錯密碼 / 匿名 401']] },
+  { n: 27, prove: '日誌與 trace 經 Kafka 當緩衝進 Loki / Tempo:下游停機資料不掉;trace 跨過 Kafka 串起 producer 與 consumer;稽核事件也進 Loki;觀測管線的 Kafka 帳號寫讀分開', use: ['cli', 'broker', 'prom', 'grafana', 'obs', 'certs', 'browser'],
+    flows: [['平台容器日誌', 'Alloy → Kafka(otel-logs)→ Alloy → Loki(mTLS)', '✔ 7 個節點都進 Loki'], ['Loki 停機 1 分鐘', '日誌留在 Kafka', '✔ 恢復後 1000 行 = 1000 行'], ['Java 程式掛 OpenTelemetry agent', 'trace context 放進訊息標頭', '✔ 一個 trace 串起 publish 與 process'], ['YUJIE 讀沒有權限的 topic', '稽核事件 → Kafka → Loki', '✘ 被拒 → ✔ Loki 查得到 granted false'], ['alloy-producer / alloy-consumer', 'ACL 寫讀分開', '✔ 各做各的 → ✘ 越權被拒']] },
+  { n: 28, prove: 'schema 演進要靠相容性模式把關:選哪個模式取決於誰先上線;TRANSITIVE 擋住舊資料重播的問題;授權(403)與相容性(409)是兩道獨立的關卡;RecordNameStrategy 讓前綴授權失效;資料契約規則只在 client 端執行', use: ['cli', 'broker', 'sr', 'ad', 'certs'],
     flows: [['加有預設值的欄位', 'BACKWARD 相容性檢查', '✔ 200;✘ 加必填欄位 / 改型別 409'], ['BACKWARD / FORWARD / FULL', '同樣三種改法', '✔ 結果不同:先升級哪一端決定用哪個'], ['只比最新版 vs 比全部版本', 'BACKWARD vs BACKWARD_TRANSITIVE', '✘ 漏掉 v1 → ✔ TRANSITIVE 擋住'], ['yujie 改 orders / payments', '相容性 vs RBAC', '✘ 409(不相容)/ ✘ 403(沒權限)'], ['RecordNameStrategy', 'subject 變成 demo.Order', '✘ orders. 前綴授權不涵蓋 → 403'], ['CEL 規則 amount >= 0', 'client 端序列化器執行', '✔ 100 寫入 → ✘ -5 在寫入端被擋']] },
-  { n: 29, prove: 'Connect 的安全:連接器的建立與查看跟著 AD 群組;每個連接器用自己的最小權限服務帳號;壞資料用容錯加 DLQ 分流;密碼用 config provider 不落地', use: ['cli', 'broker', 'ad', 'certs'],
+  { n: 29, prove: 'Connect 的安全:連接器的建立與查看跟著 AD 群組;每個連接器用自己的最小權限服務帳號;壞資料用容錯加 DLQ 分流;密碼用 config provider 不落地', use: ['cli', 'broker', 'connect', 'ad', 'certs'],
     flows: [['yujie / ming 管連接器', 'MDS 授權(Connector 資源)', '✔ yujie 只能 orders-;✘ ming 空清單、403'], ['連接器讀 topic', '各用自己的 AD 服務帳號', '✔ 有授權的 topic;✘ 用 worker 身分或越權的 topic 被擋'], ['壞資料', 'errors.tolerance + DLQ', '✘ 沒容錯就 FAILED → ✔ 好的照寫、壞的進 DLQ 附原因'], ['連接器密碼', '寫進設定 vs ${file:…}', '✘ 直接寫:connect-configs 明文 → ✔ provider:只有引用']] },
   { n: 33, prove: '動態 quorum(本環境一開始就是):壞掉的 controller 以「先加新的、再移除舊的」汰換,不必動其他節點的設定與重啟', use: ['cli', 'broker', 'controller', 'certs'],
     flows: [['現況', 'kafka-features describe / describe --status', '✔ kraft.version 1;3 個 voter 都有 directory id'], ['加入 controller4', '--no-initial-controllers + add-controller', '✔ 成為 voter(預設不會自動加入)'], ['移除 controller3', 'remove-controller(id + directory id)', '✔ 名單 {1,2,4}'], ['再停 controller1', '新 quorum 選 leader', '✔ 可寫入、可建 topic']] },
   { n: 31, prove: 'Self-Balancing 自動搬分區:啟用要 controller 與 broker 都設;加空 broker 等指標視窗後自動搬、寫入不中斷;一個指令下線 broker;小資料量的負載不均不會觸發', use: ['cli', 'broker', 'controller'],
-    flows: [['啟用', 'controller 與 broker 都設 enable 與 listener', '✘ 只開 broker:DISABLED → ✔ 全設:ENABLED'], ['加空 broker', 'balancer 算計畫(6 個指標視窗)再搬', '✔ 約 15 到 20 分鐘後自動搬副本,20000 筆寫入全成功'], ['下線 broker', 'kafka-remove-brokers --delete', '✔ 副本搬走、筆數不變、自動關機'], ['負載不均', 'GoalViolationDetector', '✘ 小資料量不觸發(只在副本數與 >20% 磁碟用量)']] },
-  { n: 32, prove: 'Tiered Storage:舊 segment 上傳到物件儲存、本機變小、從頭讀與重啟後仍讀到全部;物件儲存只收 HTTPS、專用帳號只限單一 bucket', use: ['cli', 'broker', 'certs'],
-    flows: [['寫入 100 MB', 'topic 啟用 tier、segment 5 MB', '✔ 20 到 30 秒內開始上傳到 MinIO'], ['hotset 到期', '下一輪保留檢查清本機', '✔ 本機約 300 → 20 MB;筆數不變'], ['從頭讀 / 重啟 broker1', '舊資料從物件儲存取回', '✔ 讀到 100000 筆'], ['存取保護', 'HTTPS、專用帳號、policy', '✘ 匿名 403、建別的 bucket 被拒;✔ 專用帳號只能動 kafka-tier']] },
-  { n: 30, prove: '告警要「找上人」:寄成信、依嚴重度分流、同類合併、解除也通知;郵件伺服器強制 STARTTLS 並要帳密,Alertmanager 的密碼不寫在設定裡', use: ['cli', 'broker', 'prom', 'am', 'certs'],
+    flows: [['啟用', 'controller 與 broker 都設 enable 與 listener', '✘ 只開 broker:DISABLED → ✔ 全設:ENABLED'], ['加空 broker', 'balancer 算計畫(6 個指標視窗)再搬', '✔ 約 12 分鐘後(實測 726 秒)自動搬副本,20000 筆寫入全成功'], ['下線 broker', 'kafka-remove-brokers --delete', '✔ 副本搬走、筆數不變、自動關機'], ['負載不均', 'GoalViolationDetector', '✘ 小資料量不觸發(只在副本數與 >20% 磁碟用量)']] },
+  { n: 32, prove: 'Tiered Storage:舊 segment 上傳到物件儲存、本機變小、從頭讀與重啟後仍讀到全部;物件儲存只收 HTTPS、專用帳號只限單一 bucket', use: ['cli', 'broker', 'minio', 'certs'],
+    flows: [['寫入 100 MB', 'topic 啟用 tier、segment 5 MB', '✔ 20 到 30 秒內開始上傳到 MinIO'], ['hotset 到期', '下一輪保留檢查清本機', '✔ 本機 303 → 83 MB(下一輪保留檢查再降);筆數不變'], ['從頭讀 / 重啟 broker1', '舊資料從物件儲存取回', '✔ 讀到 100000 筆'], ['存取保護', 'HTTPS、專用帳號、policy', '✘ 匿名 403、建別的 bucket 被拒;✔ 專用帳號只能動 kafka-tier']] },
+  { n: 30, prove: '告警要「找上人」:寄成信、依嚴重度分流、同類合併、解除也通知;郵件伺服器強制 STARTTLS 並要帳密,Alertmanager 的密碼不寫在設定裡', use: ['cli', 'broker', 'prom', 'am', 'mail', 'certs'],
     flows: [['測試告警', 'Alertmanager → SMTP(STARTTLS + 帳密)→ 郵件伺服器', '✔ 收到信,主旨寫明狀態、名稱、嚴重度'], ['critical / warning', 'route 依 severity 分流', '✔ critical 寄值班信箱、warning 寄維運群組信箱'], ['同一種告警 3 個實例', 'group_by alertname、severity', '✔ 合併成 1 封,不洗版'], ['停 broker3 再恢復', 'URP 規則 → Alertmanager → 郵件', '✔ FIRING → RESOLVED 兩封'], ['不用 TLS / 沒帳密 / 錯密碼', '郵件伺服器', '✘ 都被拒 → ✔ 正確帳密才收']] },
   { n: 34, prove: '看門狗:監控自己壞掉時不會有任何告警;讓「心跳停了」本身變成告警,連 HA 察覺不到的設定錯誤都抓得到', use: ['cli', 'prom', 'am', 'wd', 'certs'],
     flows: [['Watchdog(vector(1))', 'Prometheus → Alertmanager → 外部看門狗(每 60 秒,HTTPS + Basic)', '✔ 心跳 OK'], ['停 Alertmanager', '心跳停止', '✘ 逾時後判定監控鏈路失效'], ['停 Prometheus', 'Alertmanager 手上的 Watchdog 過期後才停', '✘ 較慢發現(要寫進值班 SOP)'], ['兩者都健康、密碼設錯', 'webhook 401', '✘ 只有看門狗發現']] },
   { n: 35, prove: '多機架:副本 3 / min.isr 2 要撐過整個機架斷電,至少要 3 個機架;2 個機架時部分分區會暫停寫入', use: ['cli', 'broker'],
-    flows: [['broker.rack(2 個機架)', '新 topic 每分區橫跨 2 個機架', '✔ 一定有一個機架放 2 份'], ['rack-b 整排斷電', 'acks=all 寫入', '✘ 部分分區低於 min.isr、寫不進去'], ['broker.rack(3 個機架)', '每分區 3 份各在一個機架', '✔'], ['rack-a 整排斷電(2 台)', 'acks=all 寫入', '✔ 全部照常寫入']] },
+    flows: [['broker.rack(2 個機架)', '新 topic 每分區橫跨 2 個機架', '✔ 一定有一個機架放 2 份'], ['rack-b 整排斷電', 'acks=all 寫入', '✘ 6 個分區有 3 個低於 min.isr,600 筆只進 300'], ['broker.rack(3 個機架)', '每分區 3 份各在一個機架', '✔'], ['rack-a 整排斷電(2 台)', 'acks=all 寫入', '✔ 600 筆全部寫入']] },
   { n: 36, prove: 'DR 與演練:Cluster Linking 鏡像到 DR 站;主站整站斷電時 failover、應用程式改連、量測 RPO / RTO、切回,並留下演練紀錄', use: ['cli', 'broker', 'controller', 'dr', 'ad'],
-    flows: [['主站 → DR 站', 'Cluster Linking(DR 主動連;SCRAM 唯讀帳號)', '✔ 資料與 consumer offset 同步'], ['yujie 在 DR 站', 'DR 站自己的 MDS', '✘ 授權沒同步 → 補建後 ✔'], ['主站整站斷電', 'DR 站 failover、client 改連', '✔ 恢復寫入;遺失 = 斷電當下的鏡像落後'], ['主站恢復', '重建為鏡像 → promote → 改回', '✔ 切回;產生演練紀錄']] },
+    flows: [['主站 → DR 站', 'Cluster Linking(DR 主動連;SCRAM 唯讀帳號)', '✔ 資料與 consumer offset 同步'], ['yujie 在 DR 站', 'DR 站自己的 MDS', '✘ 授權沒同步 → 補建後 ✔'], ['主站整站斷電', 'DR 站 failover、client 改連', '✔ 107 秒恢復寫入;RPO 0 筆(同主機無延遲,跨機房會大於 0)'], ['主站恢復', '重建為鏡像 → promote → 改回', '✔ 切回;產生演練紀錄']] },
 ];
 
 const esc = s => s.replace(/&/g, '&amp;').replace(/</g, '&lt;');

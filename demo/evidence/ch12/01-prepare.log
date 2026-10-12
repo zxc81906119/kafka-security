@@ -1,0 +1,6 @@
+# 【起點準備】legacy-orders 與 orders-write 都還沒有 orders. 的寫入權(冪等:已正確的不動;可單獨從這一章開始,也可重跑)
+$ scripts/chapter-start.sh ch12
+  topic orders.events:已確保存在
+  綁定 User:legacy-orders DeveloperWrite Topic:orders.(PREFIXED):已確保不存在
+  綁定 Group:orders-write DeveloperWrite Topic:orders.(PREFIXED):已確保不存在
+   [起點] ch12 就緒

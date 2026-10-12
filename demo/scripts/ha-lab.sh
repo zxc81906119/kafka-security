@@ -13,7 +13,7 @@
 #   scripts/ha-lab.sh brokers-down   停 2 台 broker(剩 1):acks=all 寫不進去;acks=1 寫得進去但讀不到;恢復後才出現
 #   scripts/ha-lab.sh ctrl-down      停 1 台 controller:叢集仍可管理與寫入
 #   scripts/ha-lab.sh ctrls-down     停 2 台 controller(失去多數):不能建 topic、不能 describe;既有 topic 仍可讀寫
-#   scripts/ha-lab.sh rolling [筆數]  背景持續寫入時,依序重啟 3 台 broker、再 3 台 controller(active 最後),比對筆數
+#   scripts/ha-lab.sh rolling [筆數]  背景持續寫入時,依序重啟 4 台 broker、再 3 台 controller(active 最後),比對筆數
 # 會改動什麼:建立 topic ha.test、ha.c1、ha.c2、ha.roll(每次執行前會先刪掉重建);
 #   暫時停止 broker 或 controller 容器,結束前一律啟動回來。
 # 怎麼判斷成功:最後一行印「判定:…」;條件不成立就不印這一行(rolling 會印「判定:不符合」)。

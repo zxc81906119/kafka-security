@@ -4,7 +4,8 @@
 # ----------------------------------------------------------------------------
 # 白話:全組共用一支維運腳本沒問題,但腳本裡不能寫帳號密碼,而是讀「執行者自己的」client.properties,
 #       這樣權限和稽核都跟著人走。反例是全組共用一個帳號:唯讀的人也能寫,audit log 也只看到共用帳號。
-# 前置條件:建議已跑過第 3、4 章(yujie 在 orders-write、ming 為 orders-read);需要 scripts/ops/orders-heartbeat.sh
+# 前置條件:環境已建好;需要 scripts/ops/orders-heartbeat.sh
+# 冪等:是。第一步 scripts/chapter-start.sh 把環境收斂到本章起點(不必先跑前面的章節),重跑結果相同。
 # 用法:
 #   ./demo.sh 6                      經由講解控制台跑這一章
 #   ./scenarios/ch06-scripts.sh      直接跑(DEMO_PAUSE=0 不暫停)
@@ -19,6 +20,9 @@
 source "$(dirname "$0")/../scripts/lib-ev.sh"
 ch_begin ch06 "維運腳本:腳本共用、憑證各人各自"
 source "$DEMO_ROOT/scripts/rbac-lib.sh"
+step prepare "【起點準備】yujie 在 orders-write(可寫)、ming 只在 orders-read(唯讀);上次留下的 shared-ops 已清掉(冪等:已正確的不動;可單獨從這一章開始,也可重跑)" \
+  "scripts/chapter-start.sh ch06" \
+  'bash "$DEMO_ROOT/scripts/chapter-start.sh" ch06 2>&1' '\[起點\] ch06 就緒'
 
 step script-content "【一支腳本,全組共用】腳本裡沒有任何帳號密碼" \
   "cat orders-heartbeat.sh" 'cat "$DEMO_ROOT/scripts/ops/orders-heartbeat.sh" | grep -v "^#"' 'CFG='

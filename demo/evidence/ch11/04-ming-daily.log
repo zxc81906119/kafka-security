@@ -1,0 +1,6 @@
+# 【日常】ming(orders-read)可讀資料
+$ kafka-console-consumer --command-config ming.properties --topic orders.events --from-beginning
+new-pw
+during-ad-outage
+after-ad-recovery
+Processed a total of 3 messages

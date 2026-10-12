@@ -1,0 +1,4 @@
+# 【被拒絕的事件】整場 demo 中,被 RBAC 擋下來的動作(次數 / principal / 動作 / 資源)
+$ kafka-console-consumer --topic confluent-audit-log-events  | granted=false 彙總
+   4×  User:MING          kafka.Produce       DENIED   orders.events
+   3×  User:YUJIE         kafka.Metadata      DENIED   payments.events

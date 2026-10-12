@@ -5,6 +5,7 @@
 # 白話:員工離職或調職時,只要在 AD 把他移出群組,他手上已發出且尚未到期的 MDS token 也會立刻失去權限。
 #   因為授權是依「現在的群組」判斷,不是依發 token 當下;Kafka 與 token 本身都不用動。
 # 前置條件:環境已建好(AD、MDS、REST Proxy)
+# 冪等:是。第一步 scripts/chapter-start.sh 把環境收斂到本章起點(不必先跑前面的章節),重跑結果相同。
 # 用法:
 #   ./demo.sh 15                  經由講解控制台跑這一章
 #   ./scenarios/ch15-offboarding.sh      直接跑(DEMO_PAUSE=0 不暫停)
@@ -23,12 +24,10 @@ BODY='{"records":[{"value":{"order":"offboard-1"}}]}'
 HDR=(-H "Accept: application/vnd.kafka.v2+json" -H "Content-Type: application/vnd.kafka.json.v2+json")
 brief() { grep -o -E '"error_code":[0-9]+|"offsets":\[[^]]*\]|\[HTTP [0-9]+\]' | awk '!s[$0]++' | tr '\n' ' '; echo; }
 
-# 前置(不顯示):yujie 在 orders-write,並授權該群組寫 orders.*
-./scripts/ldap-group.sh add yujie orders-write >/dev/null 2>&1 || true
-rbac_bind cert bootstrap Group:orders-write DeveloperWrite Topic orders. PREFIXED >/dev/null
-rbac_bind cert bootstrap Group:orders-write DeveloperRead Topic orders. PREFIXED >/dev/null
-sleep 12
 
+step prepare "【起點準備】yujie 在 orders-write、群組可讀寫 orders.(冪等:已正確的不動;可單獨從這一章開始,也可重跑)" \
+  "scripts/chapter-start.sh ch15" \
+  'bash "$DEMO_ROOT/scripts/chapter-start.sh" ch15 2>&1' '\[起點\] ch15 就緒'
 step issue "【發 token】yujie 以 AD 帳密向 MDS 登入,拿到 token(JWT,效期 1 小時,尚未到期)" \
   "curl -u yujie:*** https://broker1:8091/security/1.0/authenticate    # 取得 auth_token" \
   'T=$(bash "$DC" -u yujie:yujie-pw -H "Accept: application/json" https://broker1:8091/security/1.0/authenticate | grep -o "\"auth_token\":\"[^\"]*\"" | cut -d\" -f4); echo "$T" > "$DEMO_ROOT/.tok-yujie"; printf "%s" "$T" | cut -d. -f2 | tr "_-" "/+" | awk "{ while (length(\$0) % 4) \$0 = \$0 \"=\"; print }" | base64 -d 2>/dev/null | grep -o -E "\"sub\":\"[^\"]*\"|\"exp\":[0-9]+|\"iat\":[0-9]+" | tr "\n" " "; echo' '"sub":"YUJIE"'

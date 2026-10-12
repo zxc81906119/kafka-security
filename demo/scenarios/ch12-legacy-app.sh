@@ -6,6 +6,7 @@
 #   同一個 REST Proxy 上,人照常用 Basic(AD 帳密),兩種身分並存。
 #   也示範偽造憑證、無憑證、沒授權的憑證各被擋在哪一層,以及 REST Proxy 能代誰申請 token 的範圍。
 # 前置條件:環境已建好(REST Proxy、MDS、C3);用瀏覽器自動化(e2e/ch12-ui.mjs)在 C3 指派角色
+# 冪等:是。第一步 scripts/chapter-start.sh 把環境收斂到本章起點(不必先跑前面的章節),重跑結果相同。
 # 用法:
 #   ./demo.sh 12                  經由講解控制台跑這一章
 #   ./scenarios/ch12-legacy-app.sh      直接跑(DEMO_PAUSE=0 不暫停)
@@ -25,11 +26,10 @@ UI() { (cd "$DEMO_ROOT/e2e" && node ch12-ui.mjs "$1" 2>&1 | grep -v '^$'); }
 rpc() { "$DEMO_ROOT/scripts/rp-cert.sh" "$@"; }
 BODY='{"records":[{"value":{"order":"L-1","by":"legacy-app"}}]}'
 
-# ---- 起點狀態:清掉上次殘留 ----
-rbac_unbind cert bootstrap User:legacy-orders DeveloperWrite Topic orders. PREFIXED >/dev/null
-rbac_unbind cert bootstrap Group:orders-write DeveloperWrite Topic orders. PREFIXED >/dev/null
-sleep 6
 
+step prepare "【起點準備】legacy-orders 與 orders-write 都還沒有 orders. 的寫入權(冪等:已正確的不動;可單獨從這一章開始,也可重跑)" \
+  "scripts/chapter-start.sh ch12" \
+  'bash "$DEMO_ROOT/scripts/chapter-start.sh" ch12 2>&1' '\[起點\] ch12 就緒'
 step issue-cert "【發憑證】legacy app 無法用 Kafka client → 發一張 client 憑證(CN = app 名稱 = RBAC 主體;由客戶的 CA 簽發)" \
   "openssl x509 -in client-legacy-orders.pem -noout -subject -issuer -dates" \
   'bash "$DEMO_ROOT/scripts/make-client-cert.sh" legacy-orders' 'subject=.*CN *= *legacy-orders'

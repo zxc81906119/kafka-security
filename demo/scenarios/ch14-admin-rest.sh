@@ -5,6 +5,7 @@
 # 白話:broker 內建的 Admin REST 在沒設定時完全無認證,任何人都能呼叫(曾讓 broker 記憶體耗盡而崩潰)。
 #   依官方 kafka.rest. 設定後,改成要帶 AD 帳密並依使用者身分授權:管理員看得到全部,沒有 role 的人看到空清單。
 # 前置條件:環境已建好(broker 已套用 Admin REST 保護設定)
+# 冪等:是。第一步 scripts/chapter-start.sh 把環境收斂到本章起點(不必先跑前面的章節),重跑結果相同。
 # 用法:
 #   ./demo.sh 14                  經由講解控制台跑這一章
 #   ./scenarios/ch14-admin-rest.sh      直接跑(DEMO_PAUSE=0 不暫停)
@@ -22,6 +23,10 @@ CID=XyZBQ3-GTvKH2qNfP7X33A
 API="https://broker1:8091/kafka/v3/clusters/$CID"
 JSONH='-H Content-Type:application/json'
 brief() { grep -o -E '"kind":"[A-Za-z]+"|"data":\[\]|"error_code":[0-9]+|"message":"[^"]*"|"offset":[0-9]+|\[HTTP [0-9]+\]' | awk '!s[$0]++' | tr '\n' ' '; echo; }
+
+step prepare "【起點準備】ming 沒有任何 role、yujie 在 orders-write(冪等:已正確的不動;可單獨從這一章開始,也可重跑)" \
+  "scripts/chapter-start.sh ch14" \
+  'bash "$DEMO_ROOT/scripts/chapter-start.sh" ch14 2>&1' '\[起點\] ch14 就緒'
 
 step anon "【匿名】不帶任何身分呼叫 Admin REST → 401(沒設定保護時,這個呼叫會直接成功,甚至曾讓 broker 記憶體耗盡而崩潰)" \
   "curl https://broker1:8091/kafka/v3/clusters        # 不帶任何憑證" \

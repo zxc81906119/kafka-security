@@ -1,0 +1,10 @@
+# 【現況】動態 quorum:kraft.version=1,3 個 voter 各有 directory id(controller 名單存在叢集 metadata)
+$ kafka-features describe;kafka-metadata-quorum describe --status
+▶ kraft.version 與 voter 名單(動態 quorum 的每個 voter 有 directory id,移除 controller 時要用)
+kraft.version = 1(0 = 靜態、1 = 動態)
+  ClusterId:              XyZBQ3-GTvKH2qNfP7X33A
+  LeaderId:               2
+  LeaderEpoch:            5
+  CurrentVoters:          [{"id": 1, "directoryId": "hakFaGfNbL7uvJSEFoyrsw", "endpoints": ["CONTROLLER://controller1:9093"]}, {"id": 2, "directoryId": "NEbDIbDQIiecrTGu-P5MUQ", "endpoints": ["CONTROL
+  CurrentObservers:       [{"id": 12, "directoryId": "yf342gY5a10h8SGL0DyMvw"}, {"id": 11, "directoryId": "FfszU7b834UvFAfGrnEyMA"}, {"id": 4, "directoryId": "XalCI2g03Y6D416HKLqGFQ"}, {"id": 13, "dir
+判定:目前是 動態 quorum,voter 3 個,每個 voter 都有 directory id

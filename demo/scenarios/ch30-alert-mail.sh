@@ -4,6 +4,7 @@
 # ----------------------------------------------------------------------------
 # 白話:告警只在 Prometheus 與 Alertmanager 亮燈,半夜值班的人不會知道。這一章讓告警變成信寄給人,並驗證:依嚴重度分流、同類告警合併不洗版、真實故障有「發生」與「解除」兩封、郵件伺服器本身有被保護。demo 用 Mailpit 代替行內的郵件伺服器。
 # 前置條件:Prometheus、Alertmanager:docker compose --profile c3 up -d prometheus alertmanager blackbox-exporter
+# 冪等:是。第一步 scripts/chapter-start.sh 確認起點(本章不需要前面的章節),重跑結果相同。
 # 用法:
 #   ./demo.sh 30                  經由講解控制台跑這一章(DEMO_PAUSE=0 不暫停)
 #   ./scenarios/ch30-alert-mail.sh    直接跑
@@ -18,6 +19,10 @@ source "$(dirname "$0")/../scripts/lib-ev.sh"
 ch_begin ch30 "告警寄成信:Alertmanager → 自架郵件伺服器"
 MS="$DEMO_ROOT/scripts/mail-setup.sh"
 ML="$DEMO_ROOT/scripts/mail-lab.sh"
+
+step prepare "【起點準備】這一章不需要額外準備,確認環境可直接開始(冪等:可單獨從這一章開始,也可重跑)" \
+  "scripts/chapter-start.sh ch30" \
+  'bash "$DEMO_ROOT/scripts/chapter-start.sh" ch30 2>&1' '\[起點\] ch30 就緒'
 
 step mail-on "【啟動】備妥郵件伺服器的帳密、啟動 mailpit(SMTP 強制 STARTTLS 並要帳密)、把 Alertmanager 換成郵件版設定(密碼從檔案讀、依嚴重度分流、同類合併)" \
   "scripts/mail-setup.sh on" \

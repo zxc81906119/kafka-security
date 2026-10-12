@@ -4,6 +4,7 @@
 # ----------------------------------------------------------------------------
 # 白話:接續第 18 章的發現(只停用 SCRAM 憑證擋不住舊連線),示範六項補強:SASL 重新認證、認證失敗告警、TLS 套件限定、連線數上限、client quota、AD 帳號鎖定的反向影響(鎖定也可能把管理員擋在外面)。
 # 前置條件:環境已建好;Prometheus、Alertmanager 已啟動(告警那步);步驟會用 docker 起臨時 openssl 容器
+# 冪等:是。第一步 scripts/chapter-start.sh 確認起點(本章不需要前面的章節),重跑結果相同。
 # 用法:
 #   ./demo.sh 19                  經由講解控制台跑這一章
 #   ./scenarios/ch19-stolen-account.sh      直接跑(DEMO_PAUSE=0 不暫停)
@@ -26,6 +27,10 @@ KS="$DEMO_ROOT/scripts/k.sh"
 BS="--bootstrap-server broker1:9094"
 
 # ---------------- ① 重新認證 ----------------
+step prepare "【起點準備】這一章不需要額外準備,確認環境可直接開始(冪等:可單獨從這一章開始,也可重跑)" \
+  "scripts/chapter-start.sh ch19" \
+  'bash "$DEMO_ROOT/scripts/chapter-start.sh" ch19 2>&1' '\[起點\] ch19 就緒'
+
 step reauth-baseline "【失效 ①】基準設定:CLIENT listener 的 SASL 連線每 60 秒重新認證一次(demo 值;正式環境建議 1 小時。預設 0 = 連著就永遠有效,第 18 章實驗的就是這個狀況)" \
   "docker exec broker1 grep connections.max.reauth.ms /etc/kafka/kafka.properties" \
   'docker exec broker1 grep "connections.max.reauth.ms" /etc/kafka/kafka.properties; docker exec broker2 grep "connections.max.reauth.ms" /etc/kafka/kafka.properties' '60000'

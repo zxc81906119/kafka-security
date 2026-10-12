@@ -4,7 +4,8 @@
 # ----------------------------------------------------------------------------
 # 白話:把前面各章累積在 audit log(confluent-audit-log-events topic)裡的事件整理成彙總,
 #       回答「誰、做了什麼、結果如何」:被擋下的動作、被允許的動作、誰嘗試改過授權。
-# 前置條件:需先跑過前面各章(彙總的是前面章節產生的 audit 事件),否則可能沒有可彙整的內容
+# 前置條件:環境已建好
+# 冪等:是。本章開頭自己製造要彙整的事件(允許、被拒、改授權被拒),不依賴前面跑過哪些章;重跑時彙總數字會累加(稽核日誌只增不減,這是正確行為),判定只看本章產生的事件。
 # 用法:
 #   ./demo.sh 10                           經由講解控制台跑這一章
 #   ./scenarios/ch10-audit-summary.sh      直接跑(DEMO_PAUSE=0 不暫停)
@@ -16,6 +17,12 @@
 # ============================================================================
 source "$(dirname "$0")/../scripts/lib-ev.sh"
 ch_begin ch10 "收尾:audit log 彙整(誰、做了什麼、結果)"
+step prepare "【起點準備】yujie 可寫、ming 唯讀(冪等:已正確的不動;可單獨從這一章開始,也可重跑)" \
+  "scripts/chapter-start.sh ch10" \
+  'bash "$DEMO_ROOT/scripts/chapter-start.sh" ch10 2>&1' '\[起點\] ch10 就緒'
+step make-events "【本章自己製造事件】yujie 寫入 orders.events(允許)、ming 寫入 orders.events(被拒);改授權被拒的事件在最後一步由 yujie 自己製造" \
+  "kafka-console-producer(yujie / ming)" \
+  'send_result as_produce yujie orders.events audit-ok | tail -1; send_result as_produce ming orders.events audit-denied | tail -1; sleep 8; echo "事件已產生"' '事件已產生'
 
 step audit-denied "【被拒絕的事件】整場 demo 中,被 RBAC 擋下來的動作(次數 / principal / 動作 / 資源)" \
   "kafka-console-consumer --topic confluent-audit-log-events  | granted=false 彙總" \

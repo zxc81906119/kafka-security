@@ -44,10 +44,10 @@
   <div class="box"><b>broker RBAC</b><br>audit 看到的是 User:legacy-orders,不是 restproxy</div></div>
 
 <div class="lane l5"><div class="who">內部與線路<small>不經 AD、不經 MDS</small></div>
-  <div class="box"><b>broker ↔ broker</b><br>INTERNAL 9092:SCRAM(kafka-broker)</div>
-  <div class="box"><b>broker ↔ controller</b><br>CONTROLLER 9093:SASL/PLAIN 靜態帳號</div>
+  <div class="box"><b>broker ↔ broker</b><br>INTERNAL 9092:mTLS(共用內部憑證 CN=kafka-internal),不經 SASL</div>
+  <div class="box"><b>broker ↔ controller</b><br>CONTROLLER 9093:mTLS(同一張內部憑證),不經 SASL(Lab 9)</div>
   <div class="box"><b>共用 server 憑證</b><br>只做 TLS 加密;不當身分(Lab 8)</div>
-  <div class="box"><b>監控</b><br>Prometheus / Alertmanager:HTTPS + Basic(Lab 17)</div></div>
+  <div class="box"><b>監控</b><br>Prometheus / Alertmanager、13 個 JMX exporter:HTTPS + Basic;blackbox、node_exporter:mTLS(Lab 17、22、26)</div></div>
 
 <div class="foot">每個 Lab 的「Lab 地圖」會把這張圖裡用到的元件打亮,並標出那堂要證明的路徑是允許(✔)還是拒絕(✘)。</div>
 </div></body></html>

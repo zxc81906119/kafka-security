@@ -6,7 +6,7 @@
 #   換一台壞掉的 controller 只要「新的加進來、舊的移出去」兩個指令,不用改別台的設定、也不用重啟。
 #   這支腳本模擬一台 controller 主機損壞,實際做一次汰換,並在汰換後再壞一台,驗證新名單仍能服務。
 #   (從靜態 quorum 升級成動態的做法見 DESIGN-BASIS「動態 quorum」:kafka-features upgrade --feature kraft.version=1,再換設定並依序重啟。)
-# 前置條件:全新環境(scripts/ha.sh on),叢集健康
+# 前置條件:環境已建好、叢集健康(一開始就是動態 quorum);replace 之後用 reset 把名單還原成 {1,2,3}
 # 用法:
 #   scripts/quorum-lab.sh status     kraft.version、voter 名單與 directory id、誰是 leader
 #   scripts/quorum-lab.sh replace    汰換:停 controller3(模擬主機損壞)→ 啟動全新的 controller4 → add-controller → remove-controller 3;
@@ -125,10 +125,30 @@ lab_replace() {
     && verdict "控制器汰換完成:3 換成 4,名單 {1,2,4};只改了 quorum 名單,沒有重啟 broker 或其他 controller;停 controller1 後仍可寫入與建 topic"
 }
 
+# 還原成 {1,2,3}:把汰換反過來做一次(同樣先 add 再 remove)。controller3 被移出名單後容器仍在、資料目錄與 directory id 保留,
+#   重新啟動後以 observer 身分回來,在它上面執行 add-controller 即重新成為 voter;再移除 controller4 並刪掉它的容器(資料在容器內,一起清掉)。
+#   已經是 {1,2,3} 時只確保 controller3 在跑、controller4 不存在(冪等)。
 lab_reset() {
+  [ "$(kraft_version)" = 1 ] || die "還不是動態 quorum"
+  start_containers controller3; wait_healthy controller3 >/dev/null || die "controller3 沒有 healthy:docker logs controller3"
+  if ! has_voter 3; then
+    say "controller3 重新加入 quorum:在 controller3 上執行 add-controller(它的資料目錄與 directory id 還在)"
+    docker exec controller3 bash -c "cp /etc/kafka/kafka.properties /tmp/add.properties; printf 'security.protocol=SSL\nssl.keystore.location=/etc/kafka/secrets/internal.keystore.p12\nssl.keystore.type=PKCS12\nssl.keystore.password=changeit\nssl.key.password=changeit\n' >> /tmp/add.properties" >/dev/null
+    docker exec -e KAFKA_OPTS= controller3 kafka-metadata-quorum --bootstrap-controller controller1:9093 --command-config /tmp/add.properties add-controller 2>&1 \
+      | grep -v -E 'SLF4J|^WARNING|WARN' | tail -2
+    wait_until "controller3 成為 voter" 90 has_voter 3 || true
+  fi
+  if has_voter 4; then
+    local dir4; dir4=$(voters | awk '$1==4 {print $2}')
+    say "移除 controller4:remove-controller --controller-id 4 --controller-directory-id <directory id>"
+    quorum_md controller1:9093 remove-controller --controller-id 4 --controller-directory-id "$dir4" | tail -2
+    wait_until "名單回到 3 個 voter" 60 voter_count_is 3 || true
+  fi
   docker compose --profile quorum stop controller4 >/dev/null 2>&1
   docker compose --profile quorum rm -f controller4 >/dev/null 2>&1
-  note "controller4 已移除;要回到乾淨環境請執行 scripts/ha.sh on"
+  echo "voter:$(voters | awk '{print $1}' | sort | tr '\n' ' ')"
+  [ "$(voters | awk '{print $1}' | sort | tr '\n' ' ')" = "1 2 3 " ] \
+    && verdict "名單已還原成 {1,2,3}(controller3 重新加入、controller4 移除並刪除),可以再做一次汰換"
 }
 
 create_topic() { kafka_topics --create "$@" | grep -E "Created|rror" || echo "失敗"; }

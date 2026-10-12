@@ -5,6 +5,7 @@
 # 白話:把還在走明文或沒有認證的連線補起來:broker 連 AD 走 LDAPS(636)、Prometheus 與 Alertmanager 走 HTTPS + Basic、C3 走 HTTPS。
 #   每一項都用對照(通過/不通過)證明,不只是設定了。
 # 前置條件:環境已建好(C3、Prometheus、Alertmanager 已啟用);步驟會用 docker 讀日誌、起臨時容器(curl、ldapsearch 檢查)
+# 冪等:是。第一步 scripts/chapter-start.sh 確認起點(本章不需要前面的章節),重跑結果相同。
 # 用法:
 #   ./demo.sh 17                  經由講解控制台跑這一章
 #   ./scenarios/ch17-transport-hardening.sh      直接跑(DEMO_PAUSE=0 不暫停)
@@ -19,6 +20,10 @@ ch_begin ch17 "傳輸加密補強:LDAPS、監控 HTTPS + Basic、C3 HTTPS"
 DC="$DEMO_ROOT/scripts/dcurl.sh"
 
 # ---------------- AD(LDAPS) ----------------
+step prepare "【起點準備】這一章不需要額外準備,確認環境可直接開始(冪等:可單獨從這一章開始,也可重跑)" \
+  "scripts/chapter-start.sh ch17" \
+  'bash "$DEMO_ROOT/scripts/chapter-start.sh" ch17 2>&1' '\[起點\] ch17 就緒'
+
 step ldaps-from-broker "【AD ①】broker 連 AD 走 LDAPS(636):openldap 日誌裡,來自 broker 的連線全部落在 636,389 沒有 broker 的連線" \
   "docker logs openldap | grep ACCEPT   # 依來源(broker1~4)與目的埠彙總" \
   'a=0; b=0; for x in broker1 broker2 broker3 broker4; do ip=$(docker inspect $x --format "{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}"); n6=$(docker logs openldap 2>&1 | grep ACCEPT | grep "from IP=$ip:" | grep -c "IP=0.0.0.0:636"); n3=$(docker logs openldap 2>&1 | grep ACCEPT | grep "from IP=$ip:" | grep -c "IP=0.0.0.0:389"); echo "$x($ip): $n6 條連到 636、$n3 條連到 389"; a=$((a+n6)); b=$((b+n3)); done; [ $a -gt 0 ] && [ $b -eq 0 ] && echo "判定:broker 連 AD 只走 LDAPS(636)" || echo "判定:不符合"' '判定:broker 連 AD 只走 LDAPS'

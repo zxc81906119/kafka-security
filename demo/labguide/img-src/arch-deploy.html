@@ -59,11 +59,11 @@
         <div class="c"><b>phpLDAPadmin</b><span class="tag">8081</span><br>模擬 AD 管理員加入 / 移出群組</div>
       </div>
       <div class="g mon"><h3>監控</h3>
-        <div class="c"><b>Prometheus</b> HTTPS + Basic(容器內)<br>broker 推指標;C3 讀取</div>
+        <div class="c"><b>Prometheus</b> HTTPS + Basic(容器內)<br>35 個抓取目標:13 個 JMX exporter(7778)+ 22 個 TLS 探測;C3 讀取</div>
         <div class="c"><b>Alertmanager</b> 告警路由<br><b>blackbox-exporter</b> 22 個 TLS 端點的憑證到期</div>
       </div>
     </div>
   </div>
 </div>
-<div class="foot">版本:Confluent Platform 8.3.2(cp-server、cp-kafka-rest、cp-schema-registry、cp-server-connect)、Control Center next-gen 2.6.1、OpenLDAP 1.5.0。內部埠(9092、9093)與監控埠不對外。選修 Lab 另外啟動的元件(Conjur、Grafana、Loki / Tempo、MinIO、郵件伺服器、第 5 台 broker)不在圖內。</div>
+<div class="foot">版本:Confluent Platform 8.3.2(cp-server、cp-kafka-rest、cp-schema-registry、cp-server-connect)、Control Center next-gen 2.6.1、OpenLDAP 1.5.0。內部埠(9092、9093)與監控埠不對外。JMX exporter 掛在 broker、controller、Schema Registry、Connect、REST Proxy 上(共 13 個,HTTPS + Basic)。選修 Lab 另外啟動的元件不在圖內:Conjur(Lab 18)、Grafana 與 node / kafka exporter(Lab 26)、Loki / Tempo / Alloy(Lab 27)、郵件伺服器(Lab 30)、第 5 台 broker(Lab 31)、MinIO(Lab 32)、controller4(Lab 33)、外部看門狗(Lab 34)、DR 站(Lab 36)。</div>
 </div></body></html>

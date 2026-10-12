@@ -4,7 +4,8 @@
 # ----------------------------------------------------------------------------
 # 白話:示範「只讀」的授權:把 ming 從寫入群組(orders-write)改放到唯讀群組(orders-read,角色 DeveloperRead)。
 #       他仍能讀資料、在 C3 看 topic,但寫入與建立 topic 都被拒;同時 yujie 的寫入權限不受影響。
-# 前置條件:需先跑過第 3 章(ming 在 orders-write、orders.events 內有 order-A-1001);需要 e2e/ 的 Playwright
+# 前置條件:環境已建好(scripts/up.sh);需要 e2e/ 的 Playwright
+# 冪等:是。第一步 scripts/chapter-start.sh 把環境收斂到本章起點(不必先跑前面的章節),重跑結果相同。
 # 用法:
 #   ./demo.sh 4                      經由講解控制台跑這一章
 #   ./scenarios/ch04-readonly.sh     直接跑(DEMO_PAUSE=0 不暫停)
@@ -19,6 +20,9 @@
 # ============================================================================
 source "$(dirname "$0")/../scripts/lib-ev.sh"
 ch_begin ch04 "生產環境人只能唯讀"
+step prepare "【起點準備】第 3 章結束時的狀態:orders-write 可讀寫、ming 在 orders-write、orders.events 有資料;orders-read 還沒有唯讀授權(冪等:已正確的不動;可單獨從這一章開始,也可重跑)" \
+  "scripts/chapter-start.sh ch04" \
+  'bash "$DEMO_ROOT/scripts/chapter-start.sh" ch04 2>&1' '\[起點\] ch04 就緒'
 UI() { (cd "$DEMO_ROOT/e2e" && node ch04-ui.mjs "$1" 2>&1 | grep -v '^$'); }
 
 step c3-readonly "【C3 操作】gary 建立唯讀權限:AD 群組 orders-read → DeveloperRead(只有 Read,沒有 Write / Manage)" \

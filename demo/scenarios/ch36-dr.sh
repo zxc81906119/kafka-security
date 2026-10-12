@@ -5,6 +5,7 @@
 # 白話:Cluster Linking 把主站的 topic 鏡像到 DR 站。這一章把 DR 演練做成可重複的腳本:主站一邊寫入一邊整站斷電 → DR 站 failover
 #   → 應用程式改連 → 量測 RPO / RTO → 主站恢復後切回 → 產生演練紀錄(evidence/dr-drills/)。
 # 前置條件:叢集已啟動(scripts/up.sh);DR 站約需 3 GB 記憶體(會暫停 Connect×2 與 Control Center,結束時恢復)。
+# 冪等:是。第一步 scripts/chapter-start.sh 確認起點(本章不需要前面的章節),重跑結果相同。
 # 用法:
 #   ./demo.sh 36             經由講解控制台跑這一章(DEMO_PAUSE=0 不暫停)
 #   ./scenarios/ch36-dr.sh   直接跑
@@ -15,6 +16,10 @@
 source "$(dirname "$0")/../scripts/lib-ev.sh"
 ch_begin ch36 "DR 與演練:整個機房掛掉時,切到 DR 站"
 DS="$DEMO_ROOT/scripts/dr-setup.sh"; DL="$DEMO_ROOT/scripts/dr-lab.sh"
+
+step prepare "【起點準備】這一章不需要額外準備,確認環境可直接開始(冪等:可單獨從這一章開始,也可重跑)" \
+  "scripts/chapter-start.sh ch36" \
+  'bash "$DEMO_ROOT/scripts/chapter-start.sh" ch36 2>&1' '\[起點\] ch36 就緒'
 
 step dr-setup "【建立 DR 站】縮小版(1 controller + 3 broker);DR 站主動連主站建立 Cluster Linking,link 身分是主站上只有讀取權限的 SCRAM 帳號" \
   "scripts/dr-setup.sh up;scripts/dr-setup.sh status" \

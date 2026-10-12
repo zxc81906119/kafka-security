@@ -5,6 +5,7 @@
 # 白話:盤點 C3 周邊每一種呼叫用什麼身分、什麼認證方式:瀏覽器登入的人、C3 自己、自動化(CI)、Prometheus、Alertmanager。
 #   重點是人的操作在 MDS 與 audit log 裡是本人(ming、gary),不是 c3;而 c3 的憑證換到的 token 是管理員,要小心保管。
 # 前置條件:環境已建好(C3 走 HTTPS、Prometheus、Alertmanager 已啟用);用瀏覽器自動化(e2e/probe-c3-api.mjs)模擬登入
+# 冪等:是。第一步 scripts/chapter-start.sh 確認起點(本章不需要前面的章節),重跑結果相同。
 # 用法:
 #   ./demo.sh 13                  經由講解控制台跑這一章
 #   ./scenarios/ch13-c3-inventory.sh      直接跑(DEMO_PAUSE=0 不暫停)
@@ -21,6 +22,10 @@ DC="$DEMO_ROOT/scripts/dcurl.sh"
 E2E() { (cd "$DEMO_ROOT/e2e" && node "$@" 2>&1 | grep -v '^$'); }
 
 # ---------------- 人 ----------------
+step prepare "【起點準備】這一章不需要額外準備,確認環境可直接開始(冪等:可單獨從這一章開始,也可重跑)" \
+  "scripts/chapter-start.sh ch13" \
+  'bash "$DEMO_ROOT/scripts/chapter-start.sh" ch13 2>&1' '\[起點\] ch13 就緒'
+
 step browser "【人 ①】gary 用瀏覽器登入 C3:第一個呼叫帶 Basic(AD 帳密,經 C3 轉給 MDS 換 token),之後全部是 Bearer token" \
   "(瀏覽器開發者工具)Network → Authorization 標頭型態" \
   'E2E probe-c3-api.mjs gary' 'security/1.0/authenticate +\[Basic\]'

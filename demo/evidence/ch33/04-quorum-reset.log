@@ -1,0 +1,10 @@
+# 【還原】名單換回 {1,2,3}:同樣先 add(controller3)再 remove(controller4)
+$ kafka-metadata-quorum add-controller(在 controller3)/ remove-controller --controller-id 4
+▶ controller3 重新加入 quorum:在 controller3 上執行 add-controller(它的資料目錄與 directory id 還在)
+Added controller 3 with directory id ExctQgSpFMcX9r2MVC3hPw and endpoints: CONTROLLER://controller3:9093
+   5 秒後:controller3 成為 voter
+▶ 移除 controller4:remove-controller --controller-id 4 --controller-directory-id <directory id>
+Removed  KRaft controller 4 with directory id VkeRoRLNBW_BltHC_IZcIg
+   4 秒後:名單回到 3 個 voter
+voter:1 2 3 
+判定:名單已還原成 {1,2,3}(controller3 重新加入、controller4 移除並刪除),可以再做一次汰換

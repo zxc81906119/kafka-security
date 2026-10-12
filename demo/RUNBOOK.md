@@ -14,6 +14,28 @@ bash scripts/ha.sh on                           # 全新重建(清除所有資�
 ```
 **拓樸(與客戶正式環境相同,所有章節都以此為準)**:controller×3(動態 quorum)、broker×4(node id 11 到 14,MDS 8091 到 8094)、topic 副本 3、min.insync.replicas 2;REST Proxy×2(前面一台 L4 負載平衡器 `restproxy`,依來源 IP 黏著,代替 F5)、Schema Registry×2、Connect×2、Control Center×1。Docker Desktop / WSL 建議記憶體 ≥ 11GB(實測全部啟動 20 個容器約用 8.3 到 8.6 GB)。
 
+### 每章可以獨立、依序、重跑(冪等)
+每一章都能從「環境已建好」單獨開始,也能接著前一章做,不必「跑 5 要先跑 4」。做法:每章第一步執行 `scripts/chapter-start.sh chNN`,只把環境收斂到該章需要的起點(AD 群組成員、角色綁定、topic、起點資料、示範帳號),已經正確的不動,所以重跑結果相同;判定看本章自己產生的結果,不看累計數字。照手冊手動操作時,從哪一章開始就先執行一次同一個指令。
+
+| 章 | 起點(chapter-start 負責) |
+|---|---|
+| 1、2 | 還沒有任何授權(內部執行 `scripts/reset.sh`) |
+| 3 | orders-write 還沒有 `orders.` 的授權、yujie 在 orders-write、ming 不在任何群組 |
+| 4 | 等同第 3 章結束時:orders-write 可讀寫、ming 在 orders-write、orders.events 有資料、orders-read 還沒有唯讀授權 |
+| 5、6 | 等同第 4 章結束時:orders-write 可讀寫、orders-read 唯讀、ming 只在 orders-read;第 6 章另清 shared-ops |
+| 7 | svc-orders 還沒有示範綁定 |
+| 9 | svc-orders(密碼 v1)與寫入授權、orders-write 可寫;清掉 svc-orders-v2;AD 在線 |
+| 10 | yujie 可寫、ming 唯讀;第二步自己製造要彙整的稽核事件 |
+| 11 | ming 只在 orders-read、yujie 只在 orders-write、維運群組沒有人;清掉 infra 示範 |
+| 12 | legacy-orders 與 orders-write 都還沒有 `orders.` 的寫入權 |
+| 14 | ming 沒有任何 role |
+| 15 | yujie 在 orders-write、群組可讀寫 |
+| 16 | 清掉 OP menu 的鎖與維護模式輸出 |
+| 18 | Conjur 啟動;svc-orders 與寫入授權;Conjur 裡的帳密設為起點值 |
+| 其他 | 不需要額外準備(需要的元件由該章第一步的 `*-setup.sh` 啟動,結束時還原) |
+
+**無法完全冪等的例外**:第 33 章會改 controller 名單,開頭與結尾都用 `scripts/quorum-lab.sh reset` 收斂回 {1,2,3}(controller3 重新加入、controller4 移除),reset 失敗時才需要 `scripts/ha.sh on` 重建;第 10 章的稽核日誌只增不減,彙總數字會累加,判定看本章製造的事件。
+
 ### 身分與密碼(demo 專用)
 | 身分 | 類型 | 帳號 / 密碼 | 說明 |
 |---|---|---|---|
@@ -423,7 +445,7 @@ gary 在 C3 指派 `orders-read` → DeveloperRead;LDAP 介面把 ming 從 devel
 
 ## 第 33 章(進階)動態 quorum:汰換 controller(`./demo.sh 33`,需全新環境;約 12 分鐘)
 
-**準備**:`scripts/ha.sh on`(全新環境;叢集一開始就是動態 quorum)。`scripts/quorum-lab.sh` 子命令:status、replace、reset。做完會永久改變 voter 名單,用 `scripts/ha.sh on` 重建。
+**準備**:環境已建好(叢集一開始就是動態 quorum)。`scripts/quorum-lab.sh` 子命令:status、replace、reset。開頭與結尾都執行 reset,把名單收斂成 {1,2,3}(controller3 以原本的 directory id 重新加入、controller4 移除),所以可以重跑;reset 失敗時才需要 `scripts/ha.sh on` 重建。
 
 | 項目 | 實測結果 |
 |---|---|

@@ -5,6 +5,7 @@
 # 白話:若 Control Center 與 REST Proxy 共用同一張憑證,Kafka 眼中它們是同一個 principal,
 #       無法分開授權、audit log 分不出是誰、一台被入侵就全部淪陷。對照之下,每個元件各用一張不同 DN 的 client 憑證就能分別授權。
 # 前置條件:環境已建好(MDS 在 broker1:8091);Docker 可用(用 alpine/openssl 容器看憑證);certs/ 底下有 server.pem 與各元件 client 憑證
+# 冪等:是。第一步 scripts/chapter-start.sh 確認起點(本章不需要前面的章節),重跑結果相同。
 # 用法:
 #   ./demo.sh 8                       經由講解控制台跑這一章
 #   ./scenarios/ch08-shared-cert.sh   直接跑(DEMO_PAUSE=0 不暫停)
@@ -17,6 +18,10 @@
 # ============================================================================
 source "$(dirname "$0")/../scripts/lib-ev.sh"
 ch_begin ch08 "為什麼不用共用憑證做 mTLS 身分"
+
+step prepare "【起點準備】這一章不需要額外準備,確認環境可直接開始(冪等:可單獨從這一章開始,也可重跑)" \
+  "scripts/chapter-start.sh ch08" \
+  'bash "$DEMO_ROOT/scripts/chapter-start.sh" ch08 2>&1' '\[起點\] ch08 就緒'
 
 step shared-dn "【客戶的做法】Control Center 與 REST Proxy 共用同一張憑證(同一個 DN、同一把 private key)" \
   "openssl x509 -in shared-server.pem -noout -subject -ext subjectAltName" \

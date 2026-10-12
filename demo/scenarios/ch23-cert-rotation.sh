@@ -4,6 +4,7 @@
 # ----------------------------------------------------------------------------
 # 白話:憑證過期是常見的停機原因。這一章用 blackbox 探測各端點「實際送出」的憑證算剩餘天數,並實測不重啟 broker 的換憑證流程(預檢、金絲雀、帶外回退),以及 SAN 不對、換成別的 CA 簽的憑證會發生什麼事。
 # 前置條件:需要 Prometheus、Alertmanager、blackbox-exporter:docker compose --profile c3 up -d prometheus alertmanager blackbox-exporter
+# 冪等:是。第一步 scripts/chapter-start.sh 確認起點(本章不需要前面的章節),重跑結果相同。
 # 用法:
 #   ./demo.sh 23                  經由講解控制台跑這一章(DEMO_PAUSE=0 不暫停)
 #   ./scenarios/ch23-cert-rotation.sh    直接跑
@@ -17,6 +18,10 @@
 source "$(dirname "$0")/../scripts/lib-ev.sh"
 ch_begin ch23 "憑證到期監控與不停機換憑證"
 CL="$DEMO_ROOT/scripts/cert-lab.sh"
+
+step prepare "【起點準備】這一章不需要額外準備,確認環境可直接開始(冪等:可單獨從這一章開始,也可重跑)" \
+  "scripts/chapter-start.sh ch23" \
+  'bash "$DEMO_ROOT/scripts/chapter-start.sh" ch23 2>&1' '\[起點\] ch23 就緒'
 
 step cert-baseline "【現況】各端點「實際送出」的憑證 vs 磁碟檔案;OP menu 第 17 項(檔案巡檢)現在會顯示剩餘時間分級(已過期 / 不到 7 天 / 不到 30 天 / 不到 90 天)" \
   "openssl s_client -connect <端點>;openssl x509 -noout -serial -enddate;opmenu.sh --run 17" \

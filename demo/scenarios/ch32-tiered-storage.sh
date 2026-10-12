@@ -5,6 +5,7 @@
 # 白話:舊 segment 上傳到物件儲存,broker 本機只留最近一段;讀舊資料時 broker 從物件儲存取回。
 #   這一章驗證:資料真的上傳、本機真的變小、從頭讀還是讀得到全部、broker 重啟後仍在,以及物件儲存的存取保護。
 # 前置條件:叢集已啟動(scripts/up.sh);第一步會執行 scripts/tier-setup.sh on(啟動 MinIO、broker 依序重建)
+# 冪等:是。第一步 scripts/chapter-start.sh 確認起點(本章不需要前面的章節),重跑結果相同。
 # 用法:
 #   ./demo.sh 32                  經由講解控制台跑這一章(DEMO_PAUSE=0 不暫停)
 #   ./scenarios/ch32-tiered-storage.sh    直接跑
@@ -17,6 +18,10 @@ source "$(dirname "$0")/../scripts/lib-ev.sh"
 ch_begin ch32 "Tiered Storage:舊資料放到物件儲存(MinIO)"
 TS="$DEMO_ROOT/scripts/tier-setup.sh"
 TL="$DEMO_ROOT/scripts/tier-lab.sh"
+
+step prepare "【起點準備】這一章不需要額外準備,確認環境可直接開始(冪等:可單獨從這一章開始,也可重跑)" \
+  "scripts/chapter-start.sh ch32" \
+  'bash "$DEMO_ROOT/scripts/chapter-start.sh" ch32 2>&1' '\[起點\] ch32 就緒'
 
 step tier-on "【啟用】MinIO(HTTPS)+ 專用帳號與 bucket + broker 載入 Tiered Storage 設定(依序重建)" \
   "scripts/tier-setup.sh on" \

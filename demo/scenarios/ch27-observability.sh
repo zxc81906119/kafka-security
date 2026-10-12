@@ -4,6 +4,7 @@
 # ----------------------------------------------------------------------------
 # 白話:指標只回答「有沒有問題」,回答不了「為什麼」。這一章補日誌(Loki)與追蹤(Tempo),且讓資料先經過 Kafka 當緩衝:下游停機時資料不掉,trace 還能跨過 Kafka 串起 producer 與 consumer。
 # 前置條件:需要 Prometheus、Grafana:docker compose --profile c3 up -d prometheus alertmanager blackbox-exporter;scripts/grafana.sh on
+# 冪等:是。第一步 scripts/chapter-start.sh 確認起點(本章不需要前面的章節),重跑結果相同。
 # 用法:
 #   ./demo.sh 27                  經由講解控制台跑這一章(DEMO_PAUSE=0 不暫停)
 #   ./scenarios/ch27-observability.sh    直接跑
@@ -21,6 +22,10 @@ source "$(dirname "$0")/../scripts/lib-ev.sh"
 ch_begin ch27 "日誌與追蹤經過 Kafka 進 Loki 與 Tempo"
 OS="$DEMO_ROOT/scripts/observability.sh"
 OL="$DEMO_ROOT/scripts/observe-lab.sh"
+
+step prepare "【起點準備】Grafana 在跑、應用程式用的 JDK 映像與 Kafka jar 資料卷已備妥(不必先做 Lab 25、26)(冪等:可單獨從這一章開始,也可重跑)" \
+  "scripts/chapter-start.sh ch27" \
+  'bash "$DEMO_ROOT/scripts/chapter-start.sh" ch27 2>&1' '\[起點\] ch27 就緒'
 
 step obs-on "【啟動】備妥 Kafka 這一側(兩個專用帳號、兩個 topic、最小權限 ACL)、OpenTelemetry Java agent(校驗 SHA-256),啟動 Loki、Tempo、Alloy,讓 Grafana 載入 Loki 與 Tempo 資料來源" \
   "scripts/observability.sh on" \

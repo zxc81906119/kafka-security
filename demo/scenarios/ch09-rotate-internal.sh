@@ -5,7 +5,8 @@
 # 白話:三個維運演練。A 服務密碼輪替:先建新帳號並行、切換完再停舊,不中斷服務。
 #       B 內部通道:CONTROLLER / INTERNAL 埠只認 mTLS 憑證,帳密與沒憑證的連線都進不去,連上也沒有超級權限。
 #       C AD 故障:AD 掛了時服務(SCRAM)照常運作,但人的新登入失敗,AD 恢復後即恢復。
-# 前置條件:需先跑過第 3 章(yujie 所在的 orders-write 對 orders. 的寫入權限)與第 7 章(svc-orders 帳號與寫入權限已存在);Docker 可用(會停止 / 啟動 openldap 容器);config/clients/ 需有 mtls-legacy-orders.properties 等設定檔
+# 前置條件:環境已建好;Docker 可用(會停止 / 啟動 openldap 容器);config/clients/ 需有 mtls-legacy-orders.properties
+# 冪等:是。第一步 scripts/chapter-start.sh 把環境收斂到本章起點(不必先跑前面的章節),重跑結果相同。
 # 用法:
 #   ./demo.sh 9                            經由講解控制台跑這一章
 #   ./scenarios/ch09-rotate-internal.sh    直接跑(DEMO_PAUSE=0 不暫停)
@@ -26,6 +27,9 @@ source "$(dirname "$0")/../scripts/lib-ev.sh"
 ch_begin ch09 "輪替、內部通道、AD 故障"
 source "$DEMO_ROOT/scripts/rbac-lib.sh"
 PROP="$DEMO_ROOT/config/clients"
+step prepare "【起點準備】svc-orders(密碼 v1)與寫入授權存在、orders-write 可寫;上次輪替留下的 svc-orders-v2 已清掉(冪等:已正確的不動;可單獨從這一章開始,也可重跑)" \
+  "scripts/chapter-start.sh ch09" \
+  'bash "$DEMO_ROOT/scripts/chapter-start.sh" ch09 2>&1' '\[起點\] ch09 就緒'
 
 # ---- A. 服務密碼輪替:新帳號並行 → 切換 → 停舊 ----
 step rot-new "【輪替 1/4】建立新帳號 svc-orders-v2(新密碼)並給同樣的 RBAC 權限 —— 新舊並行,不中斷" \

@@ -6,6 +6,7 @@
 #   依簡報的 7 組群組(2026-10-07 重寫):ops = Operator、topic-admin = ResourceOwner(Topic*、Group*)、rbac-admin = UserAdmin。
 #   三組的 role binding 在 bootstrap 時就綁好,日常這些群組是空的。
 # 前置條件:環境已建好(AD、MDS、C3);用瀏覽器自動化(e2e/ch11-ui.mjs)操作 C3 與 phpLDAPadmin
+# 冪等:是。第一步 scripts/chapter-start.sh 把環境收斂到本章起點(不必先跑前面的章節),重跑結果相同。
 # 用法:
 #   ./demo.sh 11                  經由講解控制台跑這一章
 #   ./scenarios/ch11-separation.sh      直接跑(DEMO_PAUSE=0 不暫停)
@@ -30,18 +31,10 @@ DENY='not authorized|Not authorized|Authorization failed|authorization failed|To
 # AD 群組異動後確認結果(之前只印「完成」,UI 操作失敗也看不出來):grant = 應該在群組內、revoke = 不應該在
 ldap_check() { local has=0; docker exec openldap ldapsearch -x -LLL -D cn=admin,dc=corp,dc=demo -w adminpw -b "cn=$3,ou=groups,dc=corp,dc=demo" member | grep -qi "^member: cn=$2," && has=1; [ "$1" = grant ] && [ $has = 1 ] && return 0; [ "$1" = revoke ] && [ $has = 0 ] && return 0; echo "AD 群組異動沒有生效:$1 $2 $3"; return 1; }
 
-# ---- 起始狀態:ming 唯讀(orders-read)、yujie 一般開發者(orders-write)、三個維運群組都沒有人;清掉上次殘留 ----
-for u in yujie ming; do for g in ops topic-admin rbac-admin; do ldapg remove $u $g >/dev/null 2>&1; done; done
-ldapg remove ming orders-write >/dev/null 2>&1; ldapg add ming orders-read >/dev/null 2>&1
-rbac_unbind cert bootstrap Group:orders-write DeveloperRead Topic infra. PREFIXED >/dev/null
-as_admin --delete --topic infra.ops-demo >/dev/null 2>&1
-rbac_bind basic gary:gary-pw Group:orders-read DeveloperRead Topic orders. PREFIXED >/dev/null
-# consumer group 的讀取權(console consumer 需要)與測試資料:讓「讀得到/讀不到」只取決於 topic 權限
-rbac_bind basic gary:gary-pw Group:orders-read DeveloperRead Group demo- PREFIXED >/dev/null
-rbac_bind basic gary:gary-pw Group:orders-write DeveloperRead Group demo- PREFIXED >/dev/null
-echo '{"order":"A-1001"}' | K kafka-console-producer --bootstrap-server $BOOT --command-config /clients/plain-gary.properties --topic orders.events >/dev/null 2>&1
-sleep 6
 
+step prepare "【起點準備】ming 只在 orders-read、yujie 只在 orders-write、三個維運群組都沒有人;上次的 infra 示範已清掉(冪等:已正確的不動;可單獨從這一章開始,也可重跑)" \
+  "scripts/chapter-start.sh ch11" \
+  'bash "$DEMO_ROOT/scripts/chapter-start.sh" ch11 2>&1' '\[起點\] ch11 就緒'
 step matrix "【角色對照】三個維運群組的 role 在 bootstrap 時就綁好了,日常這些群組是空的(gary 以 MDS API 查詢)" \
   "POST /security/1.0/lookup/rolebindings/principal/Group:<群組>" \
   'for g in ops topic-admin rbac-admin; do mds basic gary:gary-pw POST "/security/1.0/lookup/rolebindings/principal/Group%3A$g" "$CL" | grep -o "\"Group:[a-z-]*\":{\"[A-Za-z]*\""; done' 'Operator.*|ResourceOwner|UserAdmin'

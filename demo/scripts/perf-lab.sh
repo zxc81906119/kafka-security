@@ -5,7 +5,7 @@
 # 白話:要決定「要幾台 broker」,得先知道「一台能吃多少」。這支腳本用 Kafka 內建的 perf-test 量:
 #   不同 acks(1 與 all)、不同壓縮(none、lz4、zstd)對寫入吞吐與延遲的影響,分區數對單一 producer 的影響,以及讀取吞吐。
 #   結果會印成表格,並提示怎麼回填 tools/sizing.mjs。
-# 重要限制:這是 docker 容器在一台筆電上跑出來的數字,資源互相搶(3 broker + 3 controller 共用同一台機器的 CPU 與磁碟),
+# 重要限制:這是 docker 容器在一台筆電上跑出來的數字,資源互相搶(所有 broker 與 controller 共用同一台機器的 CPU 與磁碟),
 #   **絕對值不能拿來決定正式環境台數**,只能看「比例」(壓縮省多少、acks=all 多花多少)與「方法」。
 #   正式環境要在真實硬體與網路上,以同樣的腳本重測。
 # 前置條件:叢集已啟動(scripts/up.sh),叢集健康
@@ -103,7 +103,7 @@ lab_all() {
   lab_producer; echo
   lab_partitions; echo
   lab_consumer; echo
-  say "回填 tools/sizing.mjs:--brokerMaxIngestMBps 用 acks=all 最佳值除以 broker 數(這台機器 3 台 broker 共用資源,所以只是下限參考);--partitionMBps 用單分區的 MB/s"
+  say "回填 tools/sizing.mjs:--brokerMaxIngestMBps 用 acks=all 最佳值除以 broker 數(這台機器的 broker 共用資源,所以只是下限參考);--partitionMBps 用單分區的 MB/s"
   echo "例:node tools/sizing.mjs --brokerMaxIngestMBps <壓測值> --partitionMBps <單分區壓測值>"
 }
 

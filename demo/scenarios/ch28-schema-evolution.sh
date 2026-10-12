@@ -4,6 +4,7 @@
 # ----------------------------------------------------------------------------
 # 白話:producer 與 consumer 是不同團隊、不同時間上線的程式,靠 schema 約定欄位。這一章實測 schema 怎麼改才不會讓另一端壞掉:相容性模式、transitive、授權與相容性兩道關卡、命名策略、資料契約規則。
 # 前置條件:需要 Schema Registry(scripts/sr-setup.sh)(記憶體吃緊時先 scripts/observability.sh off、docker stop control-center)
+# 冪等:是。第一步 scripts/chapter-start.sh 確認起點(本章不需要前面的章節),重跑結果相同。
 # 用法:
 #   ./demo.sh 28                  經由講解控制台跑這一章(DEMO_PAUSE=0 不暫停)
 #   ./scenarios/ch28-schema-evolution.sh    直接跑
@@ -19,6 +20,10 @@
 source "$(dirname "$0")/../scripts/lib-ev.sh"
 ch_begin ch28 "Schema 演進與資料契約"
 SL="$DEMO_ROOT/scripts/schema-lab.sh"
+
+step prepare "【起點準備】這一章不需要額外準備,確認環境可直接開始(冪等:可單獨從這一章開始,也可重跑)" \
+  "scripts/chapter-start.sh ch28" \
+  'bash "$DEMO_ROOT/scripts/chapter-start.sh" ch28 2>&1' '\[起點\] ch28 就緒'
 
 step sch-setup "【啟動】確認 Schema Registry 在跑且授權就緒(沿用第 20 章的設定)" \
   "scripts/sr-setup.sh" \

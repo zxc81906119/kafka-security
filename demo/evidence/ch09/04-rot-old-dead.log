@@ -1,5 +1,0 @@
-# 【輪替 4/4】舊密碼立刻失效;新帳號照常
-$ producer(舊密碼)  /  producer(svc-orders-v2)
-org.apache.kafka.common.errors.SaslAuthenticationException: Authentication failed during authentication due to invalid credentials with SASL mechanism SCRAM-SHA-512
-→ 結果:被拒絕
-→ 結果:成功

@@ -5,6 +5,7 @@
 # 白話:以 Conjur(CyberArk 的開源秘密管理)示範:應用程式用機器身分向 Conjur 取密碼,不把密碼寫在檔案;密碼輪替(含新舊並行的零中斷輪替);OP menu 執行時取帳密;broker 設定檔裡的密碼用 Confluent Secret Protection 加密,主金鑰由 Conjur 保管。
 #   PAM 那一側(PSM 代登入、CPM 輪替主機帳號)無法在本機重現,只在文件說明。
 # 前置條件:需要 profile cyberark(開頭執行 scripts/conjur.sh up 啟動 Conjur,啟動失敗就結束);環境已建好;sp-rolling 一步約 4 分鐘
+# 冪等:是。第一步 scripts/chapter-start.sh 把環境收斂到本章起點(不必先跑前面的章節),重跑結果相同。
 # 用法:
 #   ./demo.sh 18                  經由講解控制台跑這一章
 #   ./scenarios/ch18-cyberark.sh      直接跑(DEMO_PAUSE=0 不暫停)
@@ -30,13 +31,11 @@ G="OPMENU_USER=gary OPMENU_PASS=gary-pw OPMENU_YES=1 OPMENU_TICKET=CHG-2026-0400
 AUTH_CMD="bash $DEMO_ROOT/scripts/conjur.sh get-as opmenu opmenu/alertmanager-auth"
 
 # ---------------- 起點 ----------------
-bash "$CJ" up >/dev/null 2>&1 || { echo "Conjur 啟動失敗"; exit 1; }
-mds basic gary:gary-pw POST /security/1.0/principals/User:svc-orders/roles/DeveloperWrite/bindings "{\"scope\":{\"clusters\":{\"kafka-cluster\":\"XyZBQ3-GTvKH2qNfP7X33A\"}},\"resourcePatterns\":[{\"resourceType\":\"Topic\",\"name\":\"orders.\",\"patternType\":\"PREFIXED\"}]}" >/dev/null 2>&1
-bash "$CJ" set opmenu/alertmanager-auth "opmenu:am-opmenu-pw" >/dev/null
-bash "$CJ" set-cred svc-orders svc-orders orders-secret-v1 >/dev/null   # 起點:Conjur 裡「現在該用的帳號與密碼」= svc-orders / 原密碼
-rm -rf "$OPM/log/opmenu.lock.d"
 
 # ---------------- 應用程式取密碼 ----------------
+step prepare "【起點準備】Conjur 啟動;svc-orders 與寫入授權存在;Conjur 裡的帳密設為起點值(冪等:已正確的不動;可單獨從這一章開始,也可重跑)" \
+  "scripts/chapter-start.sh ch18" \
+  'bash "$DEMO_ROOT/scripts/chapter-start.sh" ch18 2>&1' '\[起點\] ch18 就緒'
 step policy "【policy】Conjur 裡定義了誰(機器身分)能拿什麼(秘密):svc-orders 只能拿自己的密碼;OP menu 拿 Alertmanager 帳密;broker 拿主金鑰" \
   "conjur list -k host; conjur list -k variable   # 來自 config/conjur/policy/kafka.yml" \
   'export MSYS_NO_PATHCONV=1; echo "-- host(機器身分)"; docker exec -i conjur-cli conjur list -k host | tr -d "[]\",\r" | sed "/^\s*$/d"; echo "-- variable(秘密)"; docker exec -i conjur-cli conjur list -k variable | tr -d "[]\",\r" | sed "/^\s*$/d"' 'kafka/svc-orders/credential'

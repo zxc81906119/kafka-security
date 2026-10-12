@@ -1,0 +1,5 @@
+# 【輪替 4/4】舊密碼立刻失效;新帳號照常
+$ producer(舊密碼)  /  producer(svc-orders-v2)
+WARN [Producer clientId=console-producer] Bootstrap broker broker3:9094 (id: -3 rack: null isFenced: false) disconnected
+→ 結果:被拒絕
+→ 結果:成功

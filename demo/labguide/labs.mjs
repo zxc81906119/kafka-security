@@ -61,7 +61,7 @@ export const LABS = [
   {
     id: 'ch00', n: 0, title: '建立實驗環境', time: '15–30 分(首次含映像下載)',
     goal: '在本機用 Docker 建出與客戶正式環境相同的 HA 拓樸:OpenLDAP(模擬 AD)、3 台 KRaft controller(動態 quorum)、4 台 broker(含 MDS/RBAC;topic 副本 3、min.insync.replicas 2)、REST Proxy 2 台(前面一台 L4 負載平衡器,代替 F5)、Schema Registry 2 台、Connect 2 台、Control Center 1 台,並完成初始授權。',
-    pre: ['Windows 11 + Docker Desktop(建議配置 ≥ 11 GB 記憶體;實測全部元件啟動約用 8.3 GB)、Git Bash;Node.js 24(只有跑 UI 自動化/newman 才需要;第一次執行 UI 章節時會自動下載 Playwright 的 chromium,也可先執行 bash scripts/setup-e2e.sh,需要能連網)。', '連接埠未被占用:389、8081(LDAP 與管理介面)、8086(REST Proxy 負載平衡器)、8091~8094(各 broker 的 MDS)、9094、19194、19294、19394(各 broker 的 CLIENT)、8085、8185(Schema Registry)、8083、8183(Connect)、9022(C3,HTTPS)。', '首次需下載映像約 4.3 GB(解壓後約 11 GB;cp-server、cp-kafka-rest、cp-schema-registry、cp-server-connect、C3、Prometheus、Alertmanager、blackbox-exporter、nginx、OpenLDAP、phpLDAPadmin)。'],
+    pre: ['Windows 11 + Docker Desktop(建議配置 ≥ 11 GB 記憶體;實測全部元件啟動約用 9.2 GB,含 13 個 JMX exporter)、Git Bash;Node.js 24(只有跑 UI 自動化/newman 才需要;第一次執行 UI 章節時會自動下載 Playwright 的 chromium,也可先執行 bash scripts/setup-e2e.sh,需要能連網)。', '連接埠未被占用:389、8081(LDAP 與管理介面)、8086(REST Proxy 負載平衡器)、8091~8094(各 broker 的 MDS)、9094、19194、19294、19394(各 broker 的 CLIENT)、8085、8185(Schema Registry)、8083、8183(Connect)、9022(C3,HTTPS)。', '首次需下載映像約 4.3 GB(解壓後約 11 GB;cp-server、cp-kafka-rest、cp-schema-registry、cp-server-connect、C3、Prometheus、Alertmanager、blackbox-exporter、nginx、OpenLDAP、phpLDAPadmin)。'],
     autoAll: ['bash scripts/up.sh      # 一鍵(不帶參數 = 全部元件):憑證 → LDAP → controller → brokers → 初始授權 → 服務帳號與 topics → C3、REST Proxy → SR、Connect(先授權再啟動)', './preflight.sh          # 開場前自檢(全部容器、各端點與登入、記憶體)'],
     steps: [
       { t: '0.1 準備終端機與輔助函式', why: '之後所有「手動指令」都用 kc(Kafka CLI)與 hc(curl)兩個函式,它們只是 docker run 的簡寫,不依賴專案腳本。每開一個新終端機都要重貼一次。', manual: [SETUP], expect: '沒有輸出。可用 type kc 確認函式已定義。' },
@@ -168,7 +168,7 @@ docker ps --format "table {{.Names}}\t{{.Status}}"`], auto: ['./preflight.sh'], 
   {
     id: 'ch01', n: 1, title: '沒有身分就進不來(預設全拒絕)', time: '5 分',
     goal: '證明:沒有身分、密碼錯、或「認證成功但沒授權」都看不到、做不到任何事。',
-    pre: ['Lab 0 完成。', '回到起點狀態:./scripts/reset.sh(清除示範用 role binding 與群組異動)。'],
+    pre: ['Lab 0 完成(環境已建好)。', '起點(還沒有任何授權)由「從這裡開始時先執行」的 scripts/chapter-start.sh ch01 確保(內部執行 scripts/reset.sh)。'],
     pre_cmd: ['./scripts/reset.sh', 'sleep 12   # 等 MDS 重讀 LDAP 群組(demo 為 5 秒)'],
     autoAll: ['./demo.sh 1                     # 逐步按 Enter 的講解模式', './scenarios/ch01-no-identity.sh      # 一次跑完並自動驗證'],
     steps: [
@@ -183,7 +183,7 @@ docker ps --format "table {{.Names}}\t{{.Status}}"`], auto: ['./preflight.sh'], 
   {
     id: 'ch02', n: 2, title: '人用 AD 帳號登入 Control Center', time: '8 分',
     goal: '用 AD 帳號登入 C3;看見「同一個 C3,三個人看到的不同」。',
-    pre: ['Lab 1 完成(尚無任何授權)。', '瀏覽器:建議為 gary、yujie、ming 各開一個無痕視窗或瀏覽器 profile。'],
+    pre: ['環境已建好;起點(尚無任何授權)由起點準備確保。', '瀏覽器:建議為 gary、yujie、ming 各開一個無痕視窗或瀏覽器 profile。'],
     autoAll: ['(cd e2e && node ch02.mjs)    # Playwright 自動登入三人並截圖到 evidence/ch02/'],
     steps: [
       { t: '2.1 gary(組長:cluster-admin、topic-admin、rbac-admin、security)登入', ui: ['瀏覽器開 https://localhost:9022(第一次會警告憑證不受信任:demo 的 CA 是自簽的,按「進階」繼續,或把 demo/certs/ca.pem 匯入信任)', '帳號 gary、密碼 gary-pw(就是 AD 的帳密)→ Log in', '左側選叢集 → Topics:可看到全部 topic;右上 Administration 選單有 Manage role assignments。'], expect: 'gary 看得到全部資源與管理功能(他屬於 cluster-admin、topic-admin、rbac-admin、security 四個群組,沒有 SystemAdmin)。', imgs: [['ch02/gary-1-login.png', 'gary:C3 登入畫面(帳密就是 AD 的)'], ['ch02/gary-3-topics.png', 'gary:Topics 清單(全部可見)'], ['ch02/gary-4-admin-menu.png', 'gary:Administration 選單(有 Manage role assignments)']] },
@@ -196,7 +196,7 @@ docker ps --format "table {{.Names}}\t{{.Status}}"`], auto: ['./preflight.sh'], 
   {
     id: 'ch03', n: 3, title: 'RBAC 與 AD 群組:授權跟著群組走', time: '12 分',
     goal: '把 role 綁在「AD 群組」;人員異動只改 AD,Kafka 端零變更、數秒內生效。★ 本 Lab 是整個方案的核心。',
-    pre: ['Lab 2 完成。'],
+    pre: ['環境已建好;觀念上接續 Lab 2(C3 登入)。起點狀態由起點準備確保。'],
     autoAll: ['./demo.sh 3                       # 講解模式', './scenarios/ch03-rbac-ad-group.sh    # 一次跑完(含 UI 自動化與截圖)'],
     steps: [
       { t: '3.1 授權前:yujie 在群組內,但沒有 role → 寫入被拒', manual: [produce('plain-yujie', 'orders.events', 'before-rbac')], auto: ['source scripts/lib-ev.sh; as_produce yujie orders.events before-rbac'], ev: 'before', re: new RegExp(DENY), expect: '出現 TopicAuthorizationException / Not authorized。群組成員資格 ≠ 權限,權限來自 role binding。', warn: '如果這個指令沒有印出任何東西,代表寫入成功:yujie 已經有權限了(之前做過 3.2,或叢集不是剛建好)。先執行 ./demo.sh reset 再重做;否則看不到「被拒」。' },
@@ -220,7 +220,7 @@ docker ps --format "table {{.Names}}\t{{.Status}}"`], auto: ['./preflight.sh'], 
   {
     id: 'ch04', n: 4, title: '生產環境「人只能唯讀」', time: '10 分',
     goal: '建立唯讀群組 orders-read:只能看資料,不能寫、不能建 topic。並把 ming 從開發者移到唯讀。',
-    pre: ['Lab 3 完成(ming 目前在 orders-write)。'],
+    pre: ['環境已建好;觀念上接續 Lab 3。起點(ming 在 orders-write、群組已授權)由起點準備確保,不必先做 Lab 3。'],
     autoAll: ['./demo.sh 4', './scenarios/ch04-readonly.sh'],
     steps: [
       { t: '4.1 C3 操作:建立唯讀授權(群組 orders-read → DeveloperRead)', re: /HTTP 204/, why: '需要兩條:Topic(orders.* 讀取)與 Consumer Group(demo- 讀取,因為 console consumer 需要讀自己的 consumer group)。只有 Read,沒有 Write / Manage。',
@@ -240,11 +240,11 @@ docker ps --format "table {{.Names}}\t{{.Status}}"`], auto: ['./preflight.sh'], 
   {
     id: 'ch05', n: 5, title: 'Postman / REST Proxy:工具用同一份 AD 身分', time: '12 分',
     goal: '用 Postman(人手動測試)呼叫 REST Proxy 與 MDS API,驗證與 CLI、C3 相同的身分與授權結果。',
-    pre: ['Lab 4 完成(yujie 在 orders-write;ming 在 orders-read)。', '已安裝 Postman 桌面版(或只用 newman / curl)。'],
+    pre: ['環境已建好;起點(yujie 在 orders-write、ming 在 orders-read)由起點準備確保,不必先做 Lab 4。', '已安裝 Postman 桌面版(或只用 newman / curl)。'],
     autoAll: ['./demo.sh 5      # 以 newman(Postman 的命令列版)跑同一份 collection,並產生報告與截圖'],
     steps: [
       { t: '5.1 匯入檔案並信任 demo CA(Postman 桌面版)', ui: ['Postman → Import:選 demo/postman/demo.postman_collection.json 與 demo-humans.postman_environment.json', '右上環境下拉選 demo-humans(rest_proxy=https://localhost:8086、mds=https://localhost:8091)', 'Settings → Certificates → CA certificates → 開啟,選 demo/certs/ca.pem(不要關閉 SSL 驗證)'], expect: 'Collection 出現三個資料夾:1 沒有身分進不來、5 人:同一份 AD 身分用在工具上、M MDS API。', warn: 'Postman 在不同身分間切換時,MDS 驗證成功後會設定 auth_token cookie,且 cookie 優先於 Basic Auth,導致後續請求仍以前一個人的身分執行(實測 yujie 竟新增了 role binding)。collection 已加 pre-request 清 cookie;手動測試換身分前請清除 localhost 的 cookie。' },
-      { t: '5.2 無身分 / 密碼錯 → 401', ui: ['執行 1.1、1.2,看 Tests 分頁'], manual: ['hc -H "Accept: application/vnd.kafka.v2+json" $RP/topics', 'hc -u yujie:bad -H "Accept: application/vnd.kafka.v2+json" $RP/topics'], re: /HTTP 401/, expect: '兩個都是 401;Postman Tests 綠色。', imgs: [['ch05/postman-1.1.png', '1.1 未帶帳密 → 401'], ['ch05/postman-1.2.png', '1.2 密碼錯誤 → 401']] },
+      { t: '5.2 無身分 / 密碼錯 → 401', why: '同 Lab 1.1、1.2(正式教材在 Lab 1),這裡只是在 Postman 重看一次同樣的結果。', ui: ['執行 1.1、1.2,看 Tests 分頁'], manual: ['hc -H "Accept: application/vnd.kafka.v2+json" $RP/topics', 'hc -u yujie:bad -H "Accept: application/vnd.kafka.v2+json" $RP/topics'], re: /HTTP 401/, expect: '兩個都是 401;Postman Tests 綠色。', imgs: [['ch05/postman-1.1.png', '1.1 未帶帳密 → 401'], ['ch05/postman-1.2.png', '1.2 密碼錯誤 → 401']] },
       { t: '5.3 三個人各自的結果', why: '5.1 gary 列 topics;5.2 yujie 寫 orders.events;5.3 yujie 寫 payments.events(無權);5.4 ming(唯讀)寫 orders.events(無權);5.5 ming 仍可列 topics。',
         ui: ['依序執行 5.1 ~ 5.5(Basic Auth 已設好)'],
         manual: [R`hc -u gary:gary-pw -H "Accept: application/vnd.kafka.v2+json" $RP/topics
@@ -267,7 +267,7 @@ hc -u yujie:yujie-pw "${'$'}{JSON[@]}" -X POST $MDS/security/1.0/principals/Grou
   {
     id: 'ch06', n: 6, title: '維運腳本:腳本共用、憑證各人各自', time: '10 分',
     goal: '同一支腳本,每個人用自己的憑證執行,權限與稽核各自獨立;反例:共用帳號會讓稽核看不到「是誰」。',
-    pre: ['Lab 5 完成(yujie 可寫 orders.*;ming 唯讀)。', '準備:每個人在自己的家目錄有 ~/.kafka/client.properties(demo 以 config/home/<user>/.kafka/ 模擬)。', '實機注意:這個檔案內是 AD 密碼的明文,權限必須是 600(chmod 600);AD 密碼到期或變更後腳本會失敗,要同步更新;密碼錯誤重試太多次會鎖定 AD 帳號(鎖定門檻請向客戶確認);腳本若要轉成排程或 CI,必須改用服務身分,不可借用人的帳號。'],
+    pre: ['環境已建好;起點(yujie 可寫 orders.*、ming 唯讀)由起點準備確保,不必先做 Lab 5。', '準備:每個人在自己的家目錄有 ~/.kafka/client.properties(demo 以 config/home/<user>/.kafka/ 模擬)。', '實機注意:這個檔案內是 AD 密碼的明文,權限必須是 600(chmod 600);AD 密碼到期或變更後腳本會失敗,要同步更新;密碼錯誤重試太多次會鎖定 AD 帳號(鎖定門檻請向客戶確認);腳本若要轉成排程或 CI,必須改用服務身分,不可借用人的帳號。'],
     autoAll: ['./demo.sh 6'],
     steps: [
       { defs: true, t: '6.1 定義 asuser 函式(模擬各人登入跳板機後執行腳本)', manual: [R`asuser() { u=$1; s=$2; docker run --rm -i --network $NET -e DEMO_USER=$u -e KAFKA_HEAP_OPTS="-Xmx256m" \
@@ -286,7 +286,7 @@ grep -v '^#' scripts/ops/orders-heartbeat.sh`], ev: 'script-content', re: /CFG=/
   {
     id: 'ch07', n: 7, title: '機器(不在 AD):服務帳號 SCRAM + RBAC', time: '12 分',
     goal: '服務身分不放 AD:在 Kafka 建 SCRAM 帳號,授權仍走 RBAC,且最小權限。',
-    pre: ['Lab 6 完成。'],
+    pre: ['環境已建好;觀念上接續 Lab 6(人與服務的身分分開)。起點狀態由起點準備確保。'],
     autoAll: ['./demo.sh 7'],
     steps: [
       { t: '7.1 建立服務帳號 svc-orders', manual: [`kc kafka-configs --bootstrap-server $BOOT --command-config /clients/token-bootstrap.properties --alter --add-config 'SCRAM-SHA-512=[password=orders-secret-v1]' --entity-type users --entity-name svc-orders`], auto: ['./scripts/create-service-account.sh svc-orders orders-secret-v1'], ev: 'create-svc', re: /Completed updating config/, expect: 'Completed updating config for user svc-orders。密碼存密碼庫,不是 AD。' },
@@ -318,7 +318,7 @@ grep -v '^#' scripts/ops/orders-heartbeat.sh`], ev: 'script-content', re: /CFG=/
   {
     id: 'ch09', n: 9, title: '(選修)密碼輪替、內部通道、AD 故障', time: '15 分',
     goal: '1) 服務密碼不中斷輪替;2) 內部通道(CONTROLLER/INTERNAL)的行為;3) AD 掛掉時誰受影響。',
-    pre: ['Lab 7 完成(svc-orders 存在且已授權寫 orders.*)。'],
+    pre: ['環境已建好;起點(svc-orders 存在且已授權寫 orders.*)由起點準備確保,不必先做 Lab 7。'],
     autoAll: ['./demo.sh 9'],
     steps: [
       { t: '9.1 輪替 1/4:建立新帳號 svc-orders-v2 並給同樣權限(新舊並行)', manual: [`kc kafka-configs --bootstrap-server $BOOT --command-config /clients/token-bootstrap.properties --alter --add-config 'SCRAM-SHA-512=[password=orders-secret-v2]' --entity-type users --entity-name svc-orders-v2`, bindRes('User:svc-orders-v2', 'DeveloperWrite', 'Topic', 'orders.', 'PREFIXED', 'gary:gary-pw'), 'sed \'s/svc-orders" password="orders-secret-v1/svc-orders-v2" password="orders-secret-v2/\' config/clients/scram-svc-orders.properties > config/clients/scram-svc-orders-v2.properties'], ev: 'rot-new', re: /HTTP 204/, expect: '[HTTP 204]。' },
@@ -335,10 +335,22 @@ grep -v '^#' scripts/ops/orders-heartbeat.sh`], ev: 'script-content', re: /CFG=/
   {
     id: 'ch10', n: 10, title: '收尾:audit log 彙整', time: '5 分',
     goal: '用 audit log 回顧整場:誰被拒、誰被允許、誰嘗試改授權。',
-    pre: ['已跑過前面的 Lab(audit log 內有事件)。', '官方預設的 audit log 只擷取 Management 與 Authorize 兩類事件(含 allowed 與 denied);produce、consume、describe 預設關閉。本 demo 由自訂路由 config/audit-router.json 開啟(經 .env 注入 broker)。'],
+    table: { rows: [
+      ['在哪個 Lab 做過', '會在 audit 留下什麼', '本 Lab 怎麼查'],
+      ['Lab 3、4(授權前後寫入、唯讀者寫入)', 'kafka.Produce:yujie、ming 的 DENIED / ALLOWED', '10.1、10.2'],
+      ['Lab 6(共用帳號反面教材)', 'kafka.Produce 的主體全是 User:shared-ops,看不出是誰', '10.2'],
+      ['Lab 7、9(服務帳號、輪替)', 'User:svc-orders、svc-orders-v2 的寫入', '10.2'],
+      ['Lab 11、10.3(改授權)', 'mds.Authorize:rbac-admin 的 ALLOWED、沒有權限者的 DENIED', '10.3'],
+      ['Lab 12(legacy app 經 REST Proxy)', '主體是 User:legacy-orders,不是 restproxy', '10.2(或 Lab 12 的 audit 步驟)'],
+      ['Lab 13、18(C3、Conjur)', 'C3 以使用者本人身分操作;輪替時舊帳號是否還有人用', 'Lab 13.3、18 的 audit 步驟'],
+      ['Lab 27.5', '同一批 audit 事件也進 Loki,可用 Grafana 查', 'Lab 27.5'],
+    ], colW: [2700, 3700, 2626] },
+    pre: ['環境已建好;本 Lab 第二步會自己製造要彙整的事件,不必先跑前面的 Lab(跑過的話彙總會多出那些事件)。', '官方預設的 audit log 只擷取 Management 與 Authorize 兩類事件(含 allowed 與 denied);produce、consume、describe 預設關閉。本 demo 由自訂路由 config/audit-router.json 開啟(經 .env 注入 broker)。'],
     autoAll: ['./demo.sh 10'],
     steps: [
-      { t: '10.1 被拒絕的事件', manual: [AUDIT(R`--topic '^(orders|payments)\.' --granted false --summary --top 10`)], ev: 'audit-denied', re: /DENIED/, expect: '次數 / principal / 動作 / 資源的彙總,例如 ming、yujie、svc-orders 的 Metadata/Produce 被拒。', imgs: [['ch10/01-audit-denied.png', '被 RBAC 擋下的動作']] },
+      { t: '10.0 先製造要彙整的事件', why: '本 Lab 不依賴前面跑過哪些 Lab:先讓 yujie 寫入一筆(允許)、ming 寫入一筆(被拒),再等幾秒讓稽核事件寫進 confluent-audit-log-events。前面跑過其他 Lab 的話,彙總會多出那些事件,這是正確的(稽核日誌只增不減)。',
+        manual: [produce('plain-yujie', 'orders.events', 'audit-ok'), produce('plain-ming', 'orders.events', 'audit-denied'), 'sleep 8   # 等稽核事件寫入'], ev: 'make-events', re: /事件已產生/, expect: 'yujie 寫入成功、ming 被拒(not authorized);之後的 10.1、10.2 一定看得到這兩筆。' },
+      { t: '10.1 被拒絕的事件',manual: [AUDIT(R`--topic '^(orders|payments)\.' --granted false --summary --top 10`)], ev: 'audit-denied', re: /DENIED/, expect: '次數 / principal / 動作 / 資源的彙總,例如 ming、yujie、svc-orders 的 Metadata/Produce 被拒。', imgs: [['ch10/01-audit-denied.png', '被 RBAC 擋下的動作']] },
       { t: '10.2 被允許的事件', manual: [AUDIT(R`--topic '^orders\.events$' --granted true --summary --top 10`)], ev: 'audit-allowed', re: /ALLOWED/, expect: '誰實際寫入/讀取了 orders.events。' },
       { t: '10.3 權限變更紀錄', why: '先讓 yujie(orders-write,沒有 rbac-admin)自己替群組加 payments. 的寫入權限:MDS 回 403。這一步由本章自己做,不依賴前面章節的執行順序(章節跑得多時,允許的事件很多,只看前幾名會把被拒的那一筆擠掉)。',
         manual: [bindRes('Group:orders-write', 'DeveloperWrite', 'Topic', 'payments.', 'PREFIXED', 'yujie:yujie-pw') + ' | tail -1', AUDIT(R`--method '^mds\.Authorize$' --granted false --summary --top 5`)], ev: 'audit-mgmt', re: /mds\.Authorize +DENIED/, expect: '[HTTP 403];mds.Authorize(AlterAccess)事件中,yujie 對 payments. 的改授權嘗試被記錄為 DENIED;允許的變更則是 bootstrap 與 gary 做的。', imgs: [['ch10/03-audit-mgmt.png', '權限變更事件:允許的(前 6 名)與 yujie 被拒的那一次']], tip: '未授權者多半在 Metadata/Describe 就被擋,所以 audit 路由要包含 describe-denied 才看得到。', warn: '不是所有拒絕都查得到:例如只有 DeveloperRead 的 ming produce 被拒(叢集層級 IdempotentWrite,官方歸為 PRODUCE 類 kafka.InitProducerId),在本 demo 的 audit 中找不到對應事件(原因未明)。稽核需求要另外盤點。' },
@@ -349,7 +361,7 @@ grep -v '^#' scripts/ops/orders-heartbeat.sh`], ev: 'script-content', re: /CFG=/
   {
     id: 'ch11', n: 11, title: '(進階)維運分權:唯讀 / ops / topic-admin / rbac-admin', time: '20 分',
     goal: '正式環境「人只能唯讀」,但仍要有人看叢集、有人管 topic、有人管授權:用 AD 群組拆成不同角色,需要時經核准臨時加入、做完收回。並且看清楚每個角色「真正能做什麼」,包含強角色的風險(實測結果,不是推論)。',
-    pre: ['Lab 4 完成(ming 在 orders-read)。', '三個維運群組(ops、topic-admin、rbac-admin)的 role 在 Lab 0 就綁好了,日常這三個群組是空的;臨時提權 = 只在 AD 把人加進群組,Kafka 端零變更。', '若之前跑過本 Lab:先清掉殘留的群組成員、role binding 與 infra.ops-demo topic(見下方「起點狀態」指令)。'],
+    pre: ['環境已建好;起點(ming 在 orders-read、三個維運群組都沒有人)由起點準備確保,不必先做 Lab 4。', '三個維運群組(ops、topic-admin、rbac-admin)的 role 在 Lab 0 就綁好了,日常這三個群組是空的;臨時提權 = 只在 AD 把人加進群組,Kafka 端零變更。', '重做本 Lab 也可以:起點準備會清掉上次殘留的群組成員、role binding 與 infra.ops-demo topic。'],
     pre_cmd: [
       ldapMod('delete', 'yujie', 'ops') + ' 2>/dev/null',
       ldapMod('delete', 'yujie', 'topic-admin') + ' 2>/dev/null',
@@ -397,7 +409,7 @@ grep -v '^#' scripts/ops/orders-heartbeat.sh`], ev: 'script-content', re: /CFG=/
   {
     id: 'ch12', n: 12, title: '(進階)legacy app 經 REST Proxy:機器用憑證、人用 Basic 並存', time: '15 分',
     goal: 'legacy app 無法用 Kafka client(沒辦法 SCRAM),只能 HTTP 丟資料。讓它經 REST Proxy 進來,同時人(AD 帳密)照常使用同一個 REST Proxy,且身分一路傳到 broker、權限最小化。',
-    pre: ['Lab 5 完成(REST Proxy 與 MDS 的 impersonation 已設定)。', '起點狀態:清掉 legacy app 與開發者群組在 orders.* 的寫入 binding(見下方指令)。', '前提認知:服務帳號(SCRAM)進 REST Proxy 會是 401——REST Proxy 把 Basic 交給 MDS 查 AD,AD 沒有服務帳號;所以機器改用 client 憑證。'],
+    pre: ['環境已建好(REST Proxy 與 MDS 的 impersonation 是基線設定)。', '起點(legacy app 與開發者群組都還沒有 orders.* 的寫入權)由起點準備確保。', '前提認知:服務帳號(SCRAM)進 REST Proxy 會是 401——REST Proxy 把 Basic 交給 MDS 查 AD,AD 沒有服務帳號;所以機器改用 client 憑證。'],
     pre_cmd: [
       unbindBoot('User:legacy-orders', 'DeveloperWrite', 'Topic', 'orders.'),
       unbindBoot('Group:orders-write', 'DeveloperWrite', 'Topic', 'orders.'),
@@ -457,7 +469,7 @@ printf "c3 憑證代 %-19s → " yujie; hc --cert /certs/client-c3.pem --key /ce
   {
     id: 'ch13', n: 13, title: '(進階)Control Center 身分盤點:人與機器各走哪條路', time: '20 分',
     goal: '像 REST Proxy 一樣盤點 C3:誰連到誰、人與機器各用什麼身分、哪些連線沒有認證、哪些身分擁有過大權力。每一項都用日誌、audit 與實際呼叫驗證,並與官方文件對照。',
-    pre: ['Lab 5 完成(C3、MDS 已設定)。', 'C3 與 REST Proxy 容器執行中;已有人用 C3 操作過(audit 內有事件)。', '官方文件重點(C3 RBAC 頁):REST 層要用 BEARER;C3 不支援 OAUTHBEARER 以外的 SASL 機制;C3 主體必須是 SystemAdmin;MDS 認證的範例是帳密。官方 mTLS RBAC 頁(7.8+)另有憑證做法(Streams 用 TokenCertificateLoginCallbackHandler)。本環境 C3→MDS 以 confluent.metadata.ssl.* 另設憑證(屬性與官方範例不同),實測可行。'],
+    pre: ['環境已建好(C3、MDS、REST Proxy 執行中)。', '本 Lab 的瀏覽器自動化會自己登入 C3 產生事件,不必先做其他 Lab。', '官方文件重點(C3 RBAC 頁):REST 層要用 BEARER;C3 不支援 OAUTHBEARER 以外的 SASL 機制;C3 主體必須是 SystemAdmin;MDS 認證的範例是帳密。官方 mTLS RBAC 頁(7.8+)另有憑證做法(Streams 用 TokenCertificateLoginCallbackHandler)。本環境 C3→MDS 以 confluent.metadata.ssl.* 另設憑證(屬性與官方範例不同),實測可行。'],
     table: { rows: [
       ['連線', '人 / 機器', '怎麼認證', '本 Lab 的證據'],
       ['瀏覽器 → C3 → MDS', '人', '登入時一次 Basic(C3 代轉給 MDS 換 token),之後全是 Bearer', '13.1 瀏覽器請求紀錄'],
@@ -469,7 +481,7 @@ printf "c3 憑證代 %-19s → " yujie; hc --cert /certs/client-c3.pem --key /ce
     ], colW: [2300, 1000, 3300, 2426] },
     autoAll: ['./demo.sh 13', './scenarios/ch13-c3-inventory.sh'],
     steps: [
-      { t: '13.1 人:瀏覽器登入 C3,看它怎麼認證', why: '瀏覽器只在登入時用一次 Basic(AD 帳密),C3 把它轉給 MDS 換 token;之後所有對 C3 的呼叫都帶 Bearer token;同時伺服器還設了一個 HttpOnly 的 auth_token cookie——C3 優先看 Bearer,沒有 Bearer 才用 cookie(實測)。token 約 1 小時到期並會續期。',
+      { t: '13.1 人:瀏覽器登入 C3,看它怎麼認證', why: '登入畫面同 Lab 2;這裡多看的是 MDS 日誌與 audit 裡記錄的主體是誰。瀏覽器只在登入時用一次 Basic(AD 帳密),C3 把它轉給 MDS 換 token;之後所有對 C3 的呼叫都帶 Bearer token;同時伺服器還設了一個 HttpOnly 的 auth_token cookie——C3 優先看 Bearer,沒有 Bearer 才用 cookie(實測)。token 約 1 小時到期並會續期。',
         ui: ['以 gary 登入 C3(https://localhost:9022)', '按 F12 開發者工具 → Network → 重新整理 Topics 頁面', '看請求標頭:第一個 .../security/1.0/authenticate 的 Authorization 是 Basic;其餘 /2.0/... 與 /api/... 都是 Bearer'],
         auto: ['cd e2e && node probe-c3-api.mjs gary'], ev: 'browser', re: /authenticate +\[Basic\]/, imgs: [['../labguide/img/c3map.png', '圖:C3 的連線與身分(人 vs 機器)']], expect: '第一個 authenticate 呼叫是 [Basic];其餘全是 [Bearer]。這與官方說明一致:前端取得 token 並持續更新。' },
       { t: '13.2 人:MDS 日誌裡的呼叫主體是使用者本人', why: 'C3 查「這個使用者能看什麼」時,是用使用者自己的 token 呼叫 MDS,所以 MDS 看到的主體是 ming,不是 c3。',
@@ -481,7 +493,7 @@ printf "c3 憑證代 %-19s → " yujie; hc --cert /certs/client-c3.pem --key /ce
 RPIP=$(docker inspect restproxy --format '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}')
 kc kafka-console-consumer --bootstrap-server $BOOT --command-config /clients/token-bootstrap.properties --topic confluent-audit-log-events --from-beginning --timeout-ms 12000 2>/dev/null | node scripts/audit-by-source.mjs $C3IP $RPIP`],
         ev: 'audit-source', re: /C3 +\| User:(MING|GARY)/, expect: '來源 C3 的事件主體是 User:GARY、User:MING(ListOffsets、FetchConsumer、CreateTopics、DescribeConfigs);來源 REST Proxy 的則是 yujie、legacy-orders 等(對照 Lab 12)。', tip: '本 demo 的 audit router 只排除 kafka-broker、kafka-controller;c3 不排除,所以用 c3 憑證改授權會被記錄(實測)。為避免 C3 輪詢 offset 洗版(不處理時幾分鐘數千筆 ListOffsets / OffsetFetch),topic 前綴的 consume 路由不記錄「被允許」的事件,被拒的仍記;代價是看不到誰成功讀了資料。' },
-      { t: '13.4 機器:C3 自己的服務身分', why: 'C3 的背景串流與內部 topic 用自己的身分:以 client 憑證(CN=c3)向 MDS 換 token,再用 OAUTHBEARER 連 broker。這與 REST Proxy 的「代為申請」不同:這裡是 C3 直接用自己的憑證換自己的 token。',
+      { t: '13.4 機器:C3 自己的服務身分', why: '用 client 憑證向 MDS 換 token 的做法同 Lab 8.3;這裡多看的是 sub = c3 等於管理員,私鑰要嚴控。C3 的背景串流與內部 topic 用自己的身分:以 client 憑證(CN=c3)向 MDS 換 token,再用 OAUTHBEARER 連 broker。這與 REST Proxy 的「代為申請」不同:這裡是 C3 直接用自己的憑證換自己的 token。',
         manual: [R`TOK=$(hc --cert /certs/client-c3.pem --key /certs/client-c3.key -H "Accept: application/json" $MDS/security/1.0/authenticate | grep -o '"auth_token":"[^"]*"' | cut -d'"' -f4)
 echo "$TOK" | cut -d. -f2 | tr '_-' '/+' | awk '{ while (length($0) % 4) $0 = $0 "="; print }' | base64 -d 2>/dev/null; echo`],
         auto: ['bash scripts/mds-token.sh c3 claims'], ev: 'c3-token', re: /"sub":"c3"/, expect: 'claims 內 "sub":"c3"、有效 1 小時。MDS 日誌中偶爾可見 c3 的 GET /authenticate(啟動與每小時續期)。' },
@@ -497,10 +509,10 @@ hc -X DELETE -H "Authorization: Bearer $T" "${'$'}{JSON[@]}" $U -d "$B"`],
 hc -H "Authorization: Bearer $T" https://control-center:9022/2.0/clusters/kafka
 hc https://control-center:9022/2.0/clusters/kafka`],
         auto: ['bash scripts/c3-api-check.sh legacy-orders'], ev: 'automation', re: /HTTP 200[\s\S]*HTTP 401/, expect: '第一個回 [] 與 [HTTP 200]:token 有效,但 legacy-orders 在 C3 沒有可見的叢集,所以是空清單(RBAC 仍生效);第二個(沒有 token)是一頁 HTML 的 401(Token is not present)。換成有叢集權限的主體(例如 gary 的 token)就會看到叢集資料。' },
-      { t: '13.7 機器:Prometheus(HTTPS + Basic)', why: 'C3 與 broker 都要帶帳密才讀得到、寫得進 Prometheus;不帶帳密就是 401。(啟用方式與其他加密補強見 Lab 17。)',
+      { t: '13.7 機器:Prometheus(HTTPS + Basic)', why: '本 Lab 只做盤點;監控端點的保護(401 / 200 / 明文被拒)正式教材在 Lab 17.4、17.5。C3 與 broker 都要帶帳密才讀得到、寫得進 Prometheus;不帶帳密就是 401。(啟用方式與其他加密補強見 Lab 17。)',
         manual: [R`echo "--- 不帶帳密"; hc "https://prometheus:9090/api/v1/query?query=count(up)"
 echo "--- 帶 Basic 帳密(c3)"; hc -u c3:prom-pw "https://prometheus:9090/api/v1/query?query=count(up)"`], auto: ['bash scripts/dcurl.sh "https://prometheus:9090/api/v1/query?query=count(up)"   # 不帶帳密', 'bash scripts/dcurl.sh -u c3:prom-pw "https://prometheus:9090/api/v1/query?query=count(up)"'], ev: 'prometheus', re: /HTTP 401[\s\S]*HTTP 200/, expect: '不帶帳密:Unauthorized 與 [HTTP 401];帶帳密:{"status":"success",...} 與 [HTTP 200]。', warn: '官方支援 C3 與 Prometheus / Alertmanager 之間的 TLS + HTTP Basic(CP 7.5 以後),另有 mTLS 設定頁。客戶不想管憑證時,以共用 server 憑證做 TLS 加上 Basic 帳密較貼合。Basic 沒有細部授權:有帳密就是完整讀寫,所以 C3 與其他用途的帳密要分開,而且 C3 的 INFO 日誌會印出 Authorization 標頭(Base64),日誌檔要保護。' },
-      { t: '13.8 機器:Alertmanager(HTTPS + Basic)連「寫入」都要帳密', why: '下面先不帶帳密建立一筆靜音(被擋),再帶 c3 帳密建立(成功,3 分鐘)並立刻刪除。沒有保護的 Alertmanager,攻擊者可以用同樣方式靜音告警。',
+      { t: '13.8 機器:Alertmanager(HTTPS + Basic)連「寫入」都要帳密', why: '同上,正式教材在 Lab 17.5;這裡多看的是「寫入(建靜音)也要帳密」。下面先不帶帳密建立一筆靜音(被擋),再帶 c3 帳密建立(成功,3 分鐘)並立刻刪除。沒有保護的 Alertmanager,攻擊者可以用同樣方式靜音告警。',
         manual: [R`S=$(date -u -d "+1 minute" +%Y-%m-%dT%H:%M:%SZ); E=$(date -u -d "+3 minutes" +%Y-%m-%dT%H:%M:%SZ)
 BODY="{\"matchers\":[{\"name\":\"alertname\",\"value\":\"probe\",\"isRegex\":false}],\"startsAt\":\"$S\",\"endsAt\":\"$E\",\"createdBy\":\"probe\",\"comment\":\"probe\"}"
 echo "--- 不帶帳密"; hc -X POST https://alertmanager:9093/api/v2/silences -H "Content-Type: application/json" -d "$BODY"

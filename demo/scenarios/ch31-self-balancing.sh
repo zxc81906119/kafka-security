@@ -5,6 +5,7 @@
 # 白話:第 24 章是人工搬分區。Self-Balancing 是 Confluent 內建的自動版:新 broker 加進來自己搬、要下線一台下一個指令就搬走並關機。
 #   這一章驗證它「會動」與「不會動」的情況,以及移除 broker 的完整過程。
 # 前置條件:叢集已啟動(scripts/up.sh);第一步會執行 scripts/sbc-setup.sh on(依序重建 controller 與 broker)
+# 冪等:是。第一步 scripts/sbc-setup.sh on 依序重建 controller 與 broker(已啟用時也會重建,較慢但結果相同);最後一步 sbc-setup.sh off 還原成基線。
 # 用法:
 #   ./demo.sh 31                  經由講解控制台跑這一章(DEMO_PAUSE=0 不暫停)
 #   ./scenarios/ch31-self-balancing.sh    直接跑
@@ -21,6 +22,10 @@ source "$(dirname "$0")/../scripts/lib-ev.sh"
 ch_begin ch31 "Self-Balancing:自動搬分區(加 broker、負載不均、移除 broker)"
 SS="$DEMO_ROOT/scripts/sbc-setup.sh"
 SL="$DEMO_ROOT/scripts/sbc-lab.sh"
+
+step prepare "【起點準備】這一章不需要額外準備,確認環境可直接開始(冪等:可單獨從這一章開始,也可重跑)" \
+  "scripts/chapter-start.sh ch31" \
+  'bash "$DEMO_ROOT/scripts/chapter-start.sh" ch31 2>&1' '\[起點\] ch31 就緒'
 
 step sbc-on "【啟用】SBC_ENABLE=true,controller 與 broker 依序重建(controller 也要設 balancer.enable 與 inter.broker.listener.name)" \
   "scripts/sbc-setup.sh on" \
@@ -41,5 +46,9 @@ step sbc-remove "【移除 broker】kafka-remove-brokers --delete:副本搬走�
 step sbc-uneven "【負載不均】資料量低於官方觸發門檻:偵測器判定沒有違反目標,不搬" \
   "scripts/reassign-lab.sh skew;看 GoalViolationDetector 日誌" \
   'bash "$SL" uneven 2>&1' '判定:資料量低於官方觸發門檻'
+
+step sbc-off "【還原】關閉 Self-Balancing(SBC_ENABLE=false),controller 與 broker 依序重建,回到基線" \
+  "scripts/sbc-setup.sh off" \
+  'bash "$SS" off 2>&1 | tail -3' '\[sbc\] 已關閉'
 
 ch_end

@@ -1,0 +1,10 @@
+# 【起點準備】orders-write 還沒有 orders. 的授權、yujie 在 orders-write、ming 不在任何群組(冪等:已正確的不動;可單獨從這一章開始,也可重跑)
+$ scripts/chapter-start.sh ch03
+  topic orders.events:已確保存在
+  綁定 Group:orders-write DeveloperWrite Topic:orders.(PREFIXED):已確保不存在
+  綁定 Group:orders-write DeveloperRead Topic:orders.(PREFIXED):已確保不存在
+  yujie 在 orders-write:已正確
+  ming 移出 orders-write:已調整
+  ming 不在任何示範群組:已確認
+  (等 MDS 套用 AD 群組變更)
+   [起點] ch03 就緒

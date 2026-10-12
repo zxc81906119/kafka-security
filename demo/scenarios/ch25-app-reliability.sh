@@ -4,6 +4,7 @@
 # ----------------------------------------------------------------------------
 # 白話:叢集再穩,應用程式寫法不對一樣會重複或掉資料。這一章用幾支短的 Java 程式實際製造狀況(broker 凍結、consumer 當機、新成員加入、交易 abort)並數結果。
 # 前置條件:叢集已啟動(scripts/up.sh);第一次執行會下載 JDK 映像(eclipse-temurin:21-jdk,約 740 MB)並複製 Kafka jar 到 Docker volume
+# 冪等:是。第一步 scripts/chapter-start.sh 確認起點(本章不需要前面的章節),重跑結果相同。
 # 用法:
 #   ./demo.sh 25                  經由講解控制台跑這一章(DEMO_PAUSE=0 不暫停)
 #   ./scenarios/ch25-app-reliability.sh    直接跑
@@ -19,6 +20,10 @@
 source "$(dirname "$0")/../scripts/lib-ev.sh"
 ch_begin ch25 "應用程式端的可靠性:冪等、重複處理、rebalance、交易"
 AL="$DEMO_ROOT/scripts/app-lab.sh"
+
+step prepare "【起點準備】這一章不需要額外準備,確認環境可直接開始(冪等:可單獨從這一章開始,也可重跑)" \
+  "scripts/chapter-start.sh ch25" \
+  'bash "$DEMO_ROOT/scripts/chapter-start.sh" ch25 2>&1' '\[起點\] ch25 就緒'
 
 step app-idempotent "【冪等 producer】送 1500 筆時把 leader broker 暫停 5 秒,逾時的請求會重送:關閉冪等會寫出重複訊息,開啟冪等則不會" \
   "java Producer.java <topic> 1500 200 false|true;docker pause <leader>;java Counter.java" \

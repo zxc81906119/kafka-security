@@ -152,3 +152,76 @@ export const LAB_CONF = {
   32: [{ comp: 'broker-tier', keys: ['confluent.tier.feature', 'confluent.tier.backend', 'confluent.tier.s3.aws.endpoint.override', 'confluent.tier.s3.cred.file.path', 'confluent.tier.s3.force.path.style.access', 'confluent.tier.metadata.replication.factor'] }],
   33: [{ comp: 'controller', keys: ['controller.quorum.bootstrap.servers'] }],
 };
+
+// ============================================================================
+// LAB_FILES — 不在 Kafka 元件 properties 裡的必要設定(Prometheus、Alertmanager、Grafana、blackbox、Alloy、連接器、物件儲存……)
+//   每項三種寫法之一:{ path, from?, max? } 產生手冊時從實際檔案讀(from = 從第一個符合的行開始,max = 最多幾行);
+//   { cmd } 執行指令取輸出(例如產生連接器設定);{ text } 固定片段(設計上固定、不隨環境變的,例如 ACL 指令)。
+//   note = 這段設定的用途與漏設的後果。檔案內容就是實測環境的設定,所以手冊不會與環境脫節。
+// ============================================================================
+export const LAB_FILES = {
+  22: [
+    { label: 'Prometheus 抓取 JMX exporter(官方 job 名稱與 env 標籤,官方儀表板才查得到)', path: 'config/c3/jmx-scrape.tpl', from: 'job_name: kafka-broker', max: 8,
+      note: 'scheme https + basic_auth(password_file)+ 用行內 CA 驗證 exporter 憑證;不跳過驗證。broker、controller、Schema Registry、Connect、REST Proxy 各一個 job(共 13 個 exporter)。' },
+  ],
+  23: [
+    { label: 'blackbox exporter 的探測模組', path: 'config/blackbox/blackbox.yml', max: 30, note: 'tls_connect 探測對外 TLS 端點;tls_mtls 帶一張無權限的 client 憑證完成內部 mTLS 握手(不能把 super user 的內部憑證放進探測容器)。' },
+    { label: '憑證到期告警規則', path: 'config/c3/ops_rules_cert.yml', max: 30, note: '少於 30 天 warning、少於 7 天 critical;探測失敗也要告警(否則憑證過期和探測壞掉分不出來)。' },
+  ],
+  26: [
+    { label: '主機磁碟告警規則(node_exporter)', path: 'config/c3/ops_rules_host.yml', max: 30, note: '排除 tmpfs 等虛擬檔案系統;有 promtool 單元測試(config/c3/ops_rules_host.test.yml)。' },
+    { label: 'Grafana 的 AD 登入(LDAPS、群組對映角色)', path: 'config/grafana/ldap.toml', max: 40, note: 'bind 密碼只用環境變數展開,由啟動指令從密碼檔讀入;群組對映:cluster-admin → Admin,其他 → Viewer。' },
+  ],
+  27: [
+    { label: 'Alloy:日誌與 trace 先寫進 Kafka,再由 Kafka 進 Loki / Tempo', path: 'config/observability/config.alloy', max: 40, note: '下游(Loki、Tempo)維護時資料留在 Kafka,恢復後補齊;寫入與讀取用不同的 Kafka 帳號。' },
+  ],
+  30: [
+    { label: 'Alertmanager 寄信版設定', path: 'config/mail/alertmanager-mail.yml', from: 'global:', max: 50, note: '強制 STARTTLS、帳密從檔案讀(smtp_auth_password_file);依 severity 分流;group_by 合併;send_resolved 解除也通知。demo 的時間較短,正式環境建議 group_wait 30s、group_interval 5m、repeat_interval 4h。' },
+  ],
+  34: [
+    { label: 'Watchdog 規則(永遠觸發的心跳)', path: 'config/c3/watchdog_rules.yml', max: 25, note: 'expr: vector(1);做法依 kube-prometheus。' },
+    { label: 'Alertmanager 的心跳路由(放第一條,不落到其他 receiver)', text: [
+      'route:',
+      '  routes:',
+      '    - receiver: watchdog',
+      '      matchers: [ alertname="Watchdog" ]',
+      '      group_wait: 0s',
+      '      group_interval: 1m',
+      '      repeat_interval: 1m        # 要是 group_interval 的倍數,否則心跳間隔被拉長',
+      'receivers:',
+      '  - name: watchdog',
+      '    webhook_configs:',
+      '      - url: https://<企業監控平台>/heartbeat',
+      '        http_config: { basic_auth: { username: <帳號>, password_file: <密碼檔> }, tls_config: { ca_file: <行內 CA> } }',
+    ].join('\n'), note: '外部看門狗(正式環境是行內 24 小時值班的企業監控平台)180 秒沒收到心跳就通知「監控鏈路失效」。' },
+  ],
+  35: [
+    { label: 'broker 的機架標籤(每台不同)', text: 'broker.rack=<這台 broker 所在的機架>      # 例:broker1、broker2 = rack-a,broker3 = rack-b,broker4 = rack-c', note: '只設 broker(controller 不存資料);修改要重啟,依序一台一台做。要撐過整個機架故障至少 3 個機架,官方建議各機架台數相同;既有 topic 不會自動重排。' },
+  ],
+  36: [
+    { label: 'DR 站建立 link 的設定(DR 主動連主站)', text: [
+      'bootstrap.servers=<主站 broker1>:9094,<主站 broker2>:9094,<主站 broker3>:9094,<主站 broker4>:9094',
+      'security.protocol=SASL_SSL',
+      'sasl.mechanism=SCRAM-SHA-512',
+      'sasl.jaas.config=org.apache.kafka.common.security.scram.ScramLoginModule required username="svc-dr-link" password="<由 CyberArk 提供>";',
+      'ssl.truststore.location=<SSL_DIR>/truststore.p12',
+      'consumer.offset.sync.enable=true',
+      'consumer.offset.sync.ms=5000',
+      '# consumer group 範圍不能寫在這裡:開啟 offset 同步時要用 --consumer-group-filters-json-file 傳(寫在設定檔會被拒)',
+      '{"groupFilters":[{"name":"dr-","patternType":"PREFIXED","filterType":"INCLUDE"}]}',
+    ].join('\n'), note: '主站上的 link 帳號只給讀取:DeveloperRead(Topic、Group)。不要設 cluster.link.prefix(設了就不能 reverse)。' },
+    { label: '主站給 link 帳號補的 ACL(DeveloperRead 不含 DescribeConfigs)', text: 'kafka-acls --add --allow-principal User:svc-dr-link --operation DescribeConfigs --topic <topic 前綴> --resource-pattern-type prefixed', note: '只有 DeveloperRead 時建鏡像被拒(TopicAuthorizationException: While fetching configuration for topic);不用 DeveloperManage(會多出建立、刪除、改設定)。已列入向 Confluent 確認(CONFLUENT-QUESTIONS D6)。DR 站的 RBAC 綁定與 SCRAM 帳號不會同步,要事先建好。' },
+  ],
+};
+
+// JVM_PARAMS — 附錄 F 的 JVM 參數:不在 properties 檔裡(RHEL 上放 systemd override 的 Environment=),config-export 抓不到,另外列。
+//   值與 docker-compose.yml 相同;<…> 依環境填入。
+export const JVM_PARAMS = [
+  ['broker、controller', 'KAFKA_OPTS', '-javaagent:<JMX_DIR>/jmx_prometheus_javaagent.jar=7778:<JMX_DIR>/kafka_broker_tls.yml(controller 用 kafka_controller_tls.yml)', 'JMX exporter:HTTPS + Basic 吐出指標給 Prometheus(Lab 22)', '沒有指標;URP、離線分區等告警不會響'],
+  ['Schema Registry', 'SCHEMA_REGISTRY_OPTS', '-javaagent:<JMX_DIR>/jmx_prometheus_javaagent.jar=7778:<JMX_DIR>/confluent_schemaregistry_tls.yml', 'JMX exporter(官方 Schema Registry 儀表板)', '儀表板空白'],
+  ['REST Proxy', 'KAFKAREST_OPTS', '-javaagent:<JMX_DIR>/jmx_prometheus_javaagent.jar=7778:<JMX_DIR>/confluent_rest_tls.yml', 'JMX exporter(官方 REST Proxy 儀表板)', '儀表板空白'],
+  ['Connect', 'KAFKA_OPTS', '-javaagent:<JMX_DIR>/jmx_prometheus_javaagent.jar=7778:<JMX_DIR>/kafka_connect_tls.yml', 'JMX exporter(官方 Connect 儀表板)', '儀表板空白'],
+  ['Connect', 'KAFKA_HEAP_OPTS', '-Xms512M -Xmx768M(依主機記憶體調整;官方建議 0.5 到 4 GB)', '明確設定堆積', '映像預設 -Xmx2G:容器上限較小時被 OOM 終止(實測 connect2 exit 137、OOMKilled);VM 上也要和主機記憶體一起規劃'],
+  ['broker(Tiered Storage)', 'KAFKA_OPTS 追加', '同上(JVM 信任庫)', 'Tiered Storage 的 AWS SDK 走 JVM 預設信任庫(Lab 32)', '上傳物件時 TLS 驗證失敗'],
+  ['所有元件', '內部執行 Kafka CLI 時', 'KAFKA_OPTS=""(清空)', '同一台主機上再執行 Kafka 工具時,不要繼承 javaagent', 'agent 再綁一次 7778 → 埠衝突,工具起不來'],
+];

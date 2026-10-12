@@ -1,0 +1,5 @@
+# 【起點準備】voter 名單收斂成 {1,2,3}:上次汰換留下的 controller4 移除、controller3 重新加入(冪等:可單獨從這一章開始,也可重跑)
+$ scripts/chapter-start.sh ch33
+  voter:1 2 3 
+  判定:名單已還原成 {1,2,3}(controller3 重新加入、controller4 移除並刪除),可以再做一次汰換
+   [起點] ch33 就緒

@@ -1,4 +1,0 @@
-# 【內部通道】拿 SCRAM 帳密(svc-orders)連 CONTROLLER → 拒絕:這個埠根本不接受 SASL,只認憑證
-$ kafka-broker-api-versions --bootstrap-server controller1:9093 --command-config svc-orders.properties
-WARN [LegacyAdminClient clientId=admin-1] Unexpected error from controller1/172.20.0.4 (channelId=-1); closing connection
-java.lang.IllegalStateException: handshake is not completed

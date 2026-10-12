@@ -1,6 +1,0 @@
-# 【日常】ming(orders-read)可讀資料
-$ kafka-console-consumer --command-config ming.properties --topic orders.events --from-beginning
-old-pw
-new-pw
-new-pw
-Processed a total of 3 messages

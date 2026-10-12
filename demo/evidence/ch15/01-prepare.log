@@ -1,0 +1,7 @@
+# 【起點準備】yujie 在 orders-write、群組可讀寫 orders.(冪等:已正確的不動;可單獨從這一章開始,也可重跑)
+$ scripts/chapter-start.sh ch15
+  topic orders.events:已確保存在
+  yujie 在 orders-write:已正確
+  綁定 Group:orders-write DeveloperWrite Topic:orders.(PREFIXED):已確保
+  綁定 Group:orders-write DeveloperRead Topic:orders.(PREFIXED):已確保
+   [起點] ch15 就緒

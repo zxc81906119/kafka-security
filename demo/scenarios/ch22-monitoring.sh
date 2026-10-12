@@ -4,6 +4,7 @@
 # ----------------------------------------------------------------------------
 # 白話:監控的價值在「出事時真的會響」。這一章把 broker、controller 實際停掉,看 Prometheus 的告警規則有沒有在預期時間觸發、有沒有送到 Alertmanager、恢復後有沒有解除;也檢查監控端點本身有沒有被保護(HTTPS、帳密、mTLS、帳號分開)。
 # 前置條件:需要 Prometheus、Alertmanager:docker compose --profile c3 up -d prometheus alertmanager
+# 冪等:是。第一步 scripts/chapter-start.sh 確認起點(本章不需要前面的章節),重跑結果相同。
 # 用法:
 #   ./demo.sh 22                  經由講解控制台跑這一章(DEMO_PAUSE=0 不暫停)
 #   ./scenarios/ch22-monitoring.sh    直接跑
@@ -16,6 +17,10 @@
 source "$(dirname "$0")/../scripts/lib-ev.sh"
 ch_begin ch22 "平台監控與告警:URP、離線分區、active controller 的告警實際觸發"
 MON="$DEMO_ROOT/scripts/monitor-lab.sh"
+
+step prepare "【起點準備】這一章不需要額外準備,確認環境可直接開始(冪等:可單獨從這一章開始,也可重跑)" \
+  "scripts/chapter-start.sh ch22" \
+  'bash "$DEMO_ROOT/scripts/chapter-start.sh" ch22 2>&1' '\[起點\] ch22 就緒'
 
 step mon-rules-tel "【路徑 A:telemetry】7 條平台告警規則已載入 Prometheus 並評估,基準狀態沒有告警(規則 config/c3/ops_rules.yml)" \
   "GET /api/v1/rules(Prometheus);GET /api/v1/alerts" \

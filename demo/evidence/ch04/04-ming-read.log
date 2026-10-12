@@ -1,6 +1,0 @@
-# ming(唯讀)可以讀取 orders.events
-$ kafka-console-consumer --command-config ming.properties --topic orders.events --from-beginning
-abort-check
-after-parallel-rotate
-after-finish
-Processed a total of 3 messages

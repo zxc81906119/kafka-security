@@ -1,0 +1,6 @@
+# ming(唯讀)可以讀取 orders.events
+$ kafka-console-consumer --command-config ming.properties --topic orders.events --from-beginning
+still-ok
+ERROR Error processing message, terminating consumer process: 
+org.apache.kafka.common.errors.TimeoutException
+Processed a total of 1 messages

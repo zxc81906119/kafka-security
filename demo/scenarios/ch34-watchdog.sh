@@ -6,6 +6,7 @@
 #   看門狗的做法:一條永遠在觸發的 Watchdog 告警當心跳,送到外部看門狗(代表行內既有的企業監控平台);心跳停了就是異常。
 #   這一章實測三種失效:停 Prometheus、停 Alertmanager、元件都健康但設定錯(HA 也察覺不到的那種)。
 # 前置條件:叢集已啟動(scripts/up.sh);第一步會執行 scripts/watchdog-setup.sh on(重啟 prometheus、alertmanager)。
+# 冪等:是。第一步 scripts/chapter-start.sh 確認起點(本章不需要前面的章節),重跑結果相同。
 # 用法:
 #   ./demo.sh 34                  經由講解控制台跑這一章(DEMO_PAUSE=0 不暫停)
 #   ./scenarios/ch34-watchdog.sh  直接跑
@@ -16,6 +17,10 @@
 source "$(dirname "$0")/../scripts/lib-ev.sh"
 ch_begin ch34 "看門狗:監控自己壞掉時,誰會知道"
 WL="$DEMO_ROOT/scripts/watchdog-lab.sh"
+
+step prepare "【起點準備】這一章不需要額外準備,確認環境可直接開始(冪等:可單獨從這一章開始,也可重跑)" \
+  "scripts/chapter-start.sh ch34" \
+  'bash "$DEMO_ROOT/scripts/chapter-start.sh" ch34 2>&1' '\[起點\] ch34 就緒'
 
 step wd-setup "【啟用】Prometheus 加一條永遠在觸發的 Watchdog;Alertmanager 每 60 秒把它送到外部看門狗(HTTPS + Basic);看門狗 180 秒沒收到就判定失效" \
   "scripts/watchdog-setup.sh on" \

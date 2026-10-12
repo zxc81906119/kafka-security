@@ -5,6 +5,7 @@
 # 白話:前面停的是「一台」broker。機房歲修常常是「一整個機架」一起斷電。broker.rack 讓副本分散到不同機架,
 #   但能不能撐過整個機架故障,取決於機架數:這一章用 2 個機架與 3 個機架各做一次,實測差在哪裡。
 # 前置條件:叢集已啟動(scripts/up.sh)。
+# 冪等:是。第一步 scripts/chapter-start.sh 確認起點(本章不需要前面的章節),重跑結果相同。
 # 用法:
 #   ./demo.sh 35                  經由講解控制台跑這一章(DEMO_PAUSE=0 不暫停)
 #   ./scenarios/ch35-rack.sh      直接跑
@@ -15,6 +16,10 @@
 source "$(dirname "$0")/../scripts/lib-ev.sh"
 ch_begin ch35 "多機架:整個機架斷電時,資料還寫得進去嗎"
 RS="$DEMO_ROOT/scripts/rack-setup.sh"; RL="$DEMO_ROOT/scripts/rack-lab.sh"
+
+step prepare "【起點準備】這一章不需要額外準備,確認環境可直接開始(冪等:可單獨從這一章開始,也可重跑)" \
+  "scripts/chapter-start.sh ch35" \
+  'bash "$DEMO_ROOT/scripts/chapter-start.sh" ch35 2>&1' '\[起點\] ch35 就緒'
 
 step rack-two "【2 個機架】broker1、2 在 rack-a,broker3、4 在 rack-b;依序重建 broker 讓 broker.rack 生效" \
   "scripts/rack-setup.sh two" \

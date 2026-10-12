@@ -31,13 +31,15 @@ declare -A CH=(
   [12]="ch12-legacy-app.sh|(進階)legacy app 經 REST Proxy:機器用憑證、人用 Basic,並存"
   [13]="ch13-c3-inventory.sh|(進階)Control Center 身分盤點:人與機器各走哪條路"
   [14]="ch14-admin-rest.sh|(進階)broker 內建 Admin REST 的保護:匿名擋下、依使用者授權"
+  [15]="ch15-offboarding.sh|(進階)人員異動:AD 收回群組後,已發出的 token 立刻失去權限"
+  [16]="ch16-opmenu.sh|(進階)OP menu:日常維運選單(登入、查看、維護模式、權限覆核、audit、時窗與並行鎖、滾動重啟)"
   [17]="ch17-transport-hardening.sh|(進階)傳輸加密補強:AD 走 LDAPS、監控 HTTPS + Basic、C3 HTTPS"
   [18]="ch18-cyberark.sh|(進階)與行內 CyberArk 整合:應用程式取密碼、輪替、OP menu 取帳密、設定檔密碼不落地(Conjur)"
   [19]="ch19-stolen-account.sh|(進階)帳號被偷之後:限速、失效、告警(重新認證、連線上限、配額、認證失敗告警、AD 鎖定)"
   [30]="ch30-alert-mail.sh|(進階)告警寄成信:Alertmanager 到自架郵件伺服器(分流、合併、解除通知、郵件伺服器保護;需 Prometheus;不在 all 內)"
   [31]="ch31-self-balancing.sh|(進階)Self-Balancing:自動搬分區(加 broker、負載不均不觸發的條件、移除 broker;約 40 分鐘;不在 all 內)"
   [32]="ch32-tiered-storage.sh|(進階)Tiered Storage:舊資料放到物件儲存 MinIO(上傳、本機變小、從頭讀、重啟、存取保護;不在 all 內)"
-  [33]="ch33-dynamic-quorum.sh|(進階)動態 quorum:靜態升級成動態、不停機汰換壞掉的 controller(需全新環境 scripts/ha.sh on;約 12 分鐘;不在 all 內)"
+  [33]="ch33-dynamic-quorum.sh|(進階)動態 quorum:不停機汰換壞掉的 controller,做完把名單還原成 {1,2,3}(約 15 分鐘;不在 all 內)"
   [34]="ch34-watchdog.sh|(進階)看門狗:監控自己壞掉時,誰會知道(停 Prometheus、停 Alertmanager、設定錯;約 25 分鐘;不在 all 內)"
   [35]="ch35-rack.sh|(進階)多機架:整個機架斷電時,資料還寫得進去嗎(2 個與 3 個機架;約 25 分鐘;不在 all 內)"
   [36]="ch36-dr.sh|(進階)DR 與演練:Cluster Linking、failover、量測 RPO / RTO、切回、演練紀錄(約 40 分鐘;不在 all 內)"
@@ -67,7 +69,7 @@ case "${1:-menu}" in
   *)
     while true; do
       echo; echo "═══ Confluent 安全方案 Demo ═══"
-      for n in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 35 36; do printf "  %2s) %s\n" "$n" "${CH[$n]#*|}"; done
+      for n in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 35 36; do printf "  %2s) %s\n" "$n" "${CH[$n]#*|}"; done
       echo "   r) 重置   q) 離開"
       read -r -p "選擇章節: " c
       case "$c" in q) break ;; r) ./scripts/reset.sh ;; [0-9]|1[0-9]|2[0-9]|3[0-6]) run_ch "$c" ;; esac

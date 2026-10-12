@@ -1,6 +1,7 @@
 // 產生 Word 手冊:Confluent Platform 安全方案 —— 手把手 Lab 手冊
 // 內容來自 labs.mjs;「實際輸出」來自 evidence/*/NN-slug.log(實跑結果);圖片來自 evidence/**.png
 import fs from 'node:fs';
+import { execSync } from 'node:child_process';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
@@ -10,7 +11,8 @@ import {
 import { LABS as LABS0, SETUP, IDENTITIES } from './labs.mjs';
 import { LABS_EXTRA } from './labs-extra.mjs';
 import * as S from './story.mjs';
-import { NOTES, LAB_CONF, COMPONENT_LABEL } from './config-notes.mjs';
+import { NOTES, LAB_CONF, LAB_FILES, JVM_PARAMS, COMPONENT_LABEL } from './config-notes.mjs';
+import { START, DEFAULT as START_DEFAULT } from './start-notes.mjs';
 const LABS = [...LABS0, ...LABS_EXTRA];
 const VERIFY_NOTE = process.env.VERIFY_NOTE || '(驗證說明待填)';
 
@@ -95,8 +97,19 @@ function table(rows, colW, { head = true, size = 19 } = {}) {
 }
 
 function pngSize(f) { const b = fs.readFileSync(f); return { w: b.readUInt32BE(16), h: b.readUInt32BE(20) }; }
-function image(rel, cap) {
+// 終端截圖 evidence/chNN/NN-<步驟>.png:章節增減步驟時編號會變,找不到原編號就依步驟名稱找(NN- 任意)
+function resolveEvidence(rel) {
   const f = path.join(EV, rel);
+  if (fs.existsSync(f)) return f;
+  const m = rel.match(/^(ch\d\d)\/\d\d-(.+)$/);
+  if (m && fs.existsSync(path.join(EV, m[1]))) {
+    const hit = fs.readdirSync(path.join(EV, m[1])).find(x => x.replace(/^\d\d-/, '') === m[2]);
+    if (hit) return path.join(EV, m[1], hit);
+  }
+  return f;
+}
+function image(rel, cap) {
+  const f = resolveEvidence(rel);
   if (!fs.existsSync(f)) { missing.push(rel); return [P([run(`[缺圖:${rel}]`, { color: RED })])]; }
   const s = pngSize(f);
   const maxW = 590, maxH = 430;
@@ -144,7 +157,7 @@ add(
     ['目錄服務', 'OpenLDAP(以 AD 屬性模擬;非真 AD,細節見「如何使用本手冊」的限制說明)'],
     ['環境', 'Docker Compose(Windows 11 + Git Bash 驗證;Linux/macOS 指令相同)'],
     ['證據', '所有「實際輸出」與截圖均來自本環境實跑(專案 demo/evidence/)'],
-    ['與舊版手冊', '本版以故事串起來,並新增 Lab 15(人員異動)、Lab 16(OP menu)、Lab 17(傳輸加密補強)、Lab 18(CyberArk 整合)、Lab 19(帳號被偷之後)與 Lab 20(Schema Registry 與欄位級加密);舊版 Confluent-Security-Lab-Guide.docx 保留'],
+    ['與舊版手冊', '本版以故事串起來,在舊版的 Lab 1–14 之後新增 Lab 15–36(人員異動、OP menu、傳輸加密、CyberArk、帳號被偷之後、Schema Registry、HA、監控與告警、容量、應用程式可靠性、可觀測性、Connect、Self-Balancing、Tiered Storage、動態 quorum、看門狗、多機架、DR);每個 Lab 都能單獨開始或重做。舊版 Confluent-Security-Lab-Guide.docx 保留'],
   ], [2200, 6826]),
   new Paragraph({ children: [new PageBreak()] }),
 );
@@ -160,7 +173,7 @@ add(P('目標:上課當天每個人的電腦都能在 10 分鐘內把環境建�
 add(H2('要安裝的軟體'));
 add(...table([
   ['軟體', '版本 / 設定', '用途'],
-  ['Docker Desktop', '最新版;Settings → Resources 記憶體 ≥ 11 GB', '跑與客戶正式環境相同的 HA 拓樸(3 controller、4 broker、REST Proxy / Schema Registry / Connect 各 2 台、Control Center 1 台);實測全部啟動(20 個容器)約用 8.3 到 8.6 GB'],
+  ['Docker Desktop', '最新版;Settings → Resources 記憶體 ≥ 11 GB', '跑與客戶正式環境相同的 HA 拓樸(3 controller、4 broker、REST Proxy / Schema Registry / Connect 各 2 台、Control Center 1 台);實測全部啟動(20 個容器,含 13 個 JMX exporter)約用 9.2 GB;做選修 Lab 前先關掉 IDE、Office 等大型程式'],
   ['Git for Windows(Git Bash)', '最新版', '所有指令都在 Git Bash 執行(Linux / macOS 用內建終端機即可)'],
   ['Node.js', '24(LTS 亦可)', 'UI 自動化截圖、Postman 批次測試(newman)、產生本手冊'],
   ['Postman 桌面版', '最新版(選裝)', '只有 Lab 5 用;不裝可改用 newman'],
@@ -196,6 +209,11 @@ add(...table([
   ['nginx:stable', '0.24 GB', 'REST Proxy 前面的 L4 負載平衡器(F5 的替身);Lab 18 的 Conjur 也用它'],
   ['prom/blackbox-exporter:v0.25.0', '40 MB', '憑證到期監控(22 個 TLS 端點)'],
   ['python:3-alpine', '0.08 GB', 'Lab 34 的外部看門狗(第一次跑 Lab 34 時才下載)'],
+  ['eclipse-temurin:21-jdk', '0.74 GB', 'Lab 25、27 的應用程式(第一次用到時由腳本下載)'],
+  ['grafana/grafana、prom/node-exporter、danielqsj/kafka-exporter', '約 2 GB', 'Lab 26 的 Grafana、主機指標、consumer lag'],
+  ['grafana/loki、grafana/tempo、grafana/alloy', '約 1.3 GB', 'Lab 27 的日誌與 trace'],
+  ['axllent/mailpit', '60 MB', 'Lab 30 的郵件伺服器替身'],
+  ['quay.io/minio/minio、quay.io/minio/mc', '0.36 GB', 'Lab 32 的物件儲存與管理工具'],
 ], [4200, 1500, 3326], { size: 17 }));
 add(H2('課前常見問題'));
 add(...table([
@@ -222,6 +240,8 @@ add(...table([
   ['Schema Registry(schema-registry1、schema-registry2)', '8085 / 8185', 'HTTPS;認證交 MDS(Lab 20)'],
   ['Connect(connect1、connect2,同一個 group)', '8083 / 8183', 'HTTPS;AD 帳密,授權交 MDS(Lab 29)'],
   ['Control Center', '9022(9021 只給容器內健康檢查)', 'HTTPS;人用 AD 帳密;C3 自己用 CN=c3 憑證'],
+  ['JMX exporter(13 個:broker 4、controller 3、Schema Registry 2、Connect 2、REST Proxy 2)', '7778 只在容器內', 'HTTPS + Basic(帳號 Prometheus,密碼雜湊);Prometheus 抓取(Lab 22、26)'],
+  ['blackbox exporter', '9115 只在容器內', 'HTTPS + mTLS;探測 22 個 TLS 端點的憑證到期(Lab 23)'],
   ['Prometheus / Alertmanager', '只在容器內(9090 / 9093)', 'HTTPS + Basic;帳號依用途分開(Prometheus:c3、telemetry、ops;Alertmanager:c3、prometheus、opmenu、ops;測試值)'],
 ], [2600, 2900, 3526], { size: 17 }));
 add(...image('../labguide/img/arch-identity.png', '身分路徑:人走 AD、服務走 SCRAM、元件走憑證換 token、legacy app 經 REST Proxy'));
@@ -291,9 +311,25 @@ function confProps(comp, keys) {
   return keys ? keys.map(k => props.find(p => p.key === k)).filter(Boolean) : props;
 }
 // 本章必要設定:可複製的 properties 區塊 + 說明表(用途 / 漏設會怎樣 / 依據)
+// LAB_FILES 的一項 → 片段文字:從實際檔案讀(from / max)、執行指令(cmd),或固定片段(text)
+function fileSnippet(f) {
+  if (f.text) return f.text;
+  if (f.cmd) { try { const o = execSync(f.cmd, { cwd: path.resolve(here, '..'), encoding: 'utf8' }); try { return JSON.stringify(JSON.parse(o), null, 2); } catch { return o.trim(); } } catch { return `(無法執行:${f.cmd})`; } }
+  const fp = path.resolve(here, '..', f.path);
+  if (!fs.existsSync(fp)) return `(找不到 ${f.path})`;
+  let lines = fs.readFileSync(fp, 'utf8').replace(/\r/g, '').split('\n');
+  if (f.from) { const i = lines.findIndex(l => l.includes(f.from)); if (i >= 0) lines = lines.slice(i); }
+  return lines.slice(0, f.max || 40).join('\n').trimEnd();
+}
 function confBlock(n) {
-  const list = LAB_CONF[n]; if (!list) return;
+  const list = LAB_CONF[n] || [], files = LAB_FILES[n] || [];
+  if (!list.length && !files.length) return;
   add(label('本章必要設定(正式環境要寫入的設定;值取自本環境實測,<…> 依環境填入,完整清單見附錄 F)', INK));
+  for (const f of files) {
+    add(P([run(f.label, { bold: true, size: 19 }), ...(f.path ? [run(`(${f.path})`, { color: MUTE, size: 17 })] : [])]));
+    add(...code(fileSnippet(f), { bar: INK, cut: 130 }));
+    if (f.note && !BRIEF.has('notes')) add(P([run('說明:', { bold: true, color: INK }), run(f.note)]));
+  }
   for (const { comp, keys } of list) {
     const props = confProps(comp, keys); if (!props.length) continue;
     add(P([run(COMPONENT_LABEL[comp] || comp, { bold: true, size: 19 })]));
@@ -315,10 +351,14 @@ function renderLab(lab) {
     ['項目', '內容'],
     ['目標', lab.goal],
     ['預估時間', lab.time],
-    ['前置條件', [...lab.pre, ...(lab.n >= 3 ? ['起點狀態:Lab 之間會留下權限與群組;重做這個 Lab、或指令結果與「預期結果」不同時(例如應該被拒卻靜默成功),先在 demo 目錄執行 ./demo.sh reset 回到起點,再從本 Lab 開始。'] : [])].join('\n')],
+    ['前置條件', [...lab.pre, ...(lab.n >= 1 ? ['可以單獨從這個 Lab 開始,也可以接著前一個做;重做也可以。開始前先執行下方「從這裡開始時先執行」的指令。'] : [])].join('\n')],
   ], [1700, 7326], { size: 19 }));
   if (lab.table) { add(label('盤點表', TEAL)); add(...table(lab.table.rows, lab.table.colW, { size: 17 })); }
-  if (lab.pre_cmd) { add(label('開始前的起點狀態(重置)', AMBER)); add(...code(lab.pre_cmd.join('\n'))); }
+  if (lab.n >= 1) {   // 每個 Lab 都能單獨開始:起點由 scripts/chapter-start.sh 收斂(冪等,已正確的不動)
+    add(label('從這裡開始時先執行(冪等:已正確的不動,重跑也可以)', AMBER));
+    add(...code(`bash scripts/chapter-start.sh ch${String(lab.n).padStart(2, '0')}`));
+    add(P([run('它會確保:', { bold: true, color: AMBER }), run(START[lab.n] || START_DEFAULT)]));
+  }
   if (lab.autoAll) { add(label('整個 Lab 一鍵跑完(專案包好的指令)', GREEN)); add(...code(lab.autoAll.join('\n'), { bar: GREEN })); }
   for (const s of lab.steps) {
     add(H3(s.t));
@@ -371,7 +411,8 @@ add(...table([['還沒驗證或要補的', '說明'], ...S.EPILOGUE.todo], [2600
 // ---------- 附錄 ----------
 add(H1('附錄 A  重置、清理與疑難排解'));
 add(H2('重置到起點'));
-add(...code(`./scripts/reset.sh      # LDAP 群組、示範用 role binding、服務帳號回到起點(不重建叢集)
+add(...code(`bash scripts/chapter-start.sh chNN   # 只把環境收斂到某一章的起點(冪等;每個 Lab 的「從這裡開始時先執行」)
+./scripts/reset.sh      # LDAP 群組、示範用 role binding、服務帳號回到起點(不重建叢集)
 ./demo.sh reset         # 同上
 bash scripts/ha.sh on   # 關閉並移除全部容器與資料,再依 scripts/up.sh 全新重建(冷啟動重建用)`));
 add(H2('疑難排解'));
@@ -387,13 +428,13 @@ add(...table([
   ['producer 退出碼為 0 但其實被拒', 'console producer 的授權失敗只印錯誤訊息;請看輸出,不要只看退出碼(專案的 send_result 會判斷)。'],
   ['Git Bash 路徑被改寫', 'export MSYS_NO_PATHCONV=1;D 用 pwd -W。'],
   ['docker 綁不上主機埠(ports are not available … forbidden by its access permissions)', 'Windows 每次開機可能保留一段埠範圍(netsh int ipv4 show excludedportrange protocol=tcp),落在範圍內的埠(例如 8086、8091、8092)docker 綁不上。在 demo/.env 設 HOST_PORT_MDS、HOST_PORT_MDS2、HOST_PORT_RESTPROXY 等覆蓋;up.sh 與 preflight.sh 會讀同一份。Postman 的 environment 也要改成同樣的埠。'],
-  ['記憶體不足', 'Docker Desktop 配置 ≥ 10GB;不需要 C3 的 Lab 可不啟動 c3 profile。'],
+  ['記憶體不足(整台電腦變慢或白畫面)', 'Docker Desktop 配置 ≥ 11 GB;基線約 9.2 GB,做選修 Lab 前先關掉 IDE、Office 等大型程式;各選修 Lab 做完會關閉自己啟動的元件。'],
   ['瀏覽器連 C3 出現「連線不是私人連線」', 'demo 的 CA 是自簽的,瀏覽器預設不信任:按「進階」繼續,或把 demo/certs/ca.pem 匯入「受信任的根憑證授權單位」。正式環境由 AD 群組原則把內部 CA 發給使用者電腦。'],
   ['Windows 的 curl 連 HTTPS 失敗(CRYPT_E_NO_REVOCATION_CHECK)', '加 --ssl-no-revoke。內部 CA 沒有憑證撤銷清單,curl(schannel)無法檢查撤銷就會拒絕,不是憑證有問題。'],
   ['Prometheus 日誌出現 TLS handshake error … EOF', '容器的健康檢查只打開 TCP 埠就關閉,不是真正的 HTTPS 請求,可忽略。'],
   ['broker 日誌出現 Telemetry Metrics Failure(401 Unauthorized)', 'broker 推指標到 Prometheus 的 Basic 帳密(api.key / api.secret)與 web-config-prom.yml 的 bcrypt 雜湊不一致;兩個監控元件的雜湊不要貼反(Prometheus 與 Alertmanager 各一份)。'],
   ['冷啟動:controller 或 broker 起不來', '一律用 bash scripts/up.sh 啟動,不要直接 docker compose up:controller 要先起來並 healthy,broker 才起得來(controller 的 authorizer 在等 broker 時會逾時退出)。Docker Desktop 重新啟動後所有容器都是停止狀態,同樣用 up.sh。'],
-  ['broker 重啟後起不來:SaslAuthenticationException … SCRAM-SHA-512', '實測遇過(叢集連續跑了一整天、metadata 約 13000 筆之後):broker 重啟時 authorizer 用 SCRAM 連自己,但 SCRAM 憑證還沒從 metadata 載入,錯誤是致命的,容器退出,再啟動也一樣。原因是推測、未確認。OP menu 的滾動重啟(Lab 16)遇到這種情況會等到逾時就停止,不會動下一台。demo 的處理:冷啟動重建(down -v 後 up.sh)。'],
+  ['broker 重啟後起不來:SaslAuthenticationException … SCRAM-SHA-512', '根因已查明:刪除過 SCRAM 憑證(kafka-configs --delete-config SCRAM-SHA-512)之後,下一次重啟 broker 會失敗(KAFKA-20774,Lab 19.9 可重現)。本 demo 停用帳號一律改成覆寫隨機密碼(scripts/scram-disable.sh),內部通道也改用 mTLS。已經刪了、broker 起不來時:把被刪的帳號重新建立(任何密碼)再啟動;不行時用 scripts/broker-heal.sh 清空該 broker 的資料目錄重建。'],
   ['broker 啟動即退出:Authentication failed … Invalid user credentials(SCRAM-SHA-512)', '實測遇過:改設定時 docker 連動重建 controller,逾時強制終止留下 10 位元組的空 KRaft snapshot(__cluster_metadata-0/*.snapshot),controller 重啟後遺失 SCRAM 憑證(含 kafka-broker),broker 無法啟動;還原設定無效,只能 docker compose down -v 後重建。預防:compose 已為 controller、broker 設 stop_grace_period: 60s;改設定只重建 broker;實機用 systemctl 逐台滾動重啟,避免強制終止 controller。'],
   ['匿名呼叫 broker 的 /kafka/v3 沒被擋、甚至 broker 崩潰', 'broker 內建 Admin REST(與 MDS 共用 8091)未設定 kafka.rest. 安全擴充時完全無認證。依 Lab 14 套用官方設定。'],
   ['改了 broker 設定後 C3 或 REST Proxy 登入逾時', 'broker 被重建後,C3 與 REST Proxy 仍連著舊連線:docker restart control-center restproxy。'],
@@ -405,7 +446,7 @@ add(...table([
   ['demo(docker-compose)', 'RHEL 9 VM'],
   ['KAFKA_* 環境變數', '/etc/kafka/server.properties(broker)、controller.properties;KAFKA_LISTENER_NAME_CLIENT_… → listener.name.client.…'],
   ['certs/', '/etc/kafka/secrets/(權限 600、owner cp-kafka);AD CS 根憑證同時放系統信任(update-ca-trust)與 Java truststore'],
-  ['各元件 SCRAM 密碼', 'Secret Protection / 檔案權限 600 + systemd 獨立使用者;Vault 為後續'],
+  ['各元件 SCRAM 密碼', 'Secret Protection 加密設定檔,主金鑰由 CyberArk 保管、啟動時取(Lab 18);檔案權限 600 + systemd 獨立使用者'],
   ['controller 的設定', 'demo 的 controller 在 CONTROLLER 埠(9093)用 mTLS(與 broker 共用憑證 CN=kafka-internal),設定在 docker-compose 的環境變數;VM 上寫在 controller.properties,並以防火牆只對 broker 與 controller 節點開放 9093'],
   ['.env 的 audit router', 'server.properties:confluent.security.event.router.config=<JSON 單行>'],
   ['LDAP 設定(x-ldap-env)', 'broker 設定 ldap.*(官方:MDS 叢集所有 broker 都需要;只有 MDS writer broker 向 LDAP 取群組)。controller 不設 ldap.*,改設 kraft.controller.enabled=true 與 token key(官方做法,實測通過)'],
@@ -419,7 +460,8 @@ add(...table([
   ['demo/scripts/up.sh、ha.sh、reset.sh、bootstrap-rbac.sh', '一鍵建置(HA 拓樸,不帶參數 = 全部元件)、全新重建(清除資料後重跑 up.sh)、重置、第一批授權'],
   ['demo/scripts/ha-lab.sh', 'Lab 21:停 broker / controller 與滾動重啟的實驗'],
   ['demo/scripts/k.sh、rp.sh、mds.sh、ldap-group.sh、create-service-account.sh、as-user.sh', '包好的單項指令(對應手動的 kc、hc、ldapmodify…)'],
-  ['demo/scenarios/ch01…ch20-*.sh', '各 Lab 的整章腳本(含自動驗證);ch15 人員異動、ch16 OP menu、ch17 傳輸加密補強、ch18 CyberArk 整合、ch19 帳號被偷之後、ch20 Schema Registry'],
+  ['demo/scenarios/ch01…ch36-*.sh', '各 Lab 的整章腳本(含自動驗證);第一步都是 scripts/chapter-start.sh chNN(起點準備,冪等),所以每章都能單獨跑或重跑'],
+  ['demo/scripts/chapter-start.sh', '把環境收斂到某一章的起點(AD 群組成員、角色綁定、topic、起點資料、示範帳號);已經正確的不動'],
   ['demo/config/conjur/、scripts/conjur.sh、scripts/app-with-conjur.sh、scripts/secret-protection.sh、scripts/rolling-rotate-test.sh、docker-compose.cyberark.yml、docker-compose.cyberark-summon.yml', 'Lab 18:Conjur 的 policy、TLS 入口、取秘密腳本、應用啟動示範、Secret Protection 與 broker2 覆蓋設定(自寫腳本版與 summon 版)'],
   ['demo/scripts/reauth-test.sh、quota-test.sh、ad-lockout.sh、config/c3/security_rules.yml、ldap-config/ppolicy-*.ldif', 'Lab 19:重新認證、配額、AD 鎖定實驗與認證失敗告警規則'],
   ['demo/scripts/sr-setup.sh、scenarios/ch20-schema-registry.sh', 'Lab 20:Schema Registry ×2(profile sr;up.sh 預設會先授權再啟動)的授權設定'],
@@ -508,6 +550,11 @@ if (!BRIEF.has('appendix')) {
     for (const p of confProps(comp)) { const nt = NOTES[comp]?.[p.key]; if (nt) lines.push('# ' + nt.why + (nt.miss ? '(漏設:' + nt.miss + ')' : '')); lines.push(p.key + '=' + p.value); }
     add(...code(lines.join('\n'), { bar: INK, cut: 130 }));
   }
+  // JVM 參數:不在 properties 檔裡,RHEL 上寫在 systemd override 的 Environment=(例如 /etc/systemd/system/confluent-server.service.d/override.conf)
+  add(H2('JVM 參數(systemd override)'));
+  add(P('以下不是 properties 設定,而是啟動元件時的 JVM 參數:demo 寫在 docker-compose.yml 的環境變數,RHEL 上寫在 systemd override 的 Environment=。config-export 抓不到這一類,所以另外列;漏設的後果都是實測或官方明載的。<JMX_DIR> 是 JMX exporter 的 agent 與設定檔目錄(例如 /opt/jmx)。'));
+  add(...table([['元件', '變數', '值', '用途', '漏設會怎樣'], ...JVM_PARAMS], [1300, 1300, 3000, 1800, 1626], { size: 15 }));
+  add(...code('# 例:/etc/systemd/system/confluent-kafka-connect.service.d/override.conf\n[Service]\nEnvironment="KAFKA_HEAP_OPTS=-Xms512M -Xmx768M"\nEnvironment="KAFKA_OPTS=-javaagent:/opt/jmx/jmx_prometheus_javaagent.jar=7778:/opt/jmx/kafka_connect_tls.yml"\n# 改完:systemctl daemon-reload && systemctl restart <服務>', { bar: INK }));
 }
 
 const doc = new Document({

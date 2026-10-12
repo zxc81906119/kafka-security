@@ -1,0 +1,16 @@
+# 【權限變更紀錄】誰嘗試改授權(MDS 管理事件 AlterAccess)—— yujie(沒有 rbac-admin)自己加授權被拒,也被記錄
+$ yujie POST /security/1.0/principals/Group:orders-write/roles/DeveloperWrite/bindings(預期 403);kafka-console-consumer --topic confluent-audit-log-events | mds.Authorize / AlterAccess
+[HTTP 403]
+允許的(前 6 名):
+  40×  User:bootstrap     mds.Authorize       ALLOWED  orders.
+  10×  User:GARY          mds.Authorize       ALLOWED  security-metadata
+   9×  User:bootstrap     mds.Authorize       ALLOWED  security-metadata
+   6×  User:GARY          mds.Authorize       ALLOWED  orders.
+   6×  User:bootstrap     mds.Authorize       ALLOWED  payments.
+   1×  User:bootstrap     mds.Authorize       ALLOWED  orders-kek
+被拒的:
+   8×  User:MING          mds.Authorize       DENIED   ControlCenterBrokerMetrics
+   8×  User:MING          mds.Authorize       DENIED   ControlCenterAlerts
+   8×  User:MING          mds.Authorize       DENIED   All
+   6×  User:GARY          mds.Authorize       DENIED   All
+   4×  User:YUJIE         mds.Authorize       DENIED   payments.

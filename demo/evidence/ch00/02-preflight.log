@@ -4,19 +4,38 @@ $ ./preflight.sh
   ✔ openldap 執行中
   ✔ ldapadmin 執行中
   ✔ controller1 執行中
+  ✔ controller2 執行中
+  ✔ controller3 執行中
   ✔ broker1 執行中
   ✔ broker2 執行中
+  ✔ broker3 執行中
+  ✔ broker4 執行中
+  ✔ restproxy1 執行中
+  ✔ restproxy2 執行中
   ✔ restproxy 執行中
+  ✔ schema-registry1 執行中
+  ✔ schema-registry2 執行中
+  ✔ connect1 執行中
+  ✔ connect2 執行中
   ✔ control-center 執行中
   ✔ prometheus 執行中
   ✔ alertmanager 執行中
+  ✔ blackbox-exporter 執行中
 ── 端點與登入 ──
   ✔ MDS(8091)
   ✔ AD 帳號 gary 可登入 MDS
   ✔ 錯誤密碼被拒(401)
   ✔ REST Proxy(8086)未帶帳密 401
-  ✔ C3 登入頁(9021)
+  ✔ Schema Registry(8085):不帶帳密 401、AD 帳號 200
+  ✔ Schema Registry(8185):不帶帳密 401、AD 帳號 200
+  ✔ Connect(8083):不帶帳密 401、AD 帳號 200
+  ✔ Connect(8183):不帶帳密 401、AD 帳號 200
+  ✔ C3 連 SR 的健康檢查身分是 CN=c3(不是共用 server 憑證)
+  ✔ C3 登入頁(HTTPS 9022,憑證驗證)
+  ✔ Prometheus:不帶帳密 401、帶帳密 200
+  ✔ AD 連線走 LDAPS(broker 沒連到 389)
   ✔ LDAP 管理介面(8081)
+  ✔ 瀏覽器自動化可用(Playwright chromium;缺少時會自動下載,或執行 scripts/setup-e2e.sh)
 ── 資源 ──
-  Docker 可用記憶體: 10 GB(建議 ≥ 10GB)
-── 結果:通過 15 / 失敗 0 ──
+  Docker 可用記憶體: 10.6 GB(建議 ≥ 11 GB)
+── 結果:通過 34 / 失敗 0 ──

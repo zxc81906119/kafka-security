@@ -13,6 +13,7 @@
 #   scripts/tier-setup.sh on       備妥並啟用(可重複執行)
 #   scripts/tier-setup.sh off      還原 broker 設定(依序重建),停掉 MinIO(資料卷保留)
 #   scripts/tier-setup.sh status   顯示狀態
+#   scripts/tier-setup.sh minio    只啟動 MinIO(不改 broker)
 # 會改動什麼:config/tier/ 產生密碼與憑證副本(不進版本庫);.env 的 COMPOSE_FILE 多一個檔;broker 依序重建;啟動 minio 容器。
 # 怎麼判斷成功:最後印 [tier] 完成;broker 日誌有 TierObjectStore 或 tier 相關啟動訊息。
 # 常見失敗:broker 起不來 → docker logs broker1(常見:憑證檔不存在、bucket 不存在、endpoint 不通);
@@ -89,13 +90,20 @@ roll_brokers() {
   done
 }
 
+# 備妥帳密與 TLS 檔並啟動 MinIO(只動物件儲存,不動 broker)
+start_minio() {
+  say "備妥帳密、TLS 檔與 broker 用的憑證檔(accessKey= / secretKey=)(密碼隨機產生,不進版本庫)"
+  prepare_files
+  say "啟動 MinIO(HTTPS,使用共用 server 憑證)"
+  docker compose --profile tier up -d minio >/dev/null 2>&1
+  wait_healthy minio >/dev/null || die "minio 沒有 healthy:docker logs minio"
+}
+
 case "${1:-status}" in
+  minio)
+    start_minio; note "[tier] MinIO 就緒(只啟動物件儲存,broker 不變)" ;;
   on)
-    say "備妥帳密、TLS 檔與 broker 用的憑證檔(accessKey= / secretKey=)(密碼隨機產生,不進版本庫)"
-    prepare_files
-    say "啟動 MinIO(HTTPS,使用共用 server 憑證)"
-    docker compose --profile tier up -d minio >/dev/null 2>&1
-    wait_healthy minio >/dev/null || die "minio 沒有 healthy:docker logs minio"
+    start_minio
     say "建立 bucket $BUCKET 與專用帳號 $KAFKA_USER(權限只限這個 bucket)"
     create_bucket_and_user
     compose_file_add docker-compose.tier.yml          # 只加自己的檔(可與第 35 章的 rack 檔並存)

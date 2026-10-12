@@ -4,7 +4,8 @@
 # ----------------------------------------------------------------------------
 # 白話:證明維運常用的工具(Postman、REST Proxy)和網頁、指令列用的是同一份 AD 身分與同一套 RBAC,
 #       不需要另一套帳號。腳本用 newman(Postman 的命令列版)跑整份 collection,效果等同現場匯入 Postman。
-# 前置條件:Docker 可用、環境已建好(docker network cpsec_default、REST Proxy、MDS 在線);通常接在第 3、4 章之後
+# 前置條件:Docker 可用、環境已建好(REST Proxy、MDS 在線)
+# 冪等:是。第一步 scripts/chapter-start.sh 把環境收斂到本章起點(不必先跑前面的章節),重跑結果相同。
 # 用法:
 #   ./demo.sh 5                      經由講解控制台跑這一章
 #   ./scenarios/ch05-postman.sh      直接跑(DEMO_PAUSE=0 不暫停)
@@ -19,6 +20,9 @@
 source "$(dirname "$0")/../scripts/lib-ev.sh"
 ch_begin ch05 "工具怎麼用同樣的身分:Postman / REST Proxy"
 D="$(cd "$DEMO_ROOT" && pwd -W 2>/dev/null || pwd)"
+step prepare "【起點準備】第 4 章結束時的狀態:orders-write 可讀寫、orders-read 唯讀、ming 只在 orders-read(冪等:已正確的不動;可單獨從這一章開始,也可重跑)" \
+  "scripts/chapter-start.sh ch05" \
+  'bash "$DEMO_ROOT/scripts/chapter-start.sh" ch05 2>&1' '\[起點\] ch05 就緒'
 step newman "以 newman 執行 Postman collection(與現場 Postman 匯入同一份檔案)" \
   "newman run demo.postman_collection.json -e demo-humans.postman_environment.json" \
   "docker run --rm --network cpsec_default -v '$D/postman:/etc/newman' -v '$D/certs:/certs:ro' -v '$D/evidence/ch05:/out' postman/newman:alpine run /etc/newman/demo.postman_collection.json -e /etc/newman/demo-humans.postman_environment.json --env-var rest_proxy=https://restproxy:8086 --env-var mds=https://broker1:8091 --ssl-extra-ca-certs /certs/ca.pem --reporters cli,json --reporter-json-export /out/newman-run.json --color off 2>&1 | grep -E '^↳|\[[0-9]{3} |✓|[0-9]+\. |requests|assertions' | sed -E 's/^( *)\│? */\1/' " 'assertions +\│? *14 +\│ +0'

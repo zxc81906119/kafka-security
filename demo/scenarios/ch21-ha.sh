@@ -4,6 +4,7 @@
 # ----------------------------------------------------------------------------
 # 白話:停掉 broker 或 controller 看叢集怎麼反應,最後做不停機的滾動重啟。銀行要的是「壞一兩台,服務照常」,這一章用實測回答「壞幾台還撐得住、哪些操作會先卡住」。
 # 前置條件:叢集已啟動(scripts/up.sh)。不在 `demo.sh all` 與 preflight 的基礎鏈內。
+# 冪等:是。第一步 scripts/chapter-start.sh 確認起點(本章不需要前面的章節),重跑結果相同。
 # 用法:
 #   ./demo.sh 21                  經由講解控制台跑這一章(DEMO_PAUSE=0 不暫停)
 #   ./scenarios/ch21-ha.sh    直接跑
@@ -12,11 +13,15 @@
 # 實測結果摘要(測試環境:副本 3、min.isr 2):
 #   停 1 台 broker:寫入不中斷;停 2 台:acks=all 被擋,acks=1 看似成功但讀不到(高水位不前進);
 #   停 1 台 controller:正常;停 2 台(失去多數):不能建 topic 與 describe,既有 topic 的讀寫仍可;
-#   滾動重啟 3 broker + 3 controller(active 最後):背景寫入零失敗、零遺失。
+#   滾動重啟 4 broker + 3 controller(active 最後):背景寫入零失敗、零遺失(2400 = 2400)。
 # ============================================================================
 source "$(dirname "$0")/../scripts/lib-ev.sh"
-ch_begin ch21 "HA 叢集:3 controller、3 broker 的停機行為與滾動重啟"
+ch_begin ch21 "HA 叢集:3 controller、4 broker 的停機行為與滾動重啟"
 HA="$DEMO_ROOT/scripts/ha-lab.sh"
+
+step prepare "【起點準備】這一章不需要額外準備,確認環境可直接開始(冪等:可單獨從這一章開始,也可重跑)" \
+  "scripts/chapter-start.sh ch21" \
+  'bash "$DEMO_ROOT/scripts/chapter-start.sh" ch21 2>&1' '\[起點\] ch21 就緒'
 
 step ha-quorum "【quorum】3 台 controller 都是 voter(投票成員),1 台是 leader;4 台 broker 是 observer。3 台可容忍 1 台故障(官方:正式環境至少 3 台、專用 controller)。這個測試環境用靜態 quorum(kraft.version 0)簡化;正式環境依官方建議用動態 quorum" \
   "kafka-metadata-quorum describe --status;kafka-features describe" \
